@@ -14,7 +14,7 @@ export async function registerAction(_prev: AuthState, formData: FormData): Prom
   const password = String(formData.get("password") ?? "");
 
   if (name.length < 2) return { error: "Имя должно быть не короче 2 символов" };
-  if (!/^[][^\s@]+@[^^\s@]+\.[^\s@]+$/.test(email)) return { error: "Укажите корректный email" };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: "Укажите корректный email" };
   if (password.length < 6) return { error: "Пароль — минимум 6 символов" };
 
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
