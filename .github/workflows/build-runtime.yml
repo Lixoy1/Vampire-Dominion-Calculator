@@ -6,9 +6,10 @@ on:
 
 jobs:
   build-runtime:
+    if: ${{ !contains(github.event.head_commit.message, '[runtime-built]') }}
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/app_db
     steps:
@@ -26,7 +27,7 @@ jobs:
 
       - name: Prepare runtime bundle
         run: |
-          rm -rf runtime runtime-bundle.zip
+          rm -rf runtime
           mkdir -p runtime/.next
           cp -R .next/standalone/. runtime/
           cp -R .next/static runtime/.next/static
@@ -36,14 +37,20 @@ jobs:
           Start with: node server.js
           Listen on 0.0.0.0:8080.
           EOF
-          cd runtime
-          zip -qr ../runtime-bundle.zip .
-          cd ..
 
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v4
         with:
           name: vampire-dominion-runtime
-          path: runtime-bundle.zip
+          path: runtime
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+
+      - name: Commit runtime bundle
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add runtime
+          git commit -m "[runtime-built] build deployable runtime" || exit 0
+          git push
