@@ -20,7 +20,7 @@ jobs:
 
       - name: Assemble and unpack uploaded archive
         run: |
-          cat import/vd-project.part* > /tmp/vd-project.tar.gz.b64
+          cat import/vd-project.chunk* > /tmp/vd-project.tar.gz.b64
           base64 -d /tmp/vd-project.tar.gz.b64 > /tmp/vd-project.tar.gz
           mkdir -p /tmp/vd-project
           tar -xzf /tmp/vd-project.tar.gz -C /tmp/vd-project
