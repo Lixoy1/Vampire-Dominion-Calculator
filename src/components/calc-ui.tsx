@@ -1,87 +1,100 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { motion } from "framer-motion";
-import { Card, ProgressBar } from "@/components/ui";
-import { cn, fmt } from "@/lib/utils";
+import { ReactNode } from "react";
+import { Star } from "lucide-react";
+import { AnimatedNumber, Card } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
-export function CalculatorShell({
-  title,
-  subtitle,
-  children,
+export function ResultTile({
+  icon,
+  label,
+  value,
+  sub,
+  color,
+  big,
 }: {
-  title: string;
-  subtitle: string;
-  children: ReactNode;
+  icon: ReactNode;
+  label: string;
+  value: number;
+  sub?: string;
+  color: string;
+  big?: boolean;
 }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-xl font-bold uppercase tracking-[0.06em] text-bone sm:text-2xl">{title}</h1>
-        <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-ash">{subtitle}</p>
+    <div
+      className="relative overflow-hidden rounded-xl border p-4"
+      style={{ borderColor: `${color}2e`, backgroundColor: `${color}0a` }}
+    >
+      <div className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-20 blur-xl" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-2" style={{ color }}>
+        {icon}
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em]">{label}</p>
       </div>
-      {children}
+      <p className={cn("mt-2 font-display font-bold text-bone", big ? "text-2xl sm:text-3xl" : "text-xl")}>
+        <AnimatedNumber value={value} />
+      </p>
+      {sub && <p className="mt-1 text-[11px] text-smoke">{sub}</p>}
     </div>
   );
 }
 
-export function ResultCard({
-  title,
-  value,
-  accent = "blood",
-  detail,
-}: {
-  title: string;
-  value: number;
-  accent?: "blood" | "gold" | "cyan" | "green";
-  detail?: string;
-}) {
-  const classes = {
-    blood: "text-blood-2 border-blood/30 bg-blood/5",
-    gold: "text-gold border-gold/30 bg-gold/5",
-    cyan: "text-cyan-300 border-cyan-400/30 bg-cyan-400/5",
-    green: "text-green-300 border-green-400/30 bg-green-400/5",
-  } as const;
-  return (
-    <Card className={cn("p-5", classes[accent])}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-ash">{title}</p>
-      <p className="mt-2 font-display text-2xl font-bold tabular-nums sm:text-3xl">{fmt(value)}</p>
-      {detail && <p className="mt-1 text-xs text-smoke">{detail}</p>}
-    </Card>
-  );
-}
-
-export function ComparisonBar({
+export function StarsPicker({
   label,
-  current,
-  target,
-  suffix = "",
+  value,
+  onChange,
+  max = 10,
+  accent = "#d9a441",
 }: {
   label: string;
-  current: number;
-  target: number;
-  suffix?: string;
+  value: number;
+  onChange: (v: number) => void;
+  max?: number;
+  accent?: string;
 }) {
-  const pct = target > 0 ? (current / target) * 100 : 0;
   return (
     <div>
-      <div className="mb-2 flex items-center justify-between text-xs">
-        <span className="font-semibold text-ash">{label}</span>
-        <span className="tabular-nums text-bone">
-          {fmt(current)}{suffix} / {fmt(target)}{suffix}
-        </span>
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-ash">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        {Array.from({ length: max }).map((_, i) => {
+          const n = i + 1;
+          const active = n <= value;
+          return (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onChange(n)}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-lg border transition-all hover:scale-110 cursor-pointer",
+                active ? "border-transparent" : "border-line text-[#3a3049] hover:text-smoke",
+              )}
+              style={active ? { color: accent, backgroundColor: `${accent}1f` } : undefined}
+              title={`${n}★`}
+            >
+              <Star size={14} fill={active ? "currentColor" : "none"} />
+            </button>
+          );
+        })}
       </div>
-      <ProgressBar value={pct} />
     </div>
   );
 }
 
-export function StatTile({ label, value, note }: { label: string; value: ReactNode; note?: string }) {
+export function CalcPanel({
+  title,
+  description,
+  children,
+  className,
+}: {
+  title: string;
+  description?: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
-    <motion.div whileHover={{ y: -2 }} className="rounded-xl border border-line bg-abyss/50 p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-smoke">{label}</p>
-      <div className="mt-1.5 font-display text-lg font-semibold text-bone">{value}</div>
-      {note && <p className="mt-1 text-[11px] text-smoke">{note}</p>}
-    </motion.div>
+    <Card className={cn("p-5 sm:p-6", className)}>
+      <h2 className="font-display text-xs font-semibold uppercase tracking-[0.16em] text-bone">{title}</h2>
+      {description && <p className="mt-1 text-xs leading-relaxed text-smoke">{description}</p>}
+      <div className="mt-5">{children}</div>
+    </Card>
   );
 }
