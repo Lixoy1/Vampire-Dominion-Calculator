@@ -3,7 +3,7 @@ name: Import full uploaded project
 on:
   push:
     paths:
-      - "import/vd-project.tar.gz.b64"
+      - "import/READY"
   workflow_dispatch:
 
 permissions:
@@ -18,9 +18,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore uploaded archive
+      - name: Assemble and unpack uploaded archive
         run: |
-          base64 -d import/vd-project.tar.gz.b64 > /tmp/vd-project.tar.gz
+          cat import/vd-project.part* > /tmp/vd-project.tar.gz.b64
+          base64 -d /tmp/vd-project.tar.gz.b64 > /tmp/vd-project.tar.gz
           mkdir -p /tmp/vd-project
           tar -xzf /tmp/vd-project.tar.gz -C /tmp/vd-project
 
@@ -28,21 +29,19 @@ jobs:
         run: |
           find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github ! -name import -exec rm -rf {} +
           cp -a /tmp/vd-project/. .
-          rm -f import/vd-project.tar.gz.b64
+          rm -rf import
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Import full uploaded project" || exit 0
+          git commit -m "Import full uploaded project"
           git push
 
       - name: Install dependencies
-        if: success()
         run: npm install
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/app_db
 
       - name: Build project
-        if: success()
         run: npm run build
         env:
           DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/app_db
