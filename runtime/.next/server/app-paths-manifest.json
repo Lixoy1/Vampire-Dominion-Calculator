@@ -1,0 +1,15 @@
+{
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/register/page": "app/(auth)/register/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/health/route": "app/api/health/route.js",
+  "/dashboard/artifacts/page": "app/dashboard/artifacts/page.js",
+  "/dashboard/calculators/awakening/page": "app/dashboard/calculators/awakening/page.js",
+  "/dashboard/calculators/leveling/page": "app/dashboard/calculators/leveling/page.js",
+  "/dashboard/calculators/page": "app/dashboard/calculators/page.js",
+  "/dashboard/calculators/power/page": "app/dashboard/calculators/power/page.js",
+  "/dashboard/calculators/savings/page": "app/dashboard/calculators/savings/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/page": "app/page.js"
+}

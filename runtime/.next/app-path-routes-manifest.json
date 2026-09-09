@@ -1,0 +1,15 @@
+{
+  "/(auth)/login/page": "/login",
+  "/(auth)/register/page": "/register",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/health/route": "/api/health",
+  "/dashboard/artifacts/page": "/dashboard/artifacts",
+  "/dashboard/calculators/awakening/page": "/dashboard/calculators/awakening",
+  "/dashboard/calculators/leveling/page": "/dashboard/calculators/leveling",
+  "/dashboard/calculators/page": "/dashboard/calculators",
+  "/dashboard/calculators/power/page": "/dashboard/calculators/power",
+  "/dashboard/calculators/savings/page": "/dashboard/calculators/savings",
+  "/dashboard/page": "/dashboard",
+  "/page": "/"
+}

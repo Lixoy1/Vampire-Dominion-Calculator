@@ -1,0 +1,53 @@
+{
+  "node": {
+    "008125e863552675ef4a2e59f845cd62d0f325cf39": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        }
+      },
+      "exportedName": "logoutAction",
+      "filename": "src/app/(auth)/actions.ts"
+    },
+    "4040ebed1ee1246904748804703e7772cf1025f053": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "createArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "exportedName": "createArtifact",
+      "filename": "src/app/dashboard/artifacts/actions.ts"
+    },
+    "40822aeaac1838bf8dcd429071df5c10b33a16ba50": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "deleteArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "exportedName": "deleteArtifact",
+      "filename": "src/app/dashboard/artifacts/actions.ts"
+    },
+    "60f289b00ab7d2430af3bb4b4c995a304a274480f9": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "updateArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "exportedName": "updateArtifact",
+      "filename": "src/app/dashboard/artifacts/actions.ts"
+    }
+  },
+  "edge": {}
+}

@@ -1,0 +1,126 @@
+{
+  "node": {
+    "60e7da4bdd4691300ecebcc1d8d6b9ac6e207e55d7": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": 96024,
+          "async": true,
+          "exportedName": "loginAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/(auth)/register/page": {
+          "moduleId": 67693,
+          "async": true,
+          "exportedName": "loginAction",
+          "filename": "src/app/(auth)/actions.ts"
+        }
+      },
+      "filename": "src/app/(auth)/actions.ts",
+      "exportedName": "loginAction"
+    },
+    "601ff4e2d6622948d6e7b67be8ac306c10e354d6e6": {
+      "workers": {
+        "app/(auth)/login/page": {
+          "moduleId": 96024,
+          "async": true,
+          "exportedName": "registerAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/(auth)/register/page": {
+          "moduleId": 67693,
+          "async": true,
+          "exportedName": "registerAction",
+          "filename": "src/app/(auth)/actions.ts"
+        }
+      },
+      "filename": "src/app/(auth)/actions.ts",
+      "exportedName": "registerAction"
+    },
+    "008125e863552675ef4a2e59f845cd62d0f325cf39": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/calculators/awakening/page": {
+          "moduleId": 1242,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/calculators/leveling/page": {
+          "moduleId": 35017,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/calculators/page": {
+          "moduleId": 9301,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/calculators/power/page": {
+          "moduleId": 33394,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/calculators/savings/page": {
+          "moduleId": 72436,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        },
+        "app/dashboard/page": {
+          "moduleId": 89194,
+          "async": true,
+          "exportedName": "logoutAction",
+          "filename": "src/app/(auth)/actions.ts"
+        }
+      },
+      "filename": "src/app/(auth)/actions.ts",
+      "exportedName": "logoutAction"
+    },
+    "4040ebed1ee1246904748804703e7772cf1025f053": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "createArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "filename": "src/app/dashboard/artifacts/actions.ts",
+      "exportedName": "createArtifact"
+    },
+    "40822aeaac1838bf8dcd429071df5c10b33a16ba50": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "deleteArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "filename": "src/app/dashboard/artifacts/actions.ts",
+      "exportedName": "deleteArtifact"
+    },
+    "60f289b00ab7d2430af3bb4b4c995a304a274480f9": {
+      "workers": {
+        "app/dashboard/artifacts/page": {
+          "moduleId": 28754,
+          "async": true,
+          "exportedName": "updateArtifact",
+          "filename": "src/app/dashboard/artifacts/actions.ts"
+        }
+      },
+      "filename": "src/app/dashboard/artifacts/actions.ts",
+      "exportedName": "updateArtifact"
+    }
+  },
+  "edge": {},
+  "encryptionKey": "TDU/nzJM3eEFdeNTSoUVCYejvbHyNvkbuQ6eyZ4JWA4="
+}
