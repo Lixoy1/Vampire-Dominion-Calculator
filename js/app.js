@@ -4,6 +4,7 @@
  */
 import { GAME_DB, getIconUrl } from './data.js';
 import { normalizeCalculationSnapshot } from './snapshot-adapter.js';
+import { createInventoryLedger } from './inventory-ledger.js';
 import {
   ATTRIBUTES,
   FABRIC_COST_BY_QUALITY,
@@ -437,6 +438,7 @@ function commitPlanToAccount() {
   }
   const report = calculateTotalDominanceReport({ db, account, plan });
   const fail = message => { alert(message); return false; };
+  const inventoryLedger = createInventoryLedger(account.bag);
 
   if (report.spent.blood > account.blood) return fail('Недостаточно Крови для выбранного плана.');
   if (report.spent.conclaveExp > account.conclaveExp) return fail('Недостаточно очков Конклава для выбранного плана.');
@@ -451,23 +453,31 @@ function commitPlanToAccount() {
     if (!owned || !warden || targetLevel <= (Number(owned.level) || 1)) continue;
     const currentPromoteId = Math.max(1, Number(owned.promoteId) || 1);
     const upgrade = calcWardenLevelsUpgrade(
-      warden, owned.level, targetLevel, currentPromoteId, db.promotes, account.bag, owned.talents || {}
+      warden, owned.level, targetLevel, currentPromoteId, db.promotes, inventoryLedger.getRemaining(), owned.talents || {}
     );
     if (!upgrade.canPromote) {
       const detail = upgrade.missingItems.map(item => `${tName('item', db.items.find(i => i.id === item.itemId)?.name || item.itemId)}: ещё ${item.need}`).join('\n');
       return fail(`Нельзя применить уровни ${tName('warden', warden.name)}. Не хватает предметов прорыва:\n${detail}`);
     }
     let nextPromoteId = currentPromoteId;
+    const promoteReservations = [];
     for (const promote of upgrade.neededPromotes || []) {
       nextPromoteId = Math.max(nextPromoteId, promote.id);
       for (const itemId of promote.item_ids || []) {
-        const cost = Number(promote.price) || 0;
-        if ((account.bag[itemId] || 0) < cost) {
-          const itemName = tName('item', db.items.find(i => i.id === itemId)?.name || itemId);
-          return fail(`Недостаточно предметов для прорыва ${tName('warden', warden.name)}: ${itemName}.`);
-        }
-        account.bag[itemId] = Math.max(0, (account.bag[itemId] || 0) - cost);
+        promoteReservations.push({
+          itemId,
+          amount: Number(promote.price) || 0,
+          reason: `Прорыв ${tName('warden', warden.name)} · ${tName('warden_promote', promote.name)}`,
+        });
       }
+    }
+    const reservation = inventoryLedger.reserveMany(promoteReservations);
+    if (!reservation.ok) {
+      const detail = reservation.failures.map(item => {
+        const itemName = tName('item', db.items.find(i => i.id === Number(item.itemId))?.name || item.itemId);
+        return `${itemName}: ещё ${fmt(item.missing ?? item.need)}`;
+      }).join('\\n');
+      return fail(`Не удалось зарезервировать предметы прорыва для ${tName('warden', warden.name)}:\\n${detail}`);
     }
     wardenPromotes[id] = nextPromoteId;
   }
@@ -477,14 +487,41 @@ function commitPlanToAccount() {
     db.wardens, db.lovers,
     new Set(Object.keys(account.ownedWardens).map(Number)),
     new Set(Object.keys(account.ownedLovers).map(Number)),
-    account.bag,
+    inventoryLedger.getRemaining(),
   );
   const summonIds = [...new Set((plan.summons?.wardens || []).map(Number))];
+  const loverSummonIds = [...new Set((plan.summons?.lovers || []).map(Number))];
+
   for (const id of summonIds) {
     const candidate = summonCandidates.wardens.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь предметы в сумке.`);
-    if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
+    if (!candidate || !candidate.canSummon) {
+      return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь условия и предметы в сумке.`);
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(candidate.itemId, candidate.cost, `Призыв Хранителя ${tName('warden', candidate.name)}`);
+      if (!reservation.ok) {
+        const missing = reservation.failures[0]?.missing ?? candidate.cost;
+        return fail(`Не хватает ${fmt(missing)} предметов для призыва ${tName('warden', candidate.name)}.`);
+      }
+    }
   }
+
+  for (const id of loverSummonIds) {
+    const candidate = summonCandidates.lovers.find(item => item.id === id);
+    if (!candidate || !candidate.canSummon) {
+      return fail(`Призыв Возлюбленного ${candidate ? tName('lover', candidate.name) : id} недоступен: проверь условия и предметы в сумке.`);
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(candidate.itemId, candidate.cost, `Призыв Возлюбленного ${tName('lover', candidate.name)}`);
+      if (!reservation.ok) {
+        const missing = reservation.failures[0]?.missing ?? candidate.cost;
+        return fail(`Не хватает ${fmt(missing)} предметов для призыва ${tName('lover', candidate.name)}.`);
+      }
+    }
+  }
+
+  // Итоговый остаток сумки фиксируется только после успешной проверки всего плана.
+  account.bag = inventoryLedger.getRemaining();
 
   // Проверяем очки доверия по каждому партнёру отдельно и фиксируем уровни.
   const bondUpdates = {};
@@ -530,6 +567,16 @@ function commitPlanToAccount() {
 
   for (const id of summonIds) {
     account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
+  }
+  for (const id of loverSummonIds) {
+    const lover = db.lovers.find(item => item.id === id);
+    account.ownedLovers[id] = {
+      affinity: 0,
+      closeness: 0,
+      sex: lover?.fixed_sex || state.settings.loverSex || 'female',
+      presences: {},
+      bonds: {},
+    };
   }
 
   state.account = account;
