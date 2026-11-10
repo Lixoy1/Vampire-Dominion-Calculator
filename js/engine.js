@@ -648,43 +648,65 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
  * или бесплатно (ивенты/сюжет/VIP), и считает прямой прирост господства от призыва.
  */
 export function getSummonCandidates(wardens, lovers, ownedWardenIds, ownedLoverIds, bagCountsById) {
+  const getAvailability = template => {
+    const itemId = template.summon_item_id ?? null;
+    const rawCost = template.summon_item_count;
+    const cost = rawCost == null ? 0 : Math.max(0, Number(rawCost) || 0);
+    const have = itemId == null ? 0 : Math.max(0, Number(bagCountsById[itemId]) || 0);
+    const hasExplicitFlag = typeof template.summon_possible === 'boolean';
+    const hasKnownItemRequirement = itemId != null && cost > 0;
+
+    // Нулевая/неизвестная цена сама по себе не подтверждает право на призыв.
+    // Разрешаем действие только при явном summon_possible=true либо при
+    // известном требуемом предмете и достаточном количестве в сумке.
+    const canSummon = hasExplicitFlag
+      ? template.summon_possible && (hasKnownItemRequirement ? have >= cost : true)
+      : hasKnownItemRequirement && have >= cost;
+
+    return {
+      itemId,
+      cost,
+      have,
+      availabilityKnown: hasExplicitFlag || hasKnownItemRequirement,
+      canSummon,
+      availabilityReason: canSummon
+        ? null
+        : hasExplicitFlag && !template.summon_possible
+          ? 'not_available'
+          : !hasKnownItemRequirement
+            ? 'unknown_requirement'
+            : 'insufficient_items',
+    };
+  };
+
   const wardenCandidates = wardens
     .filter(w => !ownedWardenIds.has(w.id))
     .map(w => {
-      const cost = w.summon_item_count ?? 0;
-      const have = w.summon_item_id ? (bagCountsById[w.summon_item_id] ?? 0) : 0;
+      const availability = getAvailability(w);
       const baseStars = calcWardenBaseTalentStars(w);
+      const rawSummonGain = w.summon_gain ?? w.summonGain;
+      const parsedSummonGain = rawSummonGain == null ? null : Number(rawSummonGain);
       return {
         kind: 'warden',
         id: w.id,
         name: w.name,
-        itemId: w.summon_item_id,
-        cost,
-        have,
-        canSummon: cost === 0 || have >= cost,
+        ...availability,
         baseTalentStars: baseStars,
-        // Базовый прирост при призыве на 1-й уровень (с учётом стартовых аур)
-        estimatedBaseGain: baseStars * 10,
+        // Прирост не выводится из числа звёзд: принимаем только явно заданное значение.
+        estimatedBaseGain: Number.isFinite(parsedSummonGain) ? parsedSummonGain : null,
       };
     });
 
   const loverCandidates = lovers
     .filter(l => !ownedLoverIds.has(l.id))
-    .map(l => {
-      const cost = l.summon_item_count ?? 0;
-      const have = l.summon_item_id ? (bagCountsById[l.summon_item_id] ?? 0) : 0;
-      return {
-        kind: 'lover',
-        id: l.id,
-        name: l.name,
-        wardenId: l.warden_id,
-        hasWarden: ownedWardenIds.has(l.warden_id),
-        itemId: l.summon_item_id,
-        cost,
-        have,
-        canSummon: cost === 0 || have >= cost,
-      };
-    });
+    .map(l => ({
+      kind: 'lover',
+      id: l.id,
+      name: l.name,
+      wardenId: l.warden_id,
+      hasWarden: ownedWardenIds.has(l.warden_id),
+      ...getAvailability(l),
+    }));
 
   return { wardens: wardenCandidates, lovers: loverCandidates };
 }
