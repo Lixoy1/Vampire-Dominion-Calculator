@@ -1,8 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { normalizeCalculationSnapshot, compareCalculationSnapshots, toFiniteNumber } from '../js/snapshot-adapter.js';
+import { normalizeCalculationSnapshot, compareCalculationSnapshots, isCalculationSnapshotPayload, toFiniteNumber } from '../js/snapshot-adapter.js';
 
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/server-calculation-snapshot.json', import.meta.url), 'utf8'));
+assert.equal(isCalculationSnapshotPayload(fixture), true);
+assert.equal(isCalculationSnapshotPayload({ total: 123, attributes: [], gain: {} }), false);
+assert.equal(isCalculationSnapshotPayload({ account: { total: 123 }, plan: {} }), false);
+assert.throws(() => normalizeCalculationSnapshot({ total: 123 }), TypeError);
 const normalized = normalizeCalculationSnapshot(fixture);
 
 assert.equal(normalized.total, 4651439);
