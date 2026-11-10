@@ -1,0 +1,16 @@
+{
+  "name": "vampire-dominion-mini-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "grammy": "^1.38.3"
+  }
+}
