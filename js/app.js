@@ -3,7 +3,7 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
-import { normalizeCalculationSnapshot } from './snapshot-adapter.js';
+import { isCalculationSnapshotPayload, normalizeCalculationSnapshot } from './snapshot-adapter.js';
 import { createInventoryLedger } from './inventory-ledger.js';
 import {
   ATTRIBUTES,
@@ -1583,15 +1583,8 @@ function bindEvents(db) {
       if (!file) return;
       try {
         const parsed = JSON.parse(await file.text());
-        const isCalculationSnapshot = parsed &&
-          typeof parsed === 'object' &&
-          !Array.isArray(parsed) &&
-          Array.isArray(parsed.attributes) &&
-          parsed.gain &&
-          Array.isArray(parsed.gain.attributes) &&
-          Object.prototype.hasOwnProperty.call(parsed, 'total');
-
-        if (isCalculationSnapshot) {
+        if (isCalculationSnapshotPayload(parsed)) {
+          // Validate fully before changing the active profile.
           normalizeCalculationSnapshot(parsed);
           state.account.calculationSnapshot = {
             capturedAt: new Date().toISOString(),
