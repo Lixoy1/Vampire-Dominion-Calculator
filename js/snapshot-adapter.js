@@ -19,6 +19,20 @@ export function toFiniteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+/**
+ * Strictly recognize a raw calculator response, not an exported profile or
+ * arbitrary JSON object. This is used before routing imports into the snapshot slot.
+ */
+export function isCalculationSnapshotPayload(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+  if (toFiniteNumber(input.total) === null) return false;
+  if (!Array.isArray(input.attributes) || !input.gain || typeof input.gain !== 'object') return false;
+  if (!Array.isArray(input.gain.attributes) || toFiniteNumber(input.gain.total) === null) return false;
+  const current = new Set(input.attributes.map(row => row?.attribute));
+  const gain = new Set(input.gain.attributes.map(row => row?.attribute));
+  return SNAPSHOT_ATTRIBUTES.every(attribute => current.has(attribute) && gain.has(attribute));
+}
+
 function normalizeAttributeRows(rows, valueKey = 'total') {
   if (!Array.isArray(rows)) return {};
   const result = {};
@@ -298,8 +312,8 @@ function normalizeSimpleResourceSection(section) {
 }
 
 export function normalizeCalculationSnapshot(input) {
-  if (!input || typeof input !== 'object' || Array.isArray(input)) {
-    throw new TypeError('Calculation snapshot must be a JSON object.');
+  if (!isCalculationSnapshotPayload(input)) {
+    throw new TypeError('Calculation snapshot must contain total, all four attributes, and gain totals.');
   }
 
   return {
