@@ -1,9 +1,9 @@
 /**
  * Normalize captured Vampire Dominion calculation responses.
  *
- * This adapter intentionally does not calculate game values. It only converts
- * server-supplied numeric strings into numbers and keeps source fields intact.
- * Unknown fields, missing fields and null values are preserved in `raw`.
+ * The adapter does not calculate game values. It only maps known server fields
+ * and numeric strings into a stable read model. Unknown fields and the complete
+ * source object stay available under `raw`; null is never coerced to zero.
  */
 
 export const SNAPSHOT_ATTRIBUTES = Object.freeze([
@@ -128,6 +128,155 @@ function normalizeCollectionSection(section, childKey, idKey) {
   };
 }
 
+function normalizeBondSection(section) {
+  if (!section || typeof section !== 'object') return section ?? null;
+  return {
+    trust: toFiniteNumber(section.trust),
+    spent: toFiniteNumber(section.spent),
+    left: toFiniteNumber(section.left),
+    gain: toFiniteNumber(section.gain),
+    lovers: Array.isArray(section.lovers)
+      ? section.lovers.map(lover => ({
+          loverId: lover.lover_id,
+          wardenId: lover.warden_id,
+          summoned: lover.summoned ?? null,
+          trust: toFiniteNumber(lover.trust),
+          spent: toFiniteNumber(lover.spent),
+          left: toFiniteNumber(lover.left),
+          gain: toFiniteNumber(lover.gain),
+          bonds: Array.isArray(lover.bonds)
+            ? lover.bonds.map(bond => ({
+                attribute: bond.attribute,
+                gain: toFiniteNumber(bond.gain),
+                level: normalizeNextStep(bond.level),
+                percent: normalizeNextStep(bond.percent),
+                raw: bond,
+              }))
+            : [],
+          bestPath: lover.best_path ?? null,
+          raw: lover,
+        }))
+      : [],
+    idle: Array.isArray(section.idle) ? section.idle : [],
+    raw: section,
+  };
+}
+
+function normalizeSkinSection(section) {
+  if (!section || typeof section !== 'object') return section ?? null;
+  return {
+    gain: toFiniteNumber(section.gain),
+    fabrics: Array.isArray(section.fabrics)
+      ? section.fabrics.map(group => ({
+          quality: group.quality,
+          itemId: group.item_id,
+          count: toFiniteNumber(group.count),
+          spent: toFiniteNumber(group.spent),
+          left: toFiniteNumber(group.left),
+          gain: toFiniteNumber(group.gain),
+          skins: Array.isArray(group.skins)
+            ? group.skins.map(skin => ({
+                id: skin.skin_id,
+                owner: skin.owner ?? null,
+                ownerId: skin.owner_id ?? null,
+                owned: skin.owned ?? null,
+                summoned: skin.summoned ?? null,
+                summonPossible: skin.summon_possible ?? null,
+                level: toFiniteNumber(skin.level),
+                target: toFiniteNumber(skin.target),
+                maxLevel: toFiniteNumber(skin.max_level),
+                cards: toFiniteNumber(skin.cards),
+                cardsUsed: toFiniteNumber(skin.cards_used),
+                fabricUsed: toFiniteNumber(skin.fabric_used),
+                gain: toFiniteNumber(skin.gain),
+                nextKind: skin.next_kind ?? null,
+                nextCost: toFiniteNumber(skin.next_cost),
+                nextGain: toFiniteNumber(skin.next_gain),
+                maxTarget: toFiniteNumber(skin.max_target),
+                raw: skin,
+              }))
+            : [],
+          raw: group,
+        }))
+      : [],
+    store: section.store ?? null,
+    raw: section,
+  };
+}
+
+function normalizeTalentLines(lines) {
+  if (!Array.isArray(lines)) return [];
+  return lines.map(line => ({
+    position: toFiniteNumber(line.position),
+    attribute: line.attribute ?? null,
+    stars: toFiniteNumber(line.stars),
+    level: toFiniteNumber(line.level),
+    cap: toFiniteNumber(line.cap),
+    chosen: toFiniteNumber(line.chosen),
+    cost: toFiniteNumber(line.cost),
+    maxChosen: toFiniteNumber(line.max_chosen),
+    nextCost: toFiniteNumber(line.next_cost),
+    nextGain: toFiniteNumber(line.next_gain),
+    final: toFiniteNumber(line.final),
+    chance: toFiniteNumber(line.chance),
+    tries: toFiniteNumber(line.tries),
+    best: line.best ?? null,
+    raw: line,
+  }));
+}
+
+function normalizeTalentGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  return groups.map(group => ({
+    itemId: group.item_id ?? null,
+    stars: toFiniteNumber(group.stars),
+    attribute: group.attribute ?? null,
+    count: toFiniteNumber(group.count),
+    spent: toFiniteNumber(group.spent),
+    left: toFiniteNumber(group.left),
+    gain: toFiniteNumber(group.gain),
+    wardens: Array.isArray(group.wardens)
+      ? group.wardens.map(warden => ({
+          wardenId: warden.warden_id,
+          owned: warden.owned ?? null,
+          gain: toFiniteNumber(warden.gain),
+          talents: normalizeTalentLines(warden.talents),
+          raw: warden,
+        }))
+      : [],
+    raw: group,
+  }));
+}
+
+function normalizeTalentExperience(wardens) {
+  if (!Array.isArray(wardens)) return [];
+  return wardens.map(warden => ({
+    wardenId: warden.warden_id,
+    owned: warden.owned ?? null,
+    exp: toFiniteNumber(warden.exp),
+    promoteExp: toFiniteNumber(warden.promote_exp),
+    level: toFiniteNumber(warden.level),
+    added: toFiniteNumber(warden.added),
+    points: toFiniteNumber(warden.points),
+    left: toFiniteNumber(warden.left),
+    gain: toFiniteNumber(warden.gain),
+    talents: normalizeTalentLines(warden.talents),
+    raw: warden,
+  }));
+}
+
+function normalizeTalentSection(section) {
+  if (!section || typeof section !== 'object') return section ?? null;
+  return {
+    gain: toFiniteNumber(section.gain),
+    scrolls: normalizeTalentGroups(section.scrolls),
+    scripts: normalizeTalentGroups(section.scripts),
+    expItems: Array.isArray(section.exp_items) ? section.exp_items : [],
+    ownExp: normalizeTalentExperience(section.own_exp),
+    raw: section,
+  };
+}
+
 function normalizeSimpleResourceSection(section) {
   if (!section || typeof section !== 'object') return section ?? null;
   return {
@@ -140,21 +289,10 @@ function normalizeSimpleResourceSection(section) {
     nextExp: toFiniteNumber(section.next_exp),
     exp: toFiniteNumber(section.exp),
     expAfter: toFiniteNumber(section.exp_after),
+    minimum: toFiniteNumber(section.minimum),
+    expected: toFiniteNumber(section.expected),
+    maximum: toFiniteNumber(section.maximum),
     items: Array.isArray(section.items) ? section.items : [],
-    fabrics: Array.isArray(section.fabrics) ? section.fabrics : [],
-    store: section.store ?? null,
-    raw: section,
-  };
-}
-
-function normalizeTalentSection(section) {
-  if (!section || typeof section !== 'object') return section ?? null;
-  return {
-    gain: toFiniteNumber(section.gain),
-    scrolls: Array.isArray(section.scrolls) ? section.scrolls : [],
-    scripts: Array.isArray(section.scripts) ? section.scripts : [],
-    expItems: Array.isArray(section.exp_items) ? section.exp_items : [],
-    ownExp: Array.isArray(section.own_exp) ? section.own_exp : [],
     raw: section,
   };
 }
@@ -164,31 +302,26 @@ export function normalizeCalculationSnapshot(input) {
     throw new TypeError('Calculation snapshot must be a JSON object.');
   }
 
-  const total = toFiniteNumber(input.total);
-  const attributes = normalizeAttributeRows(input.attributes);
-  const gainAttributes = normalizeAttributeRows(input.gain?.attributes);
-
   return {
     schemaVersion: 1,
     source: 'vampire-dominion-calculation',
-    total,
-    attributes,
+    total: toFiniteNumber(input.total),
+    attributes: normalizeAttributeRows(input.attributes),
     gain: {
       total: toFiniteNumber(input.gain?.total),
-      attributes: gainAttributes,
+      attributes: normalizeAttributeRows(input.gain?.attributes),
     },
     sections: {
       conclave: normalizeAttributeSection(input.conclave),
       levels: normalizeWardenLevels(input.levels),
-      bonds: normalizeSimpleResourceSection(input.bonds),
+      bonds: normalizeBondSection(input.bonds),
       auras: normalizeCollectionSection(input.auras, 'wardens', 'warden_id'),
       presences: normalizeCollectionSection(input.presences, 'lovers', 'lover_id'),
-      skins: normalizeSimpleResourceSection(input.skins),
+      skins: normalizeSkinSection(input.skins),
       talents: normalizeTalentSection(input.talents),
       courtyard: normalizeSimpleResourceSection(input.courtyard),
       books: normalizeSimpleResourceSection(input.books),
     },
-    // Keep the complete original response for parity diagnostics and future fields.
     raw: input,
   };
 }
