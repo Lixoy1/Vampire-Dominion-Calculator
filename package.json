@@ -1,13 +1,14 @@
 {
-  "name": "vampire-dominion-mini-app",
-  "version": "1.0.0",
+  "name": "vampire-dominion-crimson-obsidian",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node tests/engine.test.js && node tests/app-smoke.test.js",
+    "check": "node --check js/app.js && node --check js/engine.js && node --check js/data.js",
+    "verify:icons": "python verify_icons.py"
   },
   "dependencies": {
     "express": "^5.1.0",

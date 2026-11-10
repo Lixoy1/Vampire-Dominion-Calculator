@@ -711,124 +711,89 @@ export function summarizeBag(itemsCatalog, bagCountsById) {
 export function calculateTotalDominanceReport({
   db, // { wardens, lovers, items, promotes, conclaveLevels, courtyardLevels, presenceCurvesMap }
   account, // { blood, conclaveExp, courtyardExp, courtyardLvl, ownedWardens, ownedLovers, bag }
-  plan, // { conclave, courtyardToLvl, levels, bonds, summons }
+  plan, // { conclave, courtyardToLvl, levels, talents, auras, presences, bonds, skins, summons }
 }) {
   const bag = account.bag ?? {};
-  const ownedWardens = account.ownedWardens ?? {};
-  const ownedLovers = account.ownedLovers ?? {};
 
-  // Отчёт показывает весь уже накопленный вклад + дополнительный план.
-  // Исторические ресурсы за текущие уровни повторно не списываются.
-
-  // 1. Конклав: накопленный вклад с 0-го уровня + прирост по плану.
+  // 1. Конклав
   let conclaveGain = 0;
   let conclaveSpent = 0;
   for (const attr of ATTRIBUTES) {
-    const cur = Math.max(0, Number(account.conclave?.[attr] ?? 0));
-    const tgt = Math.max(cur, Number(plan.conclave?.[attr] ?? cur));
-    const wardensCount = Math.max(
-      1,
-      db.wardens.filter(w => ownedWardens[w.id] && w.attributes.includes(attr)).length
-    );
-
-    if (cur > 0) {
-      conclaveGain += calcConclaveBranch(db.conclaveLevels, 0, cur, wardensCount).directAttributeGain;
-    }
+    const cur = account.conclave?.[attr] ?? 0;
+    const tgt = plan.conclave?.[attr] ?? cur;
     if (tgt > cur) {
-      const planned = calcConclaveBranch(db.conclaveLevels, cur, tgt, wardensCount);
-      conclaveGain += planned.directAttributeGain;
-      conclaveSpent += planned.spent;
+      const wardensCount = db.wardens.filter(w => account.ownedWardens?.[w.id] && w.attributes.includes(attr)).length;
+      const res = calcConclaveBranch(db.conclaveLevels, cur, tgt, Math.max(1, wardensCount));
+      conclaveGain += res.directAttributeGain;
+      conclaveSpent += res.spent;
     }
   }
 
-  // 2. Сад: текущие уровни учитываются в базе, план — отдельно.
-  const currentCourtyardLvl = Math.max(0, Number(account.courtyardLvl ?? 0));
-  const targetCourtyardLvl = Math.max(
-    currentCourtyardLvl,
-    Number(plan.courtyardToLvl ?? currentCourtyardLvl)
+  // 2. Сад
+  const courtyardRes = calcCourtyardUpgrade(
+    db.courtyardLevels,
+    account.courtyardLvl ?? 0,
+    plan.courtyardToLvl ?? (account.courtyardLvl ?? 0)
   );
-  const courtyardBase = calcCourtyardUpgrade(db.courtyardLevels, 0, currentCourtyardLvl);
-  const courtyardPlanned = calcCourtyardUpgrade(db.courtyardLevels, currentCourtyardLvl, targetCourtyardLvl);
-  const courtyardGain = courtyardBase.totalGain + courtyardPlanned.totalGain;
 
-  // 3. Калькуляторы сумки.
+  // 3. Близость / Влечение и Опыт Гильдии (из сумки)
   const intimacyIds = db.items.filter(i => i.category === 'intimacy').map(i => i.id);
   const attractionIds = db.items.filter(i => i.category === 'attraction').map(i => i.id);
   const intimacyRes = calcBagPoints(bag, intimacyIds);
   const attractionRes = calcBagPoints(bag, attractionIds);
   const guildExpRes = calcGuildExp(bag, 3);
 
-  // 4. Смотрители: вклад с 1-го уровня до текущего + плановое улучшение.
+  // 4. Уровни и прорывы смотрителей
   let levelsGain = 0;
   let bloodSpent = 0;
-  for (const [wIdStr, owned] of Object.entries(ownedWardens)) {
+  for (const [wIdStr, tgtLvl] of Object.entries(plan.levels ?? {})) {
     const w = db.wardens.find(x => x.id === Number(wIdStr));
-    if (!w) continue;
-    const currentLvl = Math.max(1, Number(owned.level ?? 1));
-    const targetLvl = Math.max(currentLvl, Number(plan.levels?.[wIdStr] ?? currentLvl));
-    const promoteId = owned.promoteId ?? 1;
-
-    if (currentLvl > 1) {
-      const base = calcWardenLevelsUpgrade(
-        w, 1, currentLvl, promoteId, db.promotes, bag, owned.talents
-      );
-      levelsGain += base.baseGain;
-    }
-    if (targetLvl > currentLvl) {
-      const planned = calcWardenLevelsUpgrade(
-        w, currentLvl, targetLvl, promoteId, db.promotes, bag, owned.talents
-      );
-      levelsGain += planned.baseGain;
-      bloodSpent += planned.bloodSpent;
-    }
+    const owned = account.ownedWardens?.[wIdStr];
+    if (!w || !owned || tgtLvl <= owned.level) continue;
+    const res = calcWardenLevelsUpgrade(w, owned.level, tgtLvl, owned.promoteId ?? 1, db.promotes, bag, owned.talents);
+    levelsGain += res.baseGain;
+    bloodSpent += res.bloodSpent;
   }
 
-  // 5. Кровные узы: учитываем только выбранные в плане изменения.
+  // 5. Кровные узы партнёров
   let bondsGain = 0;
   let bondAffinitySpent = 0;
   for (const [lIdStr, bPlan] of Object.entries(plan.bonds ?? {})) {
-    const lover = db.lovers.find(x => x.id === Number(lIdStr));
-    const ownedLover = ownedLovers[lIdStr];
-    if (!lover || !ownedLover) continue;
-    const result = calcLoverBonds(
-      lover,
-      ownedLover.affinity ?? 0,
-      bPlan,
-      bPlan.wardenBaseAttrs,
-      ownedLover.closeness ?? 0
-    );
-    bondsGain += result.totalGain;
-    bondAffinitySpent += result.spentAffinity;
+    const l = db.lovers.find(x => x.id === Number(lIdStr));
+    const ownedLover = account.ownedLovers?.[lIdStr];
+    if (!l || !ownedLover) continue;
+    const res = calcLoverBonds(l, ownedLover.affinity ?? 0, bPlan, bPlan.wardenBaseAttrs, ownedLover.closeness ?? 0);
+    bondsGain += res.totalGain;
+    bondAffinitySpent += res.spentAffinity;
   }
 
-  // 6. Призыв.
+  // 6. Призыв
   const summonCandidates = getSummonCandidates(
     db.wardens,
     db.lovers,
-    new Set(Object.keys(ownedWardens).map(Number)),
-    new Set(Object.keys(ownedLovers).map(Number)),
+    new Set(Object.keys(account.ownedWardens ?? {}).map(Number)),
+    new Set(Object.keys(account.ownedLovers ?? {}).map(Number)),
     bag
   );
   const summonGain = (plan.summons?.wardens ?? []).reduce((sum, wId) => {
-    const candidate = summonCandidates.wardens.find(x => x.id === wId);
-    return sum + (candidate?.estimatedBaseGain ?? 0);
+    const c = summonCandidates.wardens.find(x => x.id === wId);
+    return sum + (c?.estimatedBaseGain ?? 0);
   }, 0);
 
-  const totalDominanceGain =
-    conclaveGain + courtyardGain + levelsGain + bondsGain + summonGain;
+  const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain + summonGain;
 
   return {
     gain: {
       total: totalDominanceGain,
       conclave: conclaveGain,
-      courtyard: courtyardGain,
+      courtyard: courtyardRes.totalGain,
       levels: levelsGain,
       bonds: bondsGain,
       summon: summonGain,
     },
     spent: {
       conclaveExp: conclaveSpent,
-      courtyardExp: courtyardPlanned.spent,
+      courtyardExp: courtyardRes.spent,
       blood: bloodSpent,
       bondAffinity: bondAffinitySpent,
     },

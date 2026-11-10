@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f2d6a0"/>
+      <stop offset=".45" stop-color="#a92336"/>
+      <stop offset="1" stop-color="#420d1a"/>
+    </linearGradient>
+    <filter id="s"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+  <path d="M64 4 112 23 106 78 64 122 22 78 16 23Z" fill="#10070b" stroke="url(#g)" stroke-width="5"/>
+  <path d="M64 15 101 30 96 73 64 106 32 73 27 30Z" fill="#250b12" stroke="#6c1b2b" stroke-width="2"/>
+  <circle cx="64" cy="48" r="25" fill="#a91f31" opacity=".22" filter="url(#s)"/>
+  <path d="M64 23a25 25 0 1 0 0 50 20 20 0 1 1 0-50Z" fill="#d6b77c"/>
+  <path d="m43 82 9-24 12 15 12-15 9 24-21 18Z" fill="url(#g)" stroke="#f1d6a3" stroke-width="1.5"/>
+  <text x="64" y="69" font-family="Georgia,serif" font-size="22" font-weight="bold" fill="#fff1d5" text-anchor="middle">VD</text>
+</svg>
