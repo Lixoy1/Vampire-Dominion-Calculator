@@ -161,8 +161,21 @@ test('unified dominance report returns finite totals and bond spend', () => {
   assert.ok(Number.isFinite(report.spent.bondAffinity));
   assert.ok(report.spent.bondAffinity > 0);
   assert.ok(report.gain.total > 0);
+  assert.equal(report.coverage.levels.status, 'approximate');
+  assert.equal(report.coverage.talents.included, false);
+  assert.equal(report.isComplete, false);
+  assert.equal(report.canApply, false, 'plans using unverified blood and bond costs cannot be committed');
+  assert.equal(Object.values(report.gain.byAttribute).reduce((sum, value) => sum + value, 0), report.gain.total);
 });
 
+
+test('level upgrade exposes per-attribute contributions and flags approximate blood cost', () => {
+  const warden = GAME_DB.wardens[0];
+  const result = E.calcWardenLevelsUpgrade(warden, 1, 2, 1, GAME_DB.warden_promotes, {}, {});
+  assert.equal(result.bloodCostIsApproximate, true);
+  assert.equal(Object.values(result.gainByAttribute).reduce((sum, value) => sum + value, 0), result.baseGain);
+  assert.ok(Object.keys(result.gainByAttribute).every(key => E.ATTRIBUTES.includes(key)));
+});
 
 test('promotion checks expose required breakthrough items without mutating inventory', () => {
   const warden = GAME_DB.wardens[0];
