@@ -23,14 +23,14 @@ const mainContent = document.getElementById('main-content');
 function renderTab(tabId) {
   // Виброотклик при переключении
   if (tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-  
+
   // Убираем класс active у всех и ставим текущему
   tabs.forEach(t => t.classList.remove('active'));
   document.querySelector(`[data-target="${tabId}"]`).classList.add('active');
-  
+
   // Рендер контента (скелет для демонстрации архитектуры)
   let html = '';
-  
+
   if (tabId === 'tab-citadel') {
     html = `
       <div class="glass-card" style="display:flex; align-items:center; gap:16px;">
@@ -41,11 +41,11 @@ function renderTab(tabId) {
           <div style="font-size:12px; color:var(--text-muted);">EU S-629</div>
         </div>
       </div>
-      
+
       <button class="btn-oracle" onclick="alert('Оракул крови активирован! Распределяем ресурсы...')">
         ${DICT.oracle_btn}
       </button>
-      
+
       <div class="glass-card" style="margin-top:16px;">
         <h2 class="gothic-title">Сводка Господства</h2>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
@@ -67,14 +67,14 @@ function renderTab(tabId) {
           </div>
         </div>
       </div>
-      
+
       <div class="glass-card" style="border-color: var(--accent-ice);">
         <h2 class="gothic-title" style="color:var(--accent-ice);">${DICT.connect_game}</h2>
         <p style="font-size:13px; color:var(--text-muted); margin-bottom:12px;">Подтяните данные из игры по коду из письма. Мы ничего не меняем в игре, только читаем параметры.</p>
         <button style="background:var(--accent-ice); color:#000; border:none; padding:10px 16px; border-radius:8px; font-weight:bold; width:100%;">Получить код</button>
       </div>
     `;
-  } 
+  }
   else if (tabId === 'tab-roster') {
     html = `<h2 class="gothic-title">Вассалы и Фавориты</h2><p style="color:var(--text-muted);">Здесь будут компактные списки 68 смотрителей и 45 партнёров с поиском и фильтрами.</p>`;
   }
@@ -85,9 +85,9 @@ function renderTab(tabId) {
     html = `<h2 class="gothic-title">Ритуалы Силы</h2><p style="color:var(--text-muted);">Калькуляторы Близости, Влечения и Опыта Гильдии.</p>`;
   }
   else if (tabId === 'tab-settings') {
-    html = `<h2 class="gotic-title">Паставия</h2><p style="color:var(--text-muted);">Настрайки языка, темы, экспорт/им�орт профиля.</p>`;
+    html = `<h2 class="gothic-title">Профиль</h2><p style="color:var(--text-muted);">Настройки языка, темы, экспорт/импорт профиля.</p>`;
   }
-  
+
   mainContent.innerHTML = html;
 }
 
