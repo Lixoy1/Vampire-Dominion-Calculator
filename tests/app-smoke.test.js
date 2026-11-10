@@ -40,7 +40,7 @@ for (const expected of expectedTabs) {
   assert.ok(tab, `tab ${expected} is rendered`);
   assert.equal(typeof tab.handlers.click, 'function', `tab ${expected} has a click handler`);
   tab.handlers.click();
-  assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
+  assert.ok(root.innerHTML.includes('class="app-shell"'), `app shell renders on ${expected}`);
 }
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
 const dominanceTab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === 'dominance');
