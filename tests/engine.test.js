@@ -98,6 +98,27 @@ test('Closeness unlocks bond branches; Affinity pays their cost', () => {
   assert.ok(open.leftAffinity < 100000);
 });
 
+test('summon requires confirmed availability and a real item requirement', () => {
+  const sampleWardens = [
+    { id: 1, name: 'UNKNOWN_FREE', summon_item_id: null, summon_item_count: null, talents: [{ stars: 4 }] },
+    { id: 2, name: 'PAID', summon_item_id: 77, summon_item_count: 5, summon_gain: '1234', talents: [{ stars: 3 }] },
+    { id: 3, name: 'EXPLICITLY_FREE', summon_item_id: null, summon_item_count: 0, summon_possible: true, talents: [{ stars: 2 }] },
+  ];
+  const sampleLovers = [
+    { id: 20, name: 'UNKNOWN_LOVER', warden_id: 1, summon_item_id: null, summon_item_count: null },
+  ];
+  const result = E.getSummonCandidates(
+    sampleWardens, sampleLovers, new Set(), new Set(), { 77: 5 }
+  );
+  assert.equal(result.wardens.find(x => x.id === 1).canSummon, false);
+  assert.equal(result.wardens.find(x => x.id === 1).availabilityReason, 'unknown_requirement');
+  assert.equal(result.wardens.find(x => x.id === 2).canSummon, true);
+  assert.equal(result.wardens.find(x => x.id === 2).estimatedBaseGain, 1234);
+  assert.equal(result.wardens.find(x => x.id === 3).canSummon, true);
+  assert.equal(result.wardens.find(x => x.id === 3).estimatedBaseGain, null);
+  assert.equal(result.lovers.find(x => x.id === 20).canSummon, false);
+});
+
 test('bag intimacy calculation returns min/expected/max', () => {
   const result = E.calcBagPoints({ 4230: 2 }, [4230]);
   assert.deepEqual([result.minimum, result.expected, result.maximum], [8, 20, 100]);
