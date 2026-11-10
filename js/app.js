@@ -185,6 +185,7 @@ function loadState() {
     'vd_chronicles_v4_4_clean',
     'vd_chronicles_v4_1',
     'vd_mini_app_v4_1',
+    'vd_chronicles_reference_v5',
     'vampire_dominion_v3_state',
   ];
   for (const key of keys) {
@@ -428,6 +429,10 @@ function commitPlanToAccount() {
   const db = getDbContext();
   const account = structuredClone(state.account);
   const plan = structuredClone(state.plan);
+  for (const [loverId, bondPlan] of Object.entries(plan.bonds || {})) {
+    const lover = db.lovers.find(item => item.id === Number(loverId));
+    if (lover) bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id);
+  }
   const report = calculateTotalDominanceReport({ db, account, plan });
   const fail = message => { alert(message); return false; };
 
@@ -827,8 +832,10 @@ function renderTalentsTab(db) {
         const baseStars = calcWardenBaseTalentStars(w);
         const promId = owned?.promoteId || 1;
         const bonusExp = calcPromoteBonusExp(db.promotes, promId);
+        const personalExp = Math.max(0, Number(owned?.exp) || 0);
+        const totalTalentExp = bonusExp + personalExp;
         const maxTalentLvl = db.promotes.find(p => p.id === promId)?.max_talent_lvl ?? 40;
-        const dpPoints = calcAchievableExpTalentPoints(w, maxTalentLvl, bonusExp);
+        const dpPoints = calcAchievableExpTalentPoints(w, maxTalentLvl, totalTalentExp);
         const trainedStars = owned ? calcWardenTalentSum(w, owned.talents || {}) : 0;
         return `
           <div class="item-row">
@@ -836,7 +843,7 @@ function renderTalentsTab(db) {
             <div class="row-info">
               <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)} ${isOwned ? '<span class="badge badge-ok">В профиле</span>' : '<span class="badge">Не призван</span>'}</div>
               <div class="row-sub">
-                Талантов: ${w.talents.length} · Звёзды: <b>${baseStars}★</b> · Текущий вес: <b>${owned ? trainedStars : '—'}</b> · Бонус опыта за прорывы: ${fmt(bonusExp)} (+${dpPoints} очк.)
+                Талантов: ${w.talents.length} · Звёзды: <b>${baseStars}★</b> · Текущий вес: <b>${owned ? trainedStars : '—'}</b> · Опыт талантов: ${fmt(personalExp)} + ${fmt(bonusExp)} за прорывы (${dpPoints} очк. доступно)
               </div>
             </div>
             <div class="row-controls">

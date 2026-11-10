@@ -167,4 +167,20 @@ test('skin optimizer respects fabric budget and ownership eligibility', () => {
   assert.equal(result[2], undefined, 'unowned unavailable skin must not be raised');
 });
 
+test('breakthrough reservation accumulates repeated item costs across tiers', () => {
+  const warden = GAME_DB.wardens[0];
+  const syntheticPromotes = [
+    { id: 1, min_warden_lvl: 1, price: 0, item_ids: [], max_talent_lvl: 40 },
+    { id: 2, min_warden_lvl: 10, price: 1, item_ids: [990001] },
+    { id: 3, min_warden_lvl: 50, price: 1, item_ids: [990001] },
+  ];
+  const oneSeal = { 990001: 1 };
+  const result = E.calcWardenLevelsUpgrade(
+    warden, 1, 100, 1, syntheticPromotes, oneSeal, {}
+  );
+  assert.equal(result.canPromote, false);
+  assert.deepEqual(result.missingItems, [{ promoteId: 3, itemId: 990001, need: 1 }]);
+  assert.deepEqual(oneSeal, { 990001: 1 }, 'checks must not mutate inventory');
+});
+
 console.log(`\n${passed} test groups passed.`);

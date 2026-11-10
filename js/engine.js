@@ -548,12 +548,17 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   // Проверка требуемых прорывов
   const neededPromotes = promotes.filter(p => p.id > currentPromoteId && p.min_warden_lvl < targetLvl);
   const missingItems = [];
+  const reservedByItem = new Map();
   for (const p of neededPromotes) {
-    for (const itemId of p.item_ids) {
-      const have = bagCountsById[itemId] ?? 0;
-      if (have < p.price) {
-        missingItems.push({ promoteId: p.id, itemId, need: p.price - have });
+    const price = Math.max(0, Number(p.price) || 0);
+    for (const itemId of p.item_ids || []) {
+      const have = Math.max(0, Number(bagCountsById[itemId]) || 0);
+      const alreadyReserved = reservedByItem.get(itemId) || 0;
+      const available = Math.max(0, have - alreadyReserved);
+      if (available < price) {
+        missingItems.push({ promoteId: p.id, itemId, need: price - available });
       }
+      reservedByItem.set(itemId, alreadyReserved + price);
     }
   }
 
