@@ -947,7 +947,23 @@ export function calculateTotalDominanceReport({
   if (courtyardRes.spent > Number(account.courtyardExp || 0)) {
     currencyIssues.push({ type: 'courtyard_points', need: courtyardRes.spent, available: Number(account.courtyardExp || 0) });
   }
-  const allIssues = [...inventoryIssues, ...summonIssues, ...currencyIssues];
+  const unsupportedPlanCategories = [
+    ['talents', plan.talents],
+    ['auras', plan.auras],
+    ['presences', plan.presences],
+    ['skins', plan.skins],
+  ].filter(([, value]) => {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return Boolean(value);
+  }).map(([category]) => category);
+
+  const unsupportedPlanIssues = unsupportedPlanCategories.map(category => ({
+    type: 'unsupported_plan_category',
+    category,
+  }));
+  const allIssues = [...inventoryIssues, ...summonIssues, ...currencyIssues, ...unsupportedPlanIssues];
 
   const coverage = {
     conclave: { status: 'table_based', included: true },
@@ -976,7 +992,8 @@ export function calculateTotalDominanceReport({
   const approximateReasons = [];
   if (hasLevelChanges) approximateReasons.push('Расход Крови для уровней пока ориентировочный.');
   if (hasBondChanges) approximateReasons.push('Стоимость Кровных уз пока ориентировочная.');
-  if (allIssues.length) approximateReasons.push('Есть нехватка ресурсов или недоступные действия.');
+  if (allIssues.some(issue => issue.type !== 'unsupported_plan_category')) approximateReasons.push('Есть нехватка ресурсов или недоступные действия.');
+  if (unsupportedPlanCategories.length) approximateReasons.push(`План содержит неподдерживаемые действия: ${unsupportedPlanCategories.join(', ')}. Они не будут применены.`);
 
   return {
     gain: {
