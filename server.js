@@ -14,11 +14,23 @@ const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').r
 app.disable('x-powered-by');
 app.use(express.json({ limit: '32kb' }));
 
-// Отдаём только публичные файлы Mini App, не раскрывая server.js и package.json.
-app.use('/js', express.static(path.join(__dirname, 'js'), { fallthrough: false, maxAge: '1h' }));
-app.use('/css', express.static(path.join(__dirname, 'css'), { fallthrough: false, maxAge: '1h' }));
+// Отдаём публичные файлы Mini App без длительного кеширования: Telegram WebView
+// иначе может продолжать показывать старый JS после нового деплоя.
+const staticOptions = {
+  fallthrough: false,
+  etag: true,
+  lastModified: true,
+  maxAge: 0,
+  setHeaders(res) { res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); }
+};
+app.use('/js', express.static(path.join(__dirname, 'js'), staticOptions));
+app.use('/css', express.static(path.join(__dirname, 'css'), staticOptions));
+app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
 
-app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, app: 'Vampire Dominion', botConfigured: Boolean(BOT_TOKEN) });
 });
