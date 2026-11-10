@@ -1,13 +1,13 @@
 {
   "name": "vampire-dominion-crimson-obsidian",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "private": true,
   "type": "module",
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/app-smoke.test.js",
-    "check": "node --check js/app.js && node --check js/engine.js && node --check js/data.js",
+    "test": "node tests/engine.test.js && node tests/snapshot-adapter.test.js && node tests/app-smoke.test.js",
+    "check": "node --check js/app.js && node --check js/engine.js && node --check js/data.js && node --check js/snapshot-adapter.js",
     "verify:icons": "python verify_icons.py"
   },
   "dependencies": {
