@@ -7,50 +7,31 @@
   --bg-panel: rgba(22, 17, 30, 0.75);
   --bg-glass: rgba(35, 25, 45, 0.6);
   --glass-border: rgba(229, 185, 99, 0.15);
-  
   --text-main: #f3ede2;
   --text-muted: #8b7d9c;
-  
   --accent-crimson: #d91e36;
   --accent-crimson-glow: rgba(217, 30, 54, 0.4);
-  
   --accent-gold: #e5b963;
   --accent-gold-glow: rgba(229, 185, 99, 0.3);
-  
-  --accent-ice: #38bdf8; /* Ледяные глаза волка */
-  
+  --accent-ice: #38bdf8;
   --tab-height: 64px;
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
-
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
 body {
   background-color: var(--bg-deep);
   color: var(--text-main);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  overflow: hidden; /* Запрет системного скролла всей страницы, скроллится только view-area */
+  overflow: hidden;
 }
-
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  height: 100dv;
-}
-
-/* Область контента с мягкии скроллом */
+.app-container { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 .view-area {
   flex: 1;
   overflow-y: auto;
   padding: 16px 16px calc(var(--tab-height) + var(--safe-bottom) + 16px);
   scroll-behavior: smooth;
 }
-
-/* Скрываем скроллбар для красоты */
 .view-area::-webkit-scrollbar { display: none; }
-
-/* Нижний Tab Bar */
 .bottom-tab-bar {
   position: fixed;
   bottom: 0;
@@ -67,7 +48,6 @@ body {
   align-items: center;
   z-index: 1000;
 }
-
 .tab-item {
   background: transparent;
   border: none;
@@ -84,23 +64,16 @@ body {
   width: 100%;
   height: 100%;
 }
-
-.tab-item.active {
-  color: var(--accent-gold);
-}
-
+.tab-item.active { color: var(--accent-gold); }
 .tab-icon {
   font-size: 22px;
   filter: grayscale(100%) opacity(0.6);
   transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-
 .tab-item.active .tab-icon {
   filter: grayscale(0%) drop-shadow(0 0 8px var(--accent-gold-glow));
   transform: translateY(-2px) scale(1.1);
 }
-
-/* Карточки (Glassmorphism) */
 .glass-card {
   background: var(--bg-glass);
   backdrop-filter: blur(8px);
@@ -110,8 +83,6 @@ body {
   margin-bottom: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.4);
 }
-
-/* Кнопка "Оракул Крови" */
 .btn-oracle {
   background: linear-gradient(135deg, #a61628, var(--accent-crimson));
   color: #fff;
@@ -130,8 +101,6 @@ body {
   cursor: pointer;
 }
 .btn-oracle:active { transform: scale(0.98); }
-
-/* Паголовки */
 .gothic-title {
   font-family: "Cormorant Garamond", serif;
   font-size: 24px;
@@ -141,8 +110,6 @@ body {
   text-transform: uppercase;
   letter-spacing: 1px;
 }
-
-/* Модальнон окно (Bottom Sheet) */
 .bottom-sheet {
   position: fixed;
   inset: 0;
@@ -153,7 +120,6 @@ body {
   pointer-events: none;
 }
 .bottom-sheet:not(.hidden) { pointer-events: auto; }
-
 .sheet-overlay {
   position: absolute;
   inset: 0;
@@ -163,7 +129,6 @@ body {
   transition: opacity 0.3s ease;
 }
 .bottom-sheet:not(.hidden) .sheet-overlay { opacity: 1; }
-
 .sheet-content {
   position: relative;
   background: var(--bg-panel);
@@ -175,8 +140,6 @@ body {
   backdrop-filter: blur(20px);
 }
 .bottom-sheet:not(.hidden) .sheet-content { transform: translateY(0); }
-
-/* линама */
 .sheet-handle {
   width: 40px;
   height: 4px;
@@ -184,6 +147,4 @@ body {
   border-radius: 2px;
   margin: 0 auto 16px;
 }
-
-/* Поляжном */
 .hidden { display: none !important; }
