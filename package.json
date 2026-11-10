@@ -3,11 +3,13 @@
   "version": "6.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/snapshot-adapter.test.js && node tests/inventory-ledger.test.js && node tests/app-smoke.test.js",
-    "check": "node --check server.js && node --check js/app.js && node --check js/engine.js && node --check js/data.js && node --check js/snapshot-adapter.js && node --check js/inventory-ledger.js",
+    "test": "node tests/engine.test.js && node tests/telegram-auth.test.js && node tests/snapshot-adapter.test.js && node tests/inventory-ledger.test.js && node tests/app-smoke.test.js",
+    "check": "node --check server.js && node --check js/telegram-auth.js && node --check js/app.js && node --check js/engine.js && node --check js/data.js && node --check js/snapshot-adapter.js && node --check js/inventory-ledger.js",
     "verify:icons": "python verify_icons.py"
   },
   "dependencies": {
