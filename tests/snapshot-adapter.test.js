@@ -24,7 +24,8 @@ assert.equal(normalized.sections.auras.items[0].entities[0].levels[0].nextGain, 
 assert.equal(normalized.sections.auras.items[0].entities[0].summonCost, null);
 assert.equal(normalized.sections.presences.items[0].entities[0].levels[0].nextCost, 100);
 assert.equal(normalized.sections.skins.store.level, 3);
-assert.equal(normalized.sections.talents.scripts[0].wardens[0].talents[0].nextGain, '52.0000000000');
+assert.equal(normalized.sections.talents.scripts[0].wardens[0].talents[0].nextGain, 52);
+assert.equal(normalized.sections.bonds.idle.length, 3);
 assert.equal(normalized.sections.books.raw.expected, '1766198.00');
 assert.equal(normalized.raw, fixture, 'raw source object must remain available without mutation');
 assert.equal(toFiniteNumber(null), null);
