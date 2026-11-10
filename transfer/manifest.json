@@ -1,0 +1,16 @@
+{
+  "bundle": "v5-bundle.tar.gz",
+  "chunks": 4,
+  "files": [
+    "README.md",
+    "index.html",
+    "package.json",
+    "js/app.js",
+    "js/engine.js",
+    "assets/css/style.css",
+    "assets/crest.svg",
+    "tests/engine.test.js",
+    "tests/app-smoke.test.js",
+    "verify_icons.py"
+  ]
+}
