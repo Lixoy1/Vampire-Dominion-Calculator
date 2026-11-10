@@ -859,6 +859,7 @@ export function calculateTotalDominanceReport({
   let bondsGain = 0;
   let bondAffinitySpent = 0;
   const bondDetails = [];
+  const currencyIssues = [];
   for (const [loverIdString, bondPlan] of Object.entries(plan.bonds ?? {})) {
     const lover = db.lovers.find(item => item.id === Number(loverIdString));
     const ownedLover = account.ownedLovers?.[loverIdString];
@@ -872,6 +873,9 @@ export function calculateTotalDominanceReport({
     );
     bondsGain += result.totalGain;
     bondAffinitySpent += result.spentAffinity;
+    if (result.spentAffinity > Number(ownedLover.affinity || 0)) {
+      currencyIssues.push({ type: 'bond_affinity', loverId: lover.id, need: result.spentAffinity, available: Number(ownedLover.affinity || 0) });
+    }
     for (const attr of ATTRIBUTES) gainByAttribute[attr] += result.gainByAttr[attr];
     bondDetails.push(result);
   }
@@ -934,7 +938,16 @@ export function calculateTotalDominanceReport({
     result.details.some(detail => detail.costFlat > 0 || detail.costPct > 0)
   );
   const hasUnverifiedSpend = hasLevelChanges || hasBondChanges;
-  const allIssues = [...inventoryIssues, ...summonIssues];
+  if (bloodSpent > Number(account.blood || 0)) {
+    currencyIssues.push({ type: 'blood', need: bloodSpent, available: Number(account.blood || 0) });
+  }
+  if (conclaveSpent > Number(account.conclaveExp || 0)) {
+    currencyIssues.push({ type: 'conclave_points', need: conclaveSpent, available: Number(account.conclaveExp || 0) });
+  }
+  if (courtyardRes.spent > Number(account.courtyardExp || 0)) {
+    currencyIssues.push({ type: 'courtyard_points', need: courtyardRes.spent, available: Number(account.courtyardExp || 0) });
+  }
+  const allIssues = [...inventoryIssues, ...summonIssues, ...currencyIssues];
 
   const coverage = {
     conclave: { status: 'table_based', included: true },
