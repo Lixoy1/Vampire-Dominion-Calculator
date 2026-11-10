@@ -138,3 +138,16 @@ Telegram Mini App `initData` proves the Telegram user context; it is not a Game 
 6. Run syntax checks, unit tests, app smoke tests and icon verification.
 7. Test the Telegram WebView interaction model, mobile horizontal navigation, profile persistence, import/export and both themes.
 8. Deploy only after the test gates pass; describe any remaining unverified formula honestly.
+
+## Additional parity findings from account snapshots
+
+- For Warden 10170 at level 1, the captured server response reported next blood cost 115 and next gain 7.
+- For Wardens 10540 and 10660 at level 5, the captured server response reported next blood cost 961, with next gains 105 and 562 respectively.
+- The current local exponential blood-cost approximation does not reproduce those checkpoints (for example, it returns 100 at level 1 and approximately 130 at level 5). Therefore plans which change Warden levels are marked approximate and cannot be committed until the curve is reconciled.
+- Scarlet Bond cost curves are also approximate. A single response showed flat next costs of 0 and percentage next costs of 20/54 for one account/target; those values are not enough to derive a universal curve.
+- The latest catalogue-count JSON reports 240 items and 108 skins while the checked-in catalogue contains 237 items and 105 skins. Do not add synthetic records; reconcile the exact IDs and metadata first.
+- The server `summon:false` flag was observed alongside zero summon cost for some candidates. A zero cost does not imply a free or available summon.
+
+## Current release boundary
+
+The current branch has a tested Telegram Mini App shell, local profiles, the catalogue, JSON import/export, a snapshot viewer, and a shared inventory ledger. The local Dominance report is deliberately partial. It must not be presented as an exact full-game total until Talents, Auras, Presences, Skins and all level/bond formulas are integrated and checked against multiple server snapshots. The Oracle remains a staged implementation rather than a completed global optimiser.
