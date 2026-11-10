@@ -1,10 +1,12 @@
 /**
  * ============================================================================
- * VAMPIRE DOMINION / ПОМОЩНИК ДАМПИРА — ПОЛНЫЙ ДВИЖОК РАСЧЁТОВ И ОПТИМИЗАЦИИ
+ * НАСЛЕДИЕ ВАМПИРОВ — CRIMSON OBSIDIAN V6
  * ============================================================================
- * 100% локальный, бесплатный и без серверных лимитов (аналог подписки Plus).
- * Содержит все формулы, константы и жадные/ДП алгоритмы распределения ресурсов.
+ * Локальные расчётные модули и алгоритмы планирования.
+ * Точность каждого источника маркируется; непроверенные формулы не выдаются за серверные.
  */
+
+import { createInventoryLedger } from './inventory-ledger.js';
 
 export const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 
@@ -212,7 +214,7 @@ export function calcAchievableExpTalentPoints(warden, maxTalentLvl, exp) {
  * 6. АЛГОРИТМ ОПТИМАЛЬНОГО ШАГА (bestPath)
  * Оригинальная функция из bestPath-DT3D5g16.js:
  * Подсвечивает золотым кольцом тот элемент, который даёт максимальный прирост господства на единицу ресурса,
- * и разворачивает цепочку `runs` для кнопки «Распределить» (БЕСПЛАТНО, без Plus!).
+ * и разворачивает цепочку `runs` для локального планирования.
  */
 export function getNextBestStep(bestPath, baseTargets, currentTargets) {
   if (!bestPath) return undefined;
@@ -501,7 +503,7 @@ export function calcMaxCourtyardLevel(courtyardLevels, currentLvl, availablePoin
  *   BaseTalentAttr = Sum(TalentLevel * TalentStars) * ( (Level^2 + Level + 18) / 20  или табличный множитель уровня )
  *   Точная формула прироста за 1 уровень смотрителя:
  *   ΔAttr(L -> L+1) = TotalTalentStarsLevel * (L + 1) / 10  (для L >= 1)
- * - Полный расчёт статов смотрителя по всем 4 атрибутам с учётом Вдохновений (Auras), Обликов, Кровных Уз, Конклава и Сада.
+ * - Агрегация всех источников требует серверных контрольных точек; непроверенные модули отмечаются в coverage.
  */
 export function calcWardenTalentSum(warden, talentLevelsByPos = {}) {
   // По умолчанию каждый талант имеет 1-й уровень при призыве
@@ -534,29 +536,54 @@ export function calcBloodCostForLevel(level) {
   return Math.round(605000000 * Math.pow(1.02, level - 400));
 }
 
+function allocateRoundedAttributeGain(rawByAttribute) {
+  const total = Math.round(ATTRIBUTES.reduce((sum, attr) => sum + rawByAttribute[attr], 0));
+  const allocated = Object.fromEntries(ATTRIBUTES.map(attr => [attr, Math.floor(rawByAttribute[attr])]));
+  let remainder = total - ATTRIBUTES.reduce((sum, attr) => sum + allocated[attr], 0);
+  const order = [...ATTRIBUTES].sort((a, b) =>
+    (rawByAttribute[b] - Math.floor(rawByAttribute[b])) -
+    (rawByAttribute[a] - Math.floor(rawByAttribute[a]))
+  );
+  for (const attr of order) {
+    if (remainder <= 0) break;
+    allocated[attr] += 1;
+    remainder -= 1;
+  }
+  return allocated;
+}
+
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
-  const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
   const multBefore = calcWardenLevelMultiplier(currentLvl);
   const multAfter = calcWardenLevelMultiplier(targetLvl);
-  const baseGain = Math.round(talentSum * (multAfter - multBefore));
+  const multiplierDelta = multAfter - multBefore;
+  const rawGainByAttribute = Object.fromEntries(ATTRIBUTES.map(attr => [attr, 0]));
+
+  warden.talents.forEach((talent, index) => {
+    if (!ATTRIBUTES.includes(talent.attribute)) return;
+    const talentLevel = Math.max(0, Number(talentLevelsByPos[index] ?? 1) || 0);
+    rawGainByAttribute[talent.attribute] += talentLevel * Number(talent.stars || 0) * multiplierDelta;
+  });
+
+  const gainByAttribute = allocateRoundedAttributeGain(rawGainByAttribute);
+  const baseGain = ATTRIBUTES.reduce((sum, attr) => sum + gainByAttribute[attr], 0);
 
   let bloodSpent = 0;
-  for (let l = currentLvl; l < targetLvl; l++) {
-    bloodSpent += calcBloodCostForLevel(l);
+  for (let level = currentLvl; level < targetLvl; level++) {
+    bloodSpent += calcBloodCostForLevel(level);
   }
 
-  // Проверка требуемых прорывов
+  // Проверка требуемых прорывов. Цена уровня крови остаётся отдельной оценкой.
   const neededPromotes = promotes.filter(p => p.id > currentPromoteId && p.min_warden_lvl < targetLvl);
   const missingItems = [];
   const reservedByItem = new Map();
-  for (const p of neededPromotes) {
-    const price = Math.max(0, Number(p.price) || 0);
-    for (const itemId of p.item_ids || []) {
+  for (const promote of neededPromotes) {
+    const price = Math.max(0, Number(promote.price) || 0);
+    for (const itemId of promote.item_ids || []) {
       const have = Math.max(0, Number(bagCountsById[itemId]) || 0);
       const alreadyReserved = reservedByItem.get(itemId) || 0;
       const available = Math.max(0, have - alreadyReserved);
       if (available < price) {
-        missingItems.push({ promoteId: p.id, itemId, need: price - available });
+        missingItems.push({ promoteId: promote.id, itemId, need: price - available });
       }
       reservedByItem.set(itemId, alreadyReserved + price);
     }
@@ -567,7 +594,9 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     fromLvl: currentLvl,
     toLvl: targetLvl,
     bloodSpent,
+    bloodCostIsApproximate: true,
     baseGain,
+    gainByAttribute,
     neededPromotes,
     missingItems,
     canPromote: missingItems.length === 0,
@@ -645,46 +674,68 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
 /**
  * 13. КАЛЬКУЛЯТОР ПРИЗЫВА СМОТРИТЕЛЕЙ И ПАРТНЁРОВ (CalcSummon)
  * Проверяет, кого можно призвать за предметы из сумки (`summon_item_id`, `summon_item_count`)
- * или бесплатно (ивенты/сюжет/VIP), и считает прямой прирост господства от призыва.
+ * либо по явному разрешению источника данных; неизвестные условия не считаются доступными.
  */
 export function getSummonCandidates(wardens, lovers, ownedWardenIds, ownedLoverIds, bagCountsById) {
+  const getAvailability = template => {
+    const itemId = template.summon_item_id ?? null;
+    const rawCost = template.summon_item_count;
+    const cost = rawCost == null ? 0 : Math.max(0, Number(rawCost) || 0);
+    const have = itemId == null ? 0 : Math.max(0, Number(bagCountsById[itemId]) || 0);
+    const hasExplicitFlag = typeof template.summon_possible === 'boolean';
+    const hasKnownItemRequirement = itemId != null && cost > 0;
+
+    // Нулевая/неизвестная цена сама по себе не подтверждает право на призыв.
+    // Разрешаем действие только при явном summon_possible=true либо при
+    // известном требуемом предмете и достаточном количестве в сумке.
+    const canSummon = hasExplicitFlag
+      ? template.summon_possible && (hasKnownItemRequirement ? have >= cost : true)
+      : hasKnownItemRequirement && have >= cost;
+
+    return {
+      itemId,
+      cost,
+      have,
+      availabilityKnown: hasExplicitFlag || hasKnownItemRequirement,
+      canSummon,
+      availabilityReason: canSummon
+        ? null
+        : hasExplicitFlag && !template.summon_possible
+          ? 'not_available'
+          : !hasKnownItemRequirement
+            ? 'unknown_requirement'
+            : 'insufficient_items',
+    };
+  };
+
   const wardenCandidates = wardens
     .filter(w => !ownedWardenIds.has(w.id))
     .map(w => {
-      const cost = w.summon_item_count ?? 0;
-      const have = w.summon_item_id ? (bagCountsById[w.summon_item_id] ?? 0) : 0;
+      const availability = getAvailability(w);
       const baseStars = calcWardenBaseTalentStars(w);
+      const rawSummonGain = w.summon_gain ?? w.summonGain;
+      const parsedSummonGain = rawSummonGain == null ? null : Number(rawSummonGain);
       return {
         kind: 'warden',
         id: w.id,
         name: w.name,
-        itemId: w.summon_item_id,
-        cost,
-        have,
-        canSummon: cost === 0 || have >= cost,
+        ...availability,
         baseTalentStars: baseStars,
-        // Базовый прирост при призыве на 1-й уровень (с учётом стартовых аур)
-        estimatedBaseGain: baseStars * 10,
+        // Прирост не выводится из числа звёзд: принимаем только явно заданное значение.
+        estimatedBaseGain: Number.isFinite(parsedSummonGain) ? parsedSummonGain : null,
       };
     });
 
   const loverCandidates = lovers
     .filter(l => !ownedLoverIds.has(l.id))
-    .map(l => {
-      const cost = l.summon_item_count ?? 0;
-      const have = l.summon_item_id ? (bagCountsById[l.summon_item_id] ?? 0) : 0;
-      return {
-        kind: 'lover',
-        id: l.id,
-        name: l.name,
-        wardenId: l.warden_id,
-        hasWarden: ownedWardenIds.has(l.warden_id),
-        itemId: l.summon_item_id,
-        cost,
-        have,
-        canSummon: cost === 0 || have >= cost,
-      };
-    });
+    .map(l => ({
+      kind: 'lover',
+      id: l.id,
+      name: l.name,
+      wardenId: l.warden_id,
+      hasWarden: ownedWardenIds.has(l.warden_id),
+      ...getAvailability(l),
+    }));
 
   return { wardens: wardenCandidates, lovers: loverCandidates };
 }
@@ -714,78 +765,235 @@ export function summarizeBag(itemsCatalog, bagCountsById) {
  * Объединяет все 8 разделов в единый отчёт с детализацией по каждой ветке и остаткам ресурсов.
  */
 export function calculateTotalDominanceReport({
-  db, // { wardens, lovers, items, promotes, conclaveLevels, courtyardLevels, presenceCurvesMap }
-  account, // { blood, conclaveExp, courtyardExp, courtyardLvl, ownedWardens, ownedLovers, bag }
-  plan, // { conclave, courtyardToLvl, levels, talents, auras, presences, bonds, skins, summons }
+  db,
+  account,
+  plan,
 }) {
   const bag = account.bag ?? {};
+  const inventoryLedger = createInventoryLedger(bag);
+  const inventoryIssues = [];
+  const gainByAttribute = Object.fromEntries(ATTRIBUTES.map(attr => [attr, 0]));
 
-  // 1. Конклав
+  // 1. Конклав: стоимость и бонус берутся из локальной таблицы уровней.
   let conclaveGain = 0;
   let conclaveSpent = 0;
   for (const attr of ATTRIBUTES) {
-    const cur = account.conclave?.[attr] ?? 0;
-    const tgt = plan.conclave?.[attr] ?? cur;
-    if (tgt > cur) {
-      const wardensCount = db.wardens.filter(w => account.ownedWardens?.[w.id] && w.attributes.includes(attr)).length;
-      const res = calcConclaveBranch(db.conclaveLevels, cur, tgt, Math.max(1, wardensCount));
-      conclaveGain += res.directAttributeGain;
-      conclaveSpent += res.spent;
+    const currentLevel = account.conclave?.[attr] ?? 0;
+    const targetLevel = plan.conclave?.[attr] ?? currentLevel;
+    if (targetLevel > currentLevel) {
+      const wardensCount = db.wardens.filter(warden =>
+        account.ownedWardens?.[warden.id] && warden.attributes.includes(attr)
+      ).length;
+      const result = calcConclaveBranch(db.conclaveLevels, currentLevel, targetLevel, Math.max(1, wardensCount));
+      conclaveGain += result.directAttributeGain;
+      conclaveSpent += result.spent;
+      gainByAttribute[attr] += result.directAttributeGain;
     }
   }
 
-  // 2. Сад
+  // 2. Сад: все четыре атрибута берутся непосредственно из таблицы уровней.
   const courtyardRes = calcCourtyardUpgrade(
     db.courtyardLevels,
     account.courtyardLvl ?? 0,
     plan.courtyardToLvl ?? (account.courtyardLvl ?? 0)
   );
+  for (const attr of ATTRIBUTES) gainByAttribute[attr] += courtyardRes.gain[attr];
 
-  // 3. Близость / Влечение и Опыт Гильдии (из сумки)
-  const intimacyIds = db.items.filter(i => i.category === 'intimacy').map(i => i.id);
-  const attractionIds = db.items.filter(i => i.category === 'attraction').map(i => i.id);
+  // 3. Калькуляторы событий из Сумки.
+  const intimacyIds = db.items.filter(item => item.category === 'intimacy').map(item => item.id);
+  const attractionIds = db.items.filter(item => item.category === 'attraction').map(item => item.id);
   const intimacyRes = calcBagPoints(bag, intimacyIds);
   const attractionRes = calcBagPoints(bag, attractionIds);
   const guildExpRes = calcGuildExp(bag, 3);
 
-  // 4. Уровни и прорывы смотрителей
+  // 4. Уровни и прорывы. Предметы прорыва резервируются в общем ledger.
   let levelsGain = 0;
   let bloodSpent = 0;
-  for (const [wIdStr, tgtLvl] of Object.entries(plan.levels ?? {})) {
-    const w = db.wardens.find(x => x.id === Number(wIdStr));
-    const owned = account.ownedWardens?.[wIdStr];
-    if (!w || !owned || tgtLvl <= owned.level) continue;
-    const res = calcWardenLevelsUpgrade(w, owned.level, tgtLvl, owned.promoteId ?? 1, db.promotes, bag, owned.talents);
-    levelsGain += res.baseGain;
-    bloodSpent += res.bloodSpent;
+  const levelDetails = [];
+  for (const [wardenIdString, targetLevelRaw] of Object.entries(plan.levels ?? {})) {
+    const warden = db.wardens.find(item => item.id === Number(wardenIdString));
+    const owned = account.ownedWardens?.[wardenIdString];
+    if (!warden || !owned || Number(targetLevelRaw) <= Number(owned.level || 1)) continue;
+
+    const result = calcWardenLevelsUpgrade(
+      warden,
+      Number(owned.level) || 1,
+      Number(targetLevelRaw),
+      Number(owned.promoteId) || 1,
+      db.promotes,
+      inventoryLedger.getRemaining(),
+      owned.talents || {}
+    );
+    levelsGain += result.baseGain;
+    bloodSpent += result.bloodSpent;
+    for (const attr of ATTRIBUTES) gainByAttribute[attr] += result.gainByAttribute[attr];
+    levelDetails.push(result);
+
+    if (!result.canPromote) {
+      inventoryIssues.push({
+        type: 'promotion_items',
+        wardenId: warden.id,
+        missingItems: result.missingItems,
+      });
+      continue;
+    }
+
+    const requests = result.neededPromotes.flatMap(promote =>
+      (promote.item_ids || []).map(itemId => ({
+        itemId,
+        amount: Math.max(0, Number(promote.price) || 0),
+        reason: `Прорыв ${warden.name} · ${promote.name}`,
+      }))
+    );
+    const reservation = inventoryLedger.reserveMany(requests);
+    if (!reservation.ok) {
+      inventoryIssues.push({
+        type: 'promotion_items',
+        wardenId: warden.id,
+        failures: reservation.failures,
+      });
+    }
   }
 
-  // 5. Кровные узы партнёров
+  // 5. Кровные узы. Локальная формула пока ориентировочная и помечается отдельно.
   let bondsGain = 0;
   let bondAffinitySpent = 0;
-  for (const [lIdStr, bPlan] of Object.entries(plan.bonds ?? {})) {
-    const l = db.lovers.find(x => x.id === Number(lIdStr));
-    const ownedLover = account.ownedLovers?.[lIdStr];
-    if (!l || !ownedLover) continue;
-    const res = calcLoverBonds(l, ownedLover.affinity ?? 0, bPlan, bPlan.wardenBaseAttrs, ownedLover.closeness ?? 0);
-    bondsGain += res.totalGain;
-    bondAffinitySpent += res.spentAffinity;
+  const bondDetails = [];
+  const currencyIssues = [];
+  for (const [loverIdString, bondPlan] of Object.entries(plan.bonds ?? {})) {
+    const lover = db.lovers.find(item => item.id === Number(loverIdString));
+    const ownedLover = account.ownedLovers?.[loverIdString];
+    if (!lover || !ownedLover) continue;
+    const result = calcLoverBonds(
+      lover,
+      ownedLover.affinity ?? 0,
+      bondPlan,
+      bondPlan.wardenBaseAttrs,
+      ownedLover.closeness ?? 0
+    );
+    bondsGain += result.totalGain;
+    bondAffinitySpent += result.spentAffinity;
+    if (result.spentAffinity > Number(ownedLover.affinity || 0)) {
+      currencyIssues.push({ type: 'bond_affinity', loverId: lover.id, need: result.spentAffinity, available: Number(ownedLover.affinity || 0) });
+    }
+    for (const attr of ATTRIBUTES) gainByAttribute[attr] += result.gainByAttr[attr];
+    bondDetails.push(result);
   }
 
-  // 6. Призыв
+  // 6. Призывы. Расходы проверяются последовательно тем же ledger, что и прорывы.
   const summonCandidates = getSummonCandidates(
     db.wardens,
     db.lovers,
     new Set(Object.keys(account.ownedWardens ?? {}).map(Number)),
     new Set(Object.keys(account.ownedLovers ?? {}).map(Number)),
-    bag
+    inventoryLedger.getRemaining()
   );
-  const summonGain = (plan.summons?.wardens ?? []).reduce((sum, wId) => {
-    const c = summonCandidates.wardens.find(x => x.id === wId);
-    return sum + (c?.estimatedBaseGain ?? 0);
-  }, 0);
+  let summonGain = 0;
+  const summonIssues = [];
+  const selectedWardens = [...new Set((plan.summons?.wardens ?? []).map(Number))];
+  const selectedLovers = [...new Set((plan.summons?.lovers ?? []).map(Number))];
+
+  for (const id of selectedWardens) {
+    const candidate = summonCandidates.wardens.find(item => item.id === id);
+    if (!candidate || !candidate.canSummon) {
+      summonIssues.push({ kind: 'warden', id, reason: candidate?.availabilityReason ?? 'not_found' });
+      continue;
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(
+        candidate.itemId,
+        candidate.cost,
+        `Призыв Хранителя ${candidate.name}`
+      );
+      if (!reservation.ok) {
+        summonIssues.push({ kind: 'warden', id, reason: 'shared_inventory_shortage', failures: reservation.failures });
+        continue;
+      }
+    }
+    if (candidate.estimatedBaseGain != null) summonGain += candidate.estimatedBaseGain;
+  }
+
+  for (const id of selectedLovers) {
+    const candidate = summonCandidates.lovers.find(item => item.id === id);
+    if (!candidate || !candidate.canSummon) {
+      summonIssues.push({ kind: 'lover', id, reason: candidate?.availabilityReason ?? 'not_found' });
+      continue;
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(
+        candidate.itemId,
+        candidate.cost,
+        `Призыв Возлюбленной ${candidate.name}`
+      );
+      if (!reservation.ok) {
+        summonIssues.push({ kind: 'lover', id, reason: 'shared_inventory_shortage', failures: reservation.failures });
+      }
+    }
+    // Прирост от призыва Возлюбленной не добавляется без подтверждённого поля gain.
+  }
 
   const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain + summonGain;
+  const hasLevelChanges = levelDetails.some(item => item.toLvl > item.fromLvl);
+  const hasBondChanges = bondDetails.some(result =>
+    result.details.some(detail => detail.costFlat > 0 || detail.costPct > 0)
+  );
+  const hasUnverifiedSpend = hasLevelChanges || hasBondChanges;
+  if (bloodSpent > Number(account.blood || 0)) {
+    currencyIssues.push({ type: 'blood', need: bloodSpent, available: Number(account.blood || 0) });
+  }
+  if (conclaveSpent > Number(account.conclaveExp || 0)) {
+    currencyIssues.push({ type: 'conclave_points', need: conclaveSpent, available: Number(account.conclaveExp || 0) });
+  }
+  if (courtyardRes.spent > Number(account.courtyardExp || 0)) {
+    currencyIssues.push({ type: 'courtyard_points', need: courtyardRes.spent, available: Number(account.courtyardExp || 0) });
+  }
+  const unsupportedPlanCategories = [
+    ['talents', plan.talents],
+    ['auras', plan.auras],
+    ['presences', plan.presences],
+    ['skins', plan.skins],
+  ].filter(([, value]) => {
+    if (value == null) return false;
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object') return Object.keys(value).length > 0;
+    return Boolean(value);
+  }).map(([category]) => category);
+
+  const unsupportedPlanIssues = unsupportedPlanCategories.map(category => ({
+    type: 'unsupported_plan_category',
+    category,
+  }));
+  const allIssues = [...inventoryIssues, ...summonIssues, ...currencyIssues, ...unsupportedPlanIssues];
+
+  const coverage = {
+    conclave: { status: 'table_based', included: true },
+    courtyard: { status: 'table_based', included: true },
+    levels: {
+      status: 'approximate',
+      included: true,
+      note: 'Кривая расхода Крови пока аппроксимирована и расходится с полученными серверными контрольными точками.',
+    },
+    bonds: {
+      status: 'approximate',
+      included: true,
+      note: 'Стоимость и прирост Кровных уз требуют сверки по уровням с серверными ответами.',
+    },
+    talents: { status: 'not_included', included: false },
+    auras: { status: 'not_included', included: false },
+    presences: { status: 'not_included', included: false },
+    skins: { status: 'not_included', included: false },
+    summons: {
+      status: 'partial',
+      included: true,
+      note: 'Прирост включается только при наличии явного числового поля; цена и доступность проверяются отдельно.',
+    },
+  };
+
+  const approximateReasons = [];
+  if (hasLevelChanges) approximateReasons.push('Расход Крови для уровней пока ориентировочный.');
+  if (hasBondChanges) approximateReasons.push('Стоимость Кровных уз пока ориентировочная.');
+  if (allIssues.some(issue => issue.type !== 'unsupported_plan_category')) approximateReasons.push('Есть нехватка ресурсов или недоступные действия.');
+  if (unsupportedPlanCategories.length) approximateReasons.push(`План содержит неподдерживаемые действия: ${unsupportedPlanCategories.join(', ')}. Они не будут применены.`);
 
   return {
     gain: {
@@ -795,13 +1003,29 @@ export function calculateTotalDominanceReport({
       levels: levelsGain,
       bonds: bondsGain,
       summon: summonGain,
+      byAttribute: gainByAttribute,
+      unallocated: summonGain,
     },
     spent: {
       conclaveExp: conclaveSpent,
       courtyardExp: courtyardRes.spent,
       blood: bloodSpent,
       bondAffinity: bondAffinitySpent,
+      promoteItems: inventoryLedger.getReservations(),
     },
+    remaining: {
+      blood: Math.max(0, Number(account.blood || 0) - bloodSpent),
+      conclaveExp: Math.max(0, Number(account.conclaveExp || 0) - conclaveSpent),
+      courtyardExp: Math.max(0, Number(account.courtyardExp || 0) - courtyardRes.spent),
+      bag: inventoryLedger.getRemaining(),
+    },
+    inventoryIssues: allIssues,
+    coverage,
+    isComplete: Object.values(coverage).every(item => item.included && item.status !== 'approximate' && item.status !== 'partial'),
+    canApply: !hasUnverifiedSpend && allIssues.length === 0,
+    blockers: approximateReasons,
+    levelDetails,
+    bondDetails,
     bagCalculators: {
       intimacy: intimacyRes,
       attraction: attractionRes,

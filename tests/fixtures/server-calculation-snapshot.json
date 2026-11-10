@@ -1,0 +1,348 @@
+{
+  "total": "4651439.0000000000",
+  "attributes": [
+    {
+      "attribute": "strength",
+      "total": "1039868.0000000000"
+    },
+    {
+      "attribute": "allure",
+      "total": "1248160.0000000000"
+    },
+    {
+      "attribute": "intellect",
+      "total": "1101848.0000000000"
+    },
+    {
+      "attribute": "spirit",
+      "total": "1261563.0000000000"
+    }
+  ],
+  "gain": {
+    "total": "1767017.0000000000",
+    "attributes": [
+      {
+        "attribute": "strength",
+        "total": "1767017.0000000000"
+      },
+      {
+        "attribute": "allure",
+        "total": "0.0000000000"
+      },
+      {
+        "attribute": "intellect",
+        "total": "0.0000000000"
+      },
+      {
+        "attribute": "spirit",
+        "total": "0.0000000000"
+      }
+    ]
+  },
+  "conclave": {
+    "points": 0,
+    "spent": 0,
+    "left": 0,
+    "gain": "0.0000000000",
+    "attributes": [
+      {
+        "attribute": "strength",
+        "level": 23,
+        "target": 23,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 16588,
+        "next_gain": "1875.0000000000",
+        "max_target": 23,
+        "max_gain": "0.0000000000"
+      },
+      {
+        "attribute": "allure",
+        "level": 74,
+        "target": 74,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 2032128,
+        "next_gain": "15000.0000000000",
+        "max_target": 74,
+        "max_gain": "0.0000000000"
+      },
+      {
+        "attribute": "intellect",
+        "level": 45,
+        "target": 45,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 100465,
+        "next_gain": "1500.0000000000",
+        "max_target": 45,
+        "max_gain": "0.0000000000"
+      },
+      {
+        "attribute": "spirit",
+        "level": 75,
+        "target": 75,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 2115072,
+        "next_gain": "3300.0000000000",
+        "max_target": 75,
+        "max_gain": "0.0000000000"
+      }
+    ],
+    "best_path": {
+      "runs": [],
+      "end": "strength"
+    }
+  },
+  "levels": {
+    "blood": 2532244222,
+    "spent": 0,
+    "left": 2532244222,
+    "gain": "0.0000000000",
+    "items": [],
+    "wardens": [
+      {
+        "warden_id": 10170,
+        "level": 1,
+        "target": 1,
+        "promote": 1,
+        "promote_after": 1,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 115,
+        "next_gain": "7.0000000000",
+        "next_missing": [],
+        "max_target": 100,
+        "max_gain": "18448.0000000000",
+        "offer": null,
+        "summoned": false
+      },
+      {
+        "warden_id": 10540,
+        "level": 5,
+        "target": 5,
+        "promote": 1,
+        "promote_after": 1,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 961,
+        "next_gain": "105.0000000000",
+        "next_missing": [],
+        "max_target": 100,
+        "max_gain": "87418.0000000000"
+      },
+      {
+        "warden_id": 10660,
+        "level": 5,
+        "target": 5,
+        "promote": 1,
+        "promote_after": 1,
+        "cost": 0,
+        "gain": "0.0000000000",
+        "next_cost": 961,
+        "next_gain": "562.0000000000",
+        "next_missing": [],
+        "max_target": 100,
+        "max_gain": "471276.0000000000"
+      }
+    ],
+    "best_path": {
+      "runs": [
+        {
+          "key": "10660",
+          "to": 41
+        },
+        {
+          "key": "10540",
+          "to": 6
+        }
+      ],
+      "end": null
+    }
+  },
+  "bonds": {
+    "trust": 0,
+    "spent": 0,
+    "left": 0,
+    "gain": "0.0000000000",
+    "lovers": [],
+    "idle": [
+      20080,
+      20500,
+      20510
+    ]
+  },
+  "auras": {
+    "gain": "0.0000000000",
+    "summons_gain": "0.0000000000",
+    "items": [
+      {
+        "item_id": 4402,
+        "count": 0,
+        "spent": 0,
+        "left": 0,
+        "gain": "0.0000000000",
+        "wardens": [
+          {
+            "warden_id": 10540,
+            "owned": true,
+            "summon": false,
+            "summon_cost": null,
+            "summon_gain": null,
+            "gain": "0.0000000000",
+            "levels": [
+              {
+                "aura_id": 2103,
+                "bonus": "talent",
+                "attributes": [
+                  "intellect"
+                ],
+                "level": 0,
+                "target": 0,
+                "max_level": 30,
+                "percent": "0.0000000000",
+                "target_percent": "0.0000000000",
+                "cost": 0,
+                "next_cost": 10,
+                "max_target": 0,
+                "gain": "0.0000000000",
+                "next_gain": "28.0000000000"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "free": []
+  },
+  "presences": {
+    "gain": "0.0000000000",
+    "summons_gain": "0.0000000000",
+    "items": [
+      {
+        "item_id": 4413,
+        "count": 0,
+        "spent": 0,
+        "left": 0,
+        "gain": "0.0000000000",
+        "lovers": [
+          {
+            "lover_id": 20510,
+            "owned": true,
+            "summon": false,
+            "summon_cost": null,
+            "summon_gain": null,
+            "gain": "0.0000000000",
+            "levels": [
+              {
+                "presence_id": 20511,
+                "level": 4,
+                "target": 4,
+                "max_level": 30,
+                "percent": "2.0000000000",
+                "target_percent": "2.0000000000",
+                "cost": 0,
+                "next_cost": 100,
+                "max_target": 4,
+                "gain": "0.0000000000",
+                "next_gain": "0.0000000000"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "free": []
+  },
+  "skins": {
+    "gain": "0.0000000000",
+    "fabrics": [
+      {
+        "quality": "s",
+        "item_id": 4422,
+        "count": 0,
+        "spent": 0,
+        "left": 0,
+        "gain": "0.0000000000",
+        "skins": [
+          {
+            "skin_id": 10544101,
+            "owned": true,
+            "next_gain": "140.0000000000"
+          }
+        ]
+      }
+    ],
+    "store": {
+      "exp": 400,
+      "exp_after": 400,
+      "level": 3,
+      "level_after": 3,
+      "next_exp": 600
+    }
+  },
+  "talents": {
+    "gain": "819.0000000000",
+    "scrolls": [],
+    "scripts": [
+      {
+        "item_id": 4151,
+        "stars": null,
+        "attribute": "strength",
+        "count": 56,
+        "spent": 56,
+        "left": 0,
+        "gain": "819.0000000000",
+        "wardens": [
+          {
+            "warden_id": 10540,
+            "owned": true,
+            "talents": [
+              {
+                "position": 0,
+                "attribute": "strength",
+                "stars": 4,
+                "level": 1,
+                "cap": 40,
+                "chosen": 16,
+                "cost": 56,
+                "max_chosen": 16,
+                "next_cost": 3,
+                "next_gain": "52.0000000000",
+                "final": 17,
+                "chance": "25.0000000000",
+                "tries": "3.4660644531"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "exp_items": [],
+    "own_exp": []
+  },
+  "courtyard": {
+    "level": 210,
+    "level_after": 210,
+    "points": 46,
+    "spent": 0,
+    "left": 46,
+    "gain": "0.0000000000"
+  },
+  "books": {
+    "minimum": 1766198,
+    "expected": "1766198.00",
+    "maximum": 1766198,
+    "items": [
+      {
+        "item_id": 3144,
+        "count": 125,
+        "counted": 125,
+        "minimum": 1487500,
+        "expected": "1487500.00",
+        "maximum": 1487500
+      }
+    ]
+  }
+}

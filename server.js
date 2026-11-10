@@ -1,6 +1,6 @@
 import express from 'express';
 import { Bot, InlineKeyboard } from 'grammy';
-import crypto from 'node:crypto';
+import { verifyTelegramInitData } from './js/telegram-auth.js';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,49 +32,20 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, app: 'Vampire Dominion', botConfigured: Boolean(BOT_TOKEN) });
+  res.json({ ok: true, app: 'Наследие вампиров', botConfigured: Boolean(BOT_TOKEN) });
 });
 
-// Проверка подлинности Telegram Mini App initData на сервере.
-// BOT_TOKEN никогда не отправляется в браузер.
-function verifyTelegramInitData(initData, maxAgeSeconds = 86400) {
-  if (!BOT_TOKEN || typeof initData !== 'string' || !initData) return null;
-
-  const params = new URLSearchParams(initData);
-  const receivedHash = params.get('hash');
-  if (!receivedHash || !/^[a-f0-9]{64}$/i.test(receivedHash)) return null;
-
-  params.delete('hash');
-  const dataCheckString = [...params.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
-
-  const secretKey = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
-  const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest();
-  const received = Buffer.from(receivedHash, 'hex');
-  if (received.length !== calculatedHash.length || !crypto.timingSafeEqual(received, calculatedHash)) return null;
-
-  const authDate = Number(params.get('auth_date'));
-  if (!Number.isFinite(authDate) || Math.abs(Date.now() / 1000 - authDate) > maxAgeSeconds) return null;
-
-  try {
-    const user = JSON.parse(params.get('user') || 'null');
-    if (!user || !Number.isSafeInteger(user.id)) return null;
-    return { id: user.id, first_name: user.first_name || '', last_name: user.last_name || '', username: user.username || '', language_code: user.language_code || '' };
-  } catch {
-    return null;
-  }
-}
+// BOT_TOKEN остаётся на сервере; проверка вынесена в тестируемый модуль.
 
 app.post('/api/auth', (req, res) => {
-  const user = verifyTelegramInitData(req.body?.initData);
+  res.setHeader('Cache-Control', 'no-store');
+  const user = verifyTelegramInitData(req.body?.initData, BOT_TOKEN);
   if (!user) return res.status(401).json({ ok: false, error: 'Invalid Telegram initData' });
   return res.json({ ok: true, user });
 });
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Vampire Dominion web server listening on ${PORT}`);
+  console.log(`Наследие вампиров server listening on ${PORT}`);
 });
 
 if (!BOT_TOKEN) {
@@ -83,17 +54,21 @@ if (!BOT_TOKEN) {
   console.error('APP_URL / RENDER_EXTERNAL_URL is missing. Set the public Render URL.');
 } else {
   const bot = new Bot(BOT_TOKEN);
-  const keyboard = new InlineKeyboard().webApp('🩸 Открыть Vampire Dominion', APP_URL);
+  const keyboard = new InlineKeyboard().webApp('🩸 Открыть Наследие', APP_URL);
 
   bot.command('start', async (ctx) => {
     await ctx.reply(
-      'Добро пожаловать в «Хроники Наследия»! 🩸\n\nОткройте калькулятор и управляйте своей Цитаделью.',
+      'Добро пожаловать в «Наследие вампиров»! 🩸\n\nОткройте бесплатный калькулятор и управляйте своей Цитаделью.',
       { reply_markup: keyboard }
     );
   });
 
+  bot.command('open', async (ctx) => {
+    await ctx.reply('🩸 Открываем «Наследие вампиров».', { reply_markup: keyboard });
+  });
+
   bot.command('help', async (ctx) => {
-    await ctx.reply('Нажмите кнопку ниже, чтобы открыть Vampire Dominion.', { reply_markup: keyboard });
+    await ctx.reply('«Наследие вампиров» — бесплатный калькулятор и помощник. Нажмите кнопку ниже, чтобы открыть Цитадель.', { reply_markup: keyboard });
   });
 
   bot.catch((error) => console.error('Telegram bot error:', error));
@@ -102,7 +77,8 @@ if (!BOT_TOKEN) {
   }).catch((error) => console.error('Could not set Telegram menu button:', error));
 
   bot.api.setMyCommands([
-    { command: 'start', description: 'Открыть Vampire Dominion' },
+    { command: 'start', description: 'Открыть Наследие вампиров' },
+    { command: 'open', description: 'Открыть Цитадель' },
     { command: 'help', description: 'Помощь' }
   ]).catch((error) => console.error('Could not set bot commands:', error));
 

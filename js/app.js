@@ -1,8 +1,10 @@
 /**
- * VAMPIRE DOMINION v3.0 — ГЛАВНОЕ ПРИЛОЖЕНИЕ КАЛЬКУЛЯТОРА (БЕЗ VIP-ОГРАНИЧЕНИЙ)
- * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
+ * НАСЛЕДИЕ ВАМПИРОВ V6 — CRIMSON OBSIDIAN
+ * Бесплатный Telegram Mini App с локальными профилями и проверяемыми расчётными модулями.
  */
 import { GAME_DB, getIconUrl } from './data.js';
+import { isCalculationSnapshotPayload, normalizeCalculationSnapshot } from './snapshot-adapter.js';
+import { createInventoryLedger } from './inventory-ledger.js';
 import {
   ATTRIBUTES,
   FABRIC_COST_BY_QUALITY,
@@ -44,6 +46,7 @@ function createBlankAccountData() {
     ownedLovers: {},
     skins: {},
     bag: {},
+    calculationSnapshot: null,
   };
 }
 
@@ -435,6 +438,13 @@ function commitPlanToAccount() {
   }
   const report = calculateTotalDominanceReport({ db, account, plan });
   const fail = message => { alert(message); return false; };
+  if (!report.canApply) {
+    const reasons = report.blockers?.length
+      ? report.blockers
+      : ['В плане есть действия, которые пока не прошли проверку ресурсов или доступности.'];
+    return fail(`План пока нельзя безопасно применить:\\n• ${reasons.join('\\n• ')}\\n\\nСохрани профиль и дождись сверки этих расчётов с серверными данными.`);
+  }
+  const inventoryLedger = createInventoryLedger(account.bag);
 
   if (report.spent.blood > account.blood) return fail('Недостаточно Крови для выбранного плана.');
   if (report.spent.conclaveExp > account.conclaveExp) return fail('Недостаточно очков Конклава для выбранного плана.');
@@ -449,23 +459,31 @@ function commitPlanToAccount() {
     if (!owned || !warden || targetLevel <= (Number(owned.level) || 1)) continue;
     const currentPromoteId = Math.max(1, Number(owned.promoteId) || 1);
     const upgrade = calcWardenLevelsUpgrade(
-      warden, owned.level, targetLevel, currentPromoteId, db.promotes, account.bag, owned.talents || {}
+      warden, owned.level, targetLevel, currentPromoteId, db.promotes, inventoryLedger.getRemaining(), owned.talents || {}
     );
     if (!upgrade.canPromote) {
       const detail = upgrade.missingItems.map(item => `${tName('item', db.items.find(i => i.id === item.itemId)?.name || item.itemId)}: ещё ${item.need}`).join('\n');
       return fail(`Нельзя применить уровни ${tName('warden', warden.name)}. Не хватает предметов прорыва:\n${detail}`);
     }
     let nextPromoteId = currentPromoteId;
+    const promoteReservations = [];
     for (const promote of upgrade.neededPromotes || []) {
       nextPromoteId = Math.max(nextPromoteId, promote.id);
       for (const itemId of promote.item_ids || []) {
-        const cost = Number(promote.price) || 0;
-        if ((account.bag[itemId] || 0) < cost) {
-          const itemName = tName('item', db.items.find(i => i.id === itemId)?.name || itemId);
-          return fail(`Недостаточно предметов для прорыва ${tName('warden', warden.name)}: ${itemName}.`);
-        }
-        account.bag[itemId] = Math.max(0, (account.bag[itemId] || 0) - cost);
+        promoteReservations.push({
+          itemId,
+          amount: Number(promote.price) || 0,
+          reason: `Прорыв ${tName('warden', warden.name)} · ${tName('warden_promote', promote.name)}`,
+        });
       }
+    }
+    const reservation = inventoryLedger.reserveMany(promoteReservations);
+    if (!reservation.ok) {
+      const detail = reservation.failures.map(item => {
+        const itemName = tName('item', db.items.find(i => i.id === Number(item.itemId))?.name || item.itemId);
+        return `${itemName}: ещё ${fmt(item.missing ?? item.need)}`;
+      }).join('\\n');
+      return fail(`Не удалось зарезервировать предметы прорыва для ${tName('warden', warden.name)}:\\n${detail}`);
     }
     wardenPromotes[id] = nextPromoteId;
   }
@@ -475,14 +493,41 @@ function commitPlanToAccount() {
     db.wardens, db.lovers,
     new Set(Object.keys(account.ownedWardens).map(Number)),
     new Set(Object.keys(account.ownedLovers).map(Number)),
-    account.bag,
+    inventoryLedger.getRemaining(),
   );
   const summonIds = [...new Set((plan.summons?.wardens || []).map(Number))];
+  const loverSummonIds = [...new Set((plan.summons?.lovers || []).map(Number))];
+
   for (const id of summonIds) {
     const candidate = summonCandidates.wardens.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь предметы в сумке.`);
-    if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
+    if (!candidate || !candidate.canSummon) {
+      return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь условия и предметы в сумке.`);
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(candidate.itemId, candidate.cost, `Призыв Хранителя ${tName('warden', candidate.name)}`);
+      if (!reservation.ok) {
+        const missing = reservation.failures[0]?.missing ?? candidate.cost;
+        return fail(`Не хватает ${fmt(missing)} предметов для призыва ${tName('warden', candidate.name)}.`);
+      }
+    }
   }
+
+  for (const id of loverSummonIds) {
+    const candidate = summonCandidates.lovers.find(item => item.id === id);
+    if (!candidate || !candidate.canSummon) {
+      return fail(`Призыв Возлюбленного ${candidate ? tName('lover', candidate.name) : id} недоступен: проверь условия и предметы в сумке.`);
+    }
+    if (candidate.itemId != null && candidate.cost > 0) {
+      const reservation = inventoryLedger.reserve(candidate.itemId, candidate.cost, `Призыв Возлюбленного ${tName('lover', candidate.name)}`);
+      if (!reservation.ok) {
+        const missing = reservation.failures[0]?.missing ?? candidate.cost;
+        return fail(`Не хватает ${fmt(missing)} предметов для призыва ${tName('lover', candidate.name)}.`);
+      }
+    }
+  }
+
+  // Итоговый остаток сумки фиксируется только после успешной проверки всего плана.
+  account.bag = inventoryLedger.getRemaining();
 
   // Проверяем очки доверия по каждому партнёру отдельно и фиксируем уровни.
   const bondUpdates = {};
@@ -529,6 +574,16 @@ function commitPlanToAccount() {
   for (const id of summonIds) {
     account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
   }
+  for (const id of loverSummonIds) {
+    const lover = db.lovers.find(item => item.id === id);
+    account.ownedLovers[id] = {
+      affinity: 0,
+      closeness: 0,
+      sex: lover?.fixed_sex || state.settings.loverSex || 'female',
+      presences: {},
+      bonds: {},
+    };
+  }
 
   state.account = account;
   state.plan = createBlankPlan(account);
@@ -566,9 +621,9 @@ function render() {
     <div class="app-shell">
       <header class="top-bar">
         <div class="brand-block">
-          <div class="brand-crest">VD</div>
+          <div class="brand-crest" aria-label="Корона Наследия">♛</div>
           <div>
-            <div class="brand-title">Vampire Dominion</div>
+            <div class="brand-title">НАСЛЕДИЕ ВАМПИРОВ</div>
             <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
           </div>
         </div>
@@ -583,7 +638,7 @@ function render() {
           </select>
           <button class="btn btn-sm" id="btn-new-account">＋ Аккаунт</button>
           <button class="btn btn-sm" id="btn-game-connect">🔗 Игра</button>
-          <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Авторасчёт</button>
+          <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Подбор плана</button>
           <button class="btn btn-sm" id="btn-theme">${state.settings.theme === 'light' ? '☀ Светлая' : '☾ Тёмная'}</button>
           <button class="btn btn-sm" id="btn-lang">${state.lang.toUpperCase()}</button>
           <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
@@ -601,7 +656,7 @@ function render() {
         ${renderActiveTab(db, report)}
       </main>
       <footer class="app-footnote">
-        <span>CRIMSON OBSIDIAN</span><span>Локальный помощник · без VIP-ограничений</span>
+        <span>♛ НАСЛЕДИЕ ВАМПИРОВ</span><span>Бесплатный помощник · все функции открыты</span>
       </footer>
     </div>
   `;
@@ -624,13 +679,133 @@ function renderActiveTab(db, report) {
   }
 }
 
-function renderDominanceTab(db, report) {
+function renderServerSnapshotCard() {
+  const record = state.account.calculationSnapshot;
+  if (!record?.data) {
+    return `
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">◈ Проверка по серверному расчёту</div>
+            <div class="row-sub">Импортируй JSON-ответ калькулятора через кнопку «Импорт» — снимок будет показан отдельно от локального плана</div>
+          </div>
+          <span class="badge">Ожидает JSON</span>
+        </div>
+        <div class="row-sub">Поддерживается ответ с полями total, attributes и gain. Профиль игры, пароль или токен не нужны.</div>
+      </section>
+    `;
+  }
+
+  let snapshot;
+  try {
+    snapshot = normalizeCalculationSnapshot(record.data);
+  } catch {
+    return `
+      <section class="card">
+        <div class="card-title">◈ Серверный снимок не прочитан</div>
+        <div class="row-sub">Файл остался в профиле, но его структура не распознана.</div>
+        <button class="btn btn-sm" id="btn-clear-snapshot">Удалить снимок</button>
+      </section>
+    `;
+  }
+
+  const capturedAt = record.capturedAt ? new Date(record.capturedAt) : null;
+  const capturedLabel = capturedAt && Number.isFinite(capturedAt.getTime())
+    ? capturedAt.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU')
+    : 'время неизвестно';
+  const attributes = ATTRIBUTES.map(attr => `
+    <div class="card" style="margin:0;padding:10px;">
+      <div class="row-sub">${tName('attribute', attr)}</div>
+      <div class="row-name">${snapshot.attributes[attr] == null ? '—' : fmt(snapshot.attributes[attr])}</div>
+      <div class="gain-pill">${snapshot.gain.attributes[attr] == null ? '—' : '+' + fmt(snapshot.gain.attributes[attr])}</div>
+    </div>
+  `).join('');
+  const sectionRows = [
+    ['Конклав', snapshot.sections.conclave?.gain],
+    ['Сад / Двор', snapshot.sections.courtyard?.gain],
+    ['Уровни Хранителей', snapshot.sections.levels?.gain],
+    ['Кровные узы', snapshot.sections.bonds?.gain],
+    ['Вдохновения', snapshot.sections.auras?.gain],
+    ['Веяния', snapshot.sections.presences?.gain],
+    ['Облики', snapshot.sections.skins?.gain],
+    ['Таланты', snapshot.sections.talents?.gain],
+  ];
+  const sections = sectionRows.map(([label, value]) => `
+    <div class="item-row">
+      <div class="row-info"><div class="row-name">${label}</div></div>
+      <div class="row-name">${value == null ? '—' : '+' + fmt(value)}</div>
+    </div>
+  `).join('');
+  const books = snapshot.sections.books;
+  const booksLine = books && (books.minimum != null || books.expected != null || books.maximum != null)
+    ? `<div class="row-sub">Книги: минимум ${books.minimum == null ? '—' : fmt(books.minimum)} · ожидание ${books.expected == null ? '—' : fmt(books.expected)} · максимум ${books.maximum == null ? '—' : fmt(books.maximum)}</div>`
+    : '';
+
   return `
     <section class="card card-gold">
       <div class="card-head">
         <div>
-          <div class="card-title">Сводный прирост Господства</div>
-          <div class="row-sub">Автоматический расчёт по всем 8 веткам прокачки</div>
+          <div class="card-title">◈ Эталонный серверный расчёт</div>
+          <div class="row-sub">Импортирован: ${capturedLabel} · это сохранённый снимок, не live-синхронизация</div>
+        </div>
+        <span class="badge badge-ok">JSON распознан</span>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="card" style="margin:0;padding:11px;">
+          <div class="row-sub">Итоговое Господство</div>
+          <div class="gain-pill">${snapshot.total == null ? '—' : fmt(snapshot.total)}</div>
+        </div>
+        <div class="card" style="margin:0;padding:11px;">
+          <div class="row-sub">Прирост по плану сервера</div>
+          <div class="gain-pill">+${snapshot.gain.total == null ? '—' : fmt(snapshot.gain.total)}</div>
+        </div>
+      </div>
+      <div class="grid-4">${attributes}</div>
+      <div class="card-title" style="margin-top:14px;">Разложение прироста по системам</div>
+      ${sections}
+      ${booksLine}
+      <div class="row-sub" style="margin-top:8px;">Значения «—» означают, что сервер не прислал отдельный итог по этой системе. Они не заменяются нулями.</div>
+      <button class="btn btn-sm" id="btn-clear-snapshot" style="margin-top:10px;">Удалить серверный снимок</button>
+    </section>
+  `;
+}
+
+function renderDominanceTab(db, report) {
+  const coverageLabels = {
+    conclave: 'Конклав',
+    courtyard: 'Сад',
+    levels: 'Уровни Хранителей',
+    bonds: 'Кровные узы',
+    talents: 'Таланты',
+    auras: 'Вдохновения',
+    presences: 'Веяния',
+    skins: 'Облики',
+    summons: 'Призыв',
+  };
+  const coverageStatus = status => ({
+    table_based: 'По таблице',
+    approximate: 'Оценка',
+    partial: 'Частично',
+    not_included: 'Не входит в итог',
+  }[status] || 'Не проверено');
+  const coverageRows = Object.entries(report.coverage || {}).map(([key, value]) => `
+    <div class="item-row">
+      <div class="row-info"><div class="row-name">${coverageLabels[key] || key}</div></div>
+      <span class="badge ${value.status === 'table_based' ? 'badge-ok' : ''}">${coverageStatus(value.status)}</span>
+    </div>
+  `).join('');
+  const attributeRows = ATTRIBUTES.map(attr => `
+    <div class="card" style="margin:0;padding:10px;">
+      <div class="row-sub">${tName('attribute', attr)}</div>
+      <div class="row-name">${fmt(report.gain.byAttribute?.[attr] || 0)}</div>
+    </div>
+  `).join('');
+  return `
+    <section class="card card-gold">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Локальный прогноз Господства</div>
+          <div class="row-sub">Расчёт по подтверждённым таблицам и отдельным модулям; оценки помечаются отдельно</div>
         </div>
         <div class="gain-pill">+${fmt(report.gain.total)}</div>
       </div>
@@ -652,12 +827,23 @@ function renderDominanceTab(db, report) {
           <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds + report.gain.summon)}</div>
         </div>
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-gold" id="btn-quick-run">⚡ Распределить все ресурсы оптимально</button>
-        <button class="btn btn-primary" id="btn-commit-plan">✅ Применить план и списать ресурсы</button>
+      <div class="card-title" style="margin-top:14px;">Прирост по атрибутам</div>
+      <div class="grid-4">${attributeRows}</div>
+      <div class="row-sub" style="margin-top:8px;">Нераспределённый по атрибутам прирост: ${fmt(report.gain.unallocated || 0)}</div>
+      <div class="card-title" style="margin-top:14px;">Покрытие расчётами</div>
+      ${coverageRows}
+      <div class="bond-warning" style="margin-top:10px;">
+        Это локальный прогноз, а не полный серверный итог. Стоимость Крови и Кровных уз пока ориентировочная; Таланты, Вдохновения, Веяния и Облики ещё не входят в локальную сумму. Для эталонных значений импортируй JSON-ответ калькулятора.
+      </div>
+      ${report.blockers?.length ? `<div class="row-sub" style="margin-top:8px;">${report.blockers.map(reason => `• ${reason}`).join('<br>')}</div>` : ''}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <button class="btn btn-gold" id="btn-quick-run">⚡ Подобрать план по доступным данным</button>
+        <button class="btn btn-primary" id="btn-commit-plan" ${report.canApply ? '' : 'disabled'}>✅ ${report.canApply ? 'Применить проверенный план' : 'Применение заблокировано'}</button>
         <button class="btn" id="btn-reset-plan">↺ Сбросить план</button>
       </div>
     </section>
+
+${renderServerSnapshotCard()}
 
     <section class="card game-sync-card">
       <div class="card-head">
@@ -1004,28 +1190,67 @@ function renderSummonTab(db) {
   const cands = getSummonCandidates(
     db.wardens,
     db.lovers,
-    new Set(Object.keys(state.account.ownedWardens).map(Number)),    new Set(Object.keys(state.account.ownedLovers).map(Number)),
+    new Set(Object.keys(state.account.ownedWardens).map(Number)),
+    new Set(Object.keys(state.account.ownedLovers).map(Number)),
     state.account.bag
   );
+
+  const availabilityText = (candidate, itemObj) => {
+    if (candidate.canSummon) {
+      return itemObj
+        ? `Можно призвать: ${candidate.cost} × ${tName('item', itemObj.name)} (в сумке: ${candidate.have})`
+        : 'Призыв разрешён по явному признаку доступности';
+    }
+    if (candidate.availabilityReason === 'insufficient_items') {
+      return `Не хватает: ${Math.max(0, candidate.cost - candidate.have)} × ${itemObj ? tName('item', itemObj.name) : candidate.itemId}`;
+    }
+    if (candidate.availabilityReason === 'not_available') return 'Сейчас призыв недоступен';
+    return 'Условие призыва не подтверждено данными каталога. Добавляй персонажа в профиль после получения в игре';
+  };
 
   return `
     <section class="card card-gold">
       <div class="card-head">
-        <div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div>
+        <div>
+          <div class="card-title">➕ Хранители · ${cands.wardens.length}</div>
+          <div class="row-sub">Кнопка призыва активна только при подтверждённом условии и достаточном количестве предметов</div>
+        </div>
       </div>
       ${cands.wardens.map(c => {
         const w = db.wardens.find(x => x.id === c.id);
-        const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
+        const itemObj = c.itemId == null ? null : db.items.find(i => i.id === c.itemId);
         return `
           <div class="item-row">
             <img class="avatar" src="${getIconUrl(w?.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
             <div class="row-info">
-              <div class="row-name">${tName('warden', c.name)} (${c.baseTalentStars}★)</div>
-              <div class="row-sub">
-                ${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}
-              </div>
+              <div class="row-name">${tName('warden', c.name)} · ${c.baseTalentStars}★</div>
+              <div class="row-sub">${availabilityText(c, itemObj)}</div>
             </div>
-            <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
+            <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Недоступно'}</button>
+          </div>
+        `;
+      }).join('')}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">♥ Возлюбленные · ${cands.lovers.length}</div>
+          <div class="row-sub">Призыв партнёра учитывает его собственный предмет; связь со Смотрителем показана отдельно</div>
+        </div>
+      </div>
+      ${cands.lovers.map(c => {
+        const l = db.lovers.find(x => x.id === c.id);
+        const w = db.wardens.find(x => x.id === c.wardenId);
+        const itemObj = c.itemId == null ? null : db.items.find(i => i.id === c.itemId);
+        return `
+          <div class="item-row">
+            <img class="avatar" src="${getIconUrl(getLoverIconPath(l, null), true)}" alt="" loading="lazy" />
+            <div class="row-info">
+              <div class="row-name">${tName('lover', c.name)}</div>
+              <div class="row-sub">${w ? `Смотритель: ${tName('warden', w.name)} · ` : ''}${availabilityText(c, itemObj)}</div>
+            </div>
+            <button class="btn btn-sm btn-primary summon-lover" data-lid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Недоступно'}</button>
           </div>
         `;
       }).join('')}
@@ -1092,6 +1317,11 @@ function bindEvents(db) {
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
+  document.getElementById('btn-clear-snapshot')?.addEventListener('click', () => {
+    state.account.calculationSnapshot = null;
+    saveState();
+    render();
+  });
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1271,6 +1501,35 @@ function bindEvents(db) {
     });
   });
 
+  document.querySelectorAll('.summon-lover').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.lid);
+      const candidate = getSummonCandidates(
+        db.wardens, db.lovers,
+        new Set(Object.keys(state.account.ownedWardens).map(Number)),
+        new Set(Object.keys(state.account.ownedLovers).map(Number)),
+        state.account.bag
+      ).lovers.find(item => item.id === id);
+      if (!candidate?.canSummon) {
+        alert('Условие призыва не подтверждено или не хватает предметов.');
+        return;
+      }
+      if (candidate.itemId != null && candidate.cost > 0) {
+        state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
+      }
+      const lover = db.lovers.find(item => item.id === id);
+      state.account.ownedLovers[id] = {
+        affinity: 0,
+        closeness: 0,
+        sex: lover?.fixed_sex || state.settings.loverSex || 'female',
+        presences: {},
+        bonds: {},
+      };
+      saveState();
+      render();
+    });
+  });
+
   document.querySelectorAll('.toggle-owned-lover').forEach(btn => {
     btn.addEventListener('click', () => {
       const lid = Number(btn.dataset.lid);
@@ -1368,7 +1627,17 @@ function bindEvents(db) {
       if (!file) return;
       try {
         const parsed = JSON.parse(await file.text());
-        state = normalizeState(parsed);
+        if (isCalculationSnapshotPayload(parsed)) {
+          // Validate fully before changing the active profile.
+          normalizeCalculationSnapshot(parsed);
+          state.account.calculationSnapshot = {
+            capturedAt: new Date().toISOString(),
+            data: parsed,
+          };
+          state.activeTab = 'dominance';
+        } else {
+          state = normalizeState(parsed);
+        }
         saveState();
         render();
       } catch (err) {

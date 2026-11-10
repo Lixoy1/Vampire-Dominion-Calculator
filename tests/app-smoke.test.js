@@ -40,9 +40,13 @@ for (const expected of expectedTabs) {
   assert.ok(tab, `tab ${expected} is rendered`);
   assert.equal(typeof tab.handlers.click, 'function', `tab ${expected} has a click handler`);
   tab.handlers.click();
-  assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
+  assert.ok(root.innerHTML.includes('class="app-shell"'), `app shell renders on ${expected}`);
 }
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
+const dominanceTab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === 'dominance');
+dominanceTab.handlers.click();
+assert.ok(root.innerHTML.includes('Проверка по серверному расчёту'), 'dominance tab explains server snapshot import');
+assert.ok(root.innerHTML.includes('total, attributes и gain'), 'server response import schema is explained');
 assert.ok(root.innerHTML.includes('assets/icons/'), 'local icon URLs are used');
 assert.ok(localStore.size > 0, 'state is stored locally');
 console.log(`PASS app render smoke: ${expectedTabs.length} tabs`);

@@ -98,6 +98,30 @@ test('Closeness unlocks bond branches; Affinity pays their cost', () => {
   assert.ok(open.leftAffinity < 100000);
 });
 
+test('summon requires confirmed availability and a real item requirement', () => {
+  const sampleWardens = [
+    { id: 1, name: 'UNKNOWN_FREE', summon_item_id: null, summon_item_count: null, talents: [{ stars: 4 }] },
+    { id: 2, name: 'PAID', summon_item_id: 77, summon_item_count: 5, summon_gain: '1234', talents: [{ stars: 3 }] },
+    { id: 3, name: 'EXPLICITLY_FREE', summon_item_id: null, summon_item_count: 0, summon_possible: true, talents: [{ stars: 2 }] },
+    { id: 4, name: 'SERVER_LOCKED', summon_item_id: 77, summon_item_count: 5, summon_possible: false, talents: [{ stars: 4 }] },
+  ];
+  const sampleLovers = [
+    { id: 20, name: 'UNKNOWN_LOVER', warden_id: 1, summon_item_id: null, summon_item_count: null },
+  ];
+  const result = E.getSummonCandidates(
+    sampleWardens, sampleLovers, new Set(), new Set(), { 77: 5 }
+  );
+  assert.equal(result.wardens.find(x => x.id === 1).canSummon, false);
+  assert.equal(result.wardens.find(x => x.id === 1).availabilityReason, 'unknown_requirement');
+  assert.equal(result.wardens.find(x => x.id === 2).canSummon, true);
+  assert.equal(result.wardens.find(x => x.id === 2).estimatedBaseGain, 1234);
+  assert.equal(result.wardens.find(x => x.id === 3).canSummon, true);
+  assert.equal(result.wardens.find(x => x.id === 3).estimatedBaseGain, null);
+  assert.equal(result.wardens.find(x => x.id === 4).canSummon, false, 'explicit server denial overrides available item count');
+  assert.equal(result.wardens.find(x => x.id === 4).availabilityReason, 'not_available');
+  assert.equal(result.lovers.find(x => x.id === 20).canSummon, false);
+});
+
 test('bag intimacy calculation returns min/expected/max', () => {
   const result = E.calcBagPoints({ 4230: 2 }, [4230]);
   assert.deepEqual([result.minimum, result.expected, result.maximum], [8, 20, 100]);
@@ -137,8 +161,60 @@ test('unified dominance report returns finite totals and bond spend', () => {
   assert.ok(Number.isFinite(report.spent.bondAffinity));
   assert.ok(report.spent.bondAffinity > 0);
   assert.ok(report.gain.total > 0);
+  assert.equal(report.coverage.levels.status, 'approximate');
+  assert.equal(report.coverage.talents.included, false);
+  assert.equal(report.isComplete, false);
+  assert.equal(report.canApply, false, 'plans using unverified blood and bond costs cannot be committed');
+  assert.equal(Object.values(report.gain.byAttribute).reduce((sum, value) => sum + value, 0), report.gain.total);
 });
 
+
+test('report blocks imported plan categories that are not applied yet', () => {
+  const curves = E.buildPresenceCurvesMap(GAME_DB.lover_presence_levels);
+  const db = {
+    wardens: GAME_DB.wardens,
+    lovers: GAME_DB.lovers,
+    items: GAME_DB.items,
+    promotes: GAME_DB.warden_promotes,
+    conclaveLevels: GAME_DB.conclave_levels,
+    courtyardLevels: GAME_DB.courtyard_levels,
+    presenceCurvesMap: curves,
+  };
+  const account = {
+    blood: 0,
+    conclaveExp: 0,
+    courtyardExp: 0,
+    courtyardLvl: 0,
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    ownedWardens: {},
+    ownedLovers: {},
+    bag: {},
+  };
+  const basePlan = {
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+    levels: {},
+    bonds: {},
+    summons: { wardens: [], lovers: [] },
+  };
+  const report = E.calculateTotalDominanceReport({
+    db,
+    account,
+    plan: { ...basePlan, skins: { 10544101: 1 }, talents: { 10540: { scripts: { 0: 1 } } } },
+  });
+  assert.equal(report.canApply, false);
+  assert.ok(report.inventoryIssues.some(issue => issue.type === 'unsupported_plan_category' && issue.category === 'skins'));
+  assert.ok(report.inventoryIssues.some(issue => issue.type === 'unsupported_plan_category' && issue.category === 'talents'));
+  assert.ok(report.blockers.some(blocker => blocker.includes('talents, skins')));
+});
+
+test('level upgrade exposes per-attribute contributions and flags approximate blood cost', () => {
+  const warden = GAME_DB.wardens[0];
+  const result = E.calcWardenLevelsUpgrade(warden, 1, 2, 1, GAME_DB.warden_promotes, {}, {});
+  assert.equal(result.bloodCostIsApproximate, true);
+  assert.equal(Object.values(result.gainByAttribute).reduce((sum, value) => sum + value, 0), result.baseGain);
+  assert.ok(Object.keys(result.gainByAttribute).every(key => E.ATTRIBUTES.includes(key)));
+});
 
 test('promotion checks expose required breakthrough items without mutating inventory', () => {
   const warden = GAME_DB.wardens[0];
