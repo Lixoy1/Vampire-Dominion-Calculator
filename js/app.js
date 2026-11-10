@@ -1004,28 +1004,67 @@ function renderSummonTab(db) {
   const cands = getSummonCandidates(
     db.wardens,
     db.lovers,
-    new Set(Object.keys(state.account.ownedWardens).map(Number)),    new Set(Object.keys(state.account.ownedLovers).map(Number)),
+    new Set(Object.keys(state.account.ownedWardens).map(Number)),
+    new Set(Object.keys(state.account.ownedLovers).map(Number)),
     state.account.bag
   );
+
+  const availabilityText = (candidate, itemObj) => {
+    if (candidate.canSummon) {
+      return itemObj
+        ? `Можно призвать: ${candidate.cost} × ${tName('item', itemObj.name)} (в сумке: ${candidate.have})`
+        : 'Призыв разрешён по явному признаку доступности';
+    }
+    if (candidate.availabilityReason === 'insufficient_items') {
+      return `Не хватает: ${Math.max(0, candidate.cost - candidate.have)} × ${itemObj ? tName('item', itemObj.name) : candidate.itemId}`;
+    }
+    if (candidate.availabilityReason === 'not_available') return 'Сейчас призыв недоступен';
+    return 'Условие призыва не подтверждено данными каталога. Добавляй персонажа в профиль после получения в игре';
+  };
 
   return `
     <section class="card card-gold">
       <div class="card-head">
-        <div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div>
+        <div>
+          <div class="card-title">➕ Хранители · ${cands.wardens.length}</div>
+          <div class="row-sub">Кнопка призыва активна только при подтверждённом условии и достаточном количестве предметов</div>
+        </div>
       </div>
       ${cands.wardens.map(c => {
         const w = db.wardens.find(x => x.id === c.id);
-        const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
+        const itemObj = c.itemId == null ? null : db.items.find(i => i.id === c.itemId);
         return `
           <div class="item-row">
             <img class="avatar" src="${getIconUrl(w?.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
             <div class="row-info">
-              <div class="row-name">${tName('warden', c.name)} (${c.baseTalentStars}★)</div>
-              <div class="row-sub">
-                ${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}
-              </div>
+              <div class="row-name">${tName('warden', c.name)} · ${c.baseTalentStars}★</div>
+              <div class="row-sub">${availabilityText(c, itemObj)}</div>
             </div>
-            <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
+            <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Недоступно'}</button>
+          </div>
+        `;
+      }).join('')}
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">♥ Возлюбленные · ${cands.lovers.length}</div>
+          <div class="row-sub">Призыв партнёра учитывает его собственный предмет; связь со Смотрителем показана отдельно</div>
+        </div>
+      </div>
+      ${cands.lovers.map(c => {
+        const l = db.lovers.find(x => x.id === c.id);
+        const w = db.wardens.find(x => x.id === c.wardenId);
+        const itemObj = c.itemId == null ? null : db.items.find(i => i.id === c.itemId);
+        return `
+          <div class="item-row">
+            <img class="avatar" src="${getIconUrl(getLoverIconPath(l, null), true)}" alt="" loading="lazy" />
+            <div class="row-info">
+              <div class="row-name">${tName('lover', c.name)}</div>
+              <div class="row-sub">${w ? `Смотритель: ${tName('warden', w.name)} · ` : ''}${availabilityText(c, itemObj)}</div>
+            </div>
+            <button class="btn btn-sm btn-primary summon-lover" data-lid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Недоступно'}</button>
           </div>
         `;
       }).join('')}
@@ -1266,6 +1305,35 @@ function bindEvents(db) {
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       if (candidate.itemId && candidate.cost > 0) state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
       state.account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.summon-lover').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.lid);
+      const candidate = getSummonCandidates(
+        db.wardens, db.lovers,
+        new Set(Object.keys(state.account.ownedWardens).map(Number)),
+        new Set(Object.keys(state.account.ownedLovers).map(Number)),
+        state.account.bag
+      ).lovers.find(item => item.id === id);
+      if (!candidate?.canSummon) {
+        alert('Условие призыва не подтверждено или не хватает предметов.');
+        return;
+      }
+      if (candidate.itemId != null && candidate.cost > 0) {
+        state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
+      }
+      const lover = db.lovers.find(item => item.id === id);
+      state.account.ownedLovers[id] = {
+        affinity: 0,
+        closeness: 0,
+        sex: lover?.fixed_sex || state.settings.loverSex || 'female',
+        presences: {},
+        bonds: {},
+      };
       saveState();
       render();
     });
