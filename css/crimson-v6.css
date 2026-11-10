@@ -79,6 +79,10 @@ button { -webkit-tap-highlight-color: transparent; }
     radial-gradient(circle at 28% 20%, rgba(255,255,255,.42), transparent 27%),
     linear-gradient(145deg, #f05270 0%, #a51b43 46%, #3a1029 100%);
   color: #fff1d2;
+  font-size: 27px;
+  line-height: 1;
+  text-align: center;
+  font-family: Georgia, serif;
   box-shadow: 0 5px 18px rgba(201, 42, 80, .28), inset 0 1px 0 rgba(255,255,255,.28);
   text-shadow: 0 1px 8px rgba(30, 0, 12, .5);
 }
@@ -95,8 +99,10 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .brand-title {
   color: #fff6f2;
-  letter-spacing: .045em;
-  font-size: 16px;
+  letter-spacing: .10em;
+  font-size: 15px;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .brand-sub {
