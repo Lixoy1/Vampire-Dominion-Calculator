@@ -169,6 +169,45 @@ test('unified dominance report returns finite totals and bond spend', () => {
 });
 
 
+test('report blocks imported plan categories that are not applied yet', () => {
+  const curves = E.buildPresenceCurvesMap(GAME_DB.lover_presence_levels);
+  const db = {
+    wardens: GAME_DB.wardens,
+    lovers: GAME_DB.lovers,
+    items: GAME_DB.items,
+    promotes: GAME_DB.warden_promotes,
+    conclaveLevels: GAME_DB.conclave_levels,
+    courtyardLevels: GAME_DB.courtyard_levels,
+    presenceCurvesMap: curves,
+  };
+  const account = {
+    blood: 0,
+    conclaveExp: 0,
+    courtyardExp: 0,
+    courtyardLvl: 0,
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    ownedWardens: {},
+    ownedLovers: {},
+    bag: {},
+  };
+  const basePlan = {
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+    levels: {},
+    bonds: {},
+    summons: { wardens: [], lovers: [] },
+  };
+  const report = E.calculateTotalDominanceReport({
+    db,
+    account,
+    plan: { ...basePlan, skins: { 10544101: 1 }, talents: { 10540: { scripts: { 0: 1 } } } },
+  });
+  assert.equal(report.canApply, false);
+  assert.ok(report.inventoryIssues.some(issue => issue.type === 'unsupported_plan_category' && issue.category === 'skins'));
+  assert.ok(report.inventoryIssues.some(issue => issue.type === 'unsupported_plan_category' && issue.category === 'talents'));
+  assert.ok(report.blockers.some(blocker => blocker.includes('talents, skins')));
+});
+
 test('level upgrade exposes per-attribute contributions and flags approximate blood cost', () => {
   const warden = GAME_DB.wardens[0];
   const result = E.calcWardenLevelsUpgrade(warden, 1, 2, 1, GAME_DB.warden_promotes, {}, {});
