@@ -3,6 +3,7 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
+import { normalizeCalculationSnapshot } from './snapshot-adapter.js';
 import {
   ATTRIBUTES,
   FABRIC_COST_BY_QUALITY,
@@ -44,6 +45,7 @@ function createBlankAccountData() {
     ownedLovers: {},
     skins: {},
     bag: {},
+    calculationSnapshot: null,
   };
 }
 
@@ -624,6 +626,97 @@ function renderActiveTab(db, report) {
   }
 }
 
+function renderServerSnapshotCard() {
+  const record = state.account.calculationSnapshot;
+  if (!record?.data) {
+    return `
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="card-title">◈ Проверка по серверному расчёту</div>
+            <div class="row-sub">Импортируй JSON-ответ калькулятора через кнопку «Импорт» — снимок будет показан отдельно от локального плана</div>
+          </div>
+          <span class="badge">Ожидает JSON</span>
+        </div>
+        <div class="row-sub">Поддерживается ответ с полями total, attributes и gain. Профиль игры, пароль или токен не нужны.</div>
+      </section>
+    `;
+  }
+
+  let snapshot;
+  try {
+    snapshot = normalizeCalculationSnapshot(record.data);
+  } catch {
+    return `
+      <section class="card">
+        <div class="card-title">◈ Серверный снимок не прочитан</div>
+        <div class="row-sub">Файл остался в профиле, но его структура не распознана.</div>
+        <button class="btn btn-sm" id="btn-clear-snapshot">Удалить снимок</button>
+      </section>
+    `;
+  }
+
+  const capturedAt = record.capturedAt ? new Date(record.capturedAt) : null;
+  const capturedLabel = capturedAt && Number.isFinite(capturedAt.getTime())
+    ? capturedAt.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU')
+    : 'время неизвестно';
+  const attributes = ATTRIBUTES.map(attr => `
+    <div class="card" style="margin:0;padding:10px;">
+      <div class="row-sub">${tName('attribute', attr)}</div>
+      <div class="row-name">${snapshot.attributes[attr] == null ? '—' : fmt(snapshot.attributes[attr])}</div>
+      <div class="gain-pill">${snapshot.gain.attributes[attr] == null ? '—' : '+' + fmt(snapshot.gain.attributes[attr])}</div>
+    </div>
+  `).join('');
+  const sectionRows = [
+    ['Конклав', snapshot.sections.conclave?.gain],
+    ['Сад / Двор', snapshot.sections.courtyard?.gain],
+    ['Уровни Хранителей', snapshot.sections.levels?.gain],
+    ['Кровные узы', snapshot.sections.bonds?.gain],
+    ['Вдохновения', snapshot.sections.auras?.gain],
+    ['Веяния', snapshot.sections.presences?.gain],
+    ['Облики', snapshot.sections.skins?.gain],
+    ['Таланты', snapshot.sections.talents?.gain],
+  ];
+  const sections = sectionRows.map(([label, value]) => `
+    <div class="item-row">
+      <div class="row-info"><div class="row-name">${label}</div></div>
+      <div class="row-name">${value == null ? '—' : '+' + fmt(value)}</div>
+    </div>
+  `).join('');
+  const books = snapshot.sections.books;
+  const booksLine = books && (books.minimum != null || books.expected != null || books.maximum != null)
+    ? `<div class="row-sub">Книги: минимум ${books.minimum == null ? '—' : fmt(books.minimum)} · ожидание ${books.expected == null ? '—' : fmt(books.expected)} · максимум ${books.maximum == null ? '—' : fmt(books.maximum)}</div>`
+    : '';
+
+  return `
+    <section class="card card-gold">
+      <div class="card-head">
+        <div>
+          <div class="card-title">◈ Эталонный серверный расчёт</div>
+          <div class="row-sub">Импортирован: ${capturedLabel} · это сохранённый снимок, не live-синхронизация</div>
+        </div>
+        <span class="badge badge-ok">JSON распознан</span>
+      </div>
+      <div class="grid-2" style="margin-bottom:10px;">
+        <div class="card" style="margin:0;padding:11px;">
+          <div class="row-sub">Итоговое Господство</div>
+          <div class="gain-pill">${snapshot.total == null ? '—' : fmt(snapshot.total)}</div>
+        </div>
+        <div class="card" style="margin:0;padding:11px;">
+          <div class="row-sub">Прирост по плану сервера</div>
+          <div class="gain-pill">+${snapshot.gain.total == null ? '—' : fmt(snapshot.gain.total)}</div>
+        </div>
+      </div>
+      <div class="grid-4">${attributes}</div>
+      <div class="card-title" style="margin-top:14px;">Разложение прироста по системам</div>
+      ${sections}
+      ${booksLine}
+      <div class="row-sub" style="margin-top:8px;">Значения «—» означают, что сервер не прислал отдельный итог по этой системе. Они не заменяются нулями.</div>
+      <button class="btn btn-sm" id="btn-clear-snapshot" style="margin-top:10px;">Удалить серверный снимок</button>
+    </section>
+  `;
+}
+
 function renderDominanceTab(db, report) {
   return `
     <section class="card card-gold">
@@ -658,6 +751,8 @@ function renderDominanceTab(db, report) {
         <button class="btn" id="btn-reset-plan">↺ Сбросить план</button>
       </div>
     </section>
+
+${renderServerSnapshotCard()}
 
     <section class="card game-sync-card">
       <div class="card-head">
@@ -1131,6 +1226,11 @@ function bindEvents(db) {
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
+  document.getElementById('btn-clear-snapshot')?.addEventListener('click', () => {
+    state.account.calculationSnapshot = null;
+    saveState();
+    render();
+  });
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1436,7 +1536,24 @@ function bindEvents(db) {
       if (!file) return;
       try {
         const parsed = JSON.parse(await file.text());
-        state = normalizeState(parsed);
+        const isCalculationSnapshot = parsed &&
+          typeof parsed === 'object' &&
+          !Array.isArray(parsed) &&
+          Array.isArray(parsed.attributes) &&
+          parsed.gain &&
+          Array.isArray(parsed.gain.attributes) &&
+          Object.prototype.hasOwnProperty.call(parsed, 'total');
+
+        if (isCalculationSnapshot) {
+          normalizeCalculationSnapshot(parsed);
+          state.account.calculationSnapshot = {
+            capturedAt: new Date().toISOString(),
+            data: parsed,
+          };
+          state.activeTab = 'dominance';
+        } else {
+          state = normalizeState(parsed);
+        }
         saveState();
         render();
       } catch (err) {
