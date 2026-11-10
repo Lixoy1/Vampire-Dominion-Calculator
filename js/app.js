@@ -566,9 +566,9 @@ function render() {
     <div class="app-shell">
       <header class="top-bar">
         <div class="brand-block">
-          <div class="brand-crest">VD</div>
+          <div class="brand-crest" aria-label="Корона Наследия">♛</div>
           <div>
-            <div class="brand-title">Vampire Dominion</div>
+            <div class="brand-title">НАСЛЕДИЕ ВАМПИРОВ</div>
             <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
           </div>
         </div>
@@ -601,7 +601,7 @@ function render() {
         ${renderActiveTab(db, report)}
       </main>
       <footer class="app-footnote">
-        <span>CRIMSON OBSIDIAN</span><span>Локальный помощник · без VIP-ограничений</span>
+        <span>♛ НАСЛЕДИЕ ВАМПИРОВ</span><span>Бесплатный помощник · все функции открыты</span>
       </footer>
     </div>
   `;
