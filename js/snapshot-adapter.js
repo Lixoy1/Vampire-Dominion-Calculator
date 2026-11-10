@@ -306,7 +306,17 @@ function normalizeSimpleResourceSection(section) {
     minimum: toFiniteNumber(section.minimum),
     expected: toFiniteNumber(section.expected),
     maximum: toFiniteNumber(section.maximum),
-    items: Array.isArray(section.items) ? section.items : [],
+    items: Array.isArray(section.items)
+      ? section.items.map(item => ({
+          itemId: item.item_id ?? null,
+          count: toFiniteNumber(item.count),
+          counted: toFiniteNumber(item.counted),
+          minimum: toFiniteNumber(item.minimum),
+          expected: toFiniteNumber(item.expected),
+          maximum: toFiniteNumber(item.maximum),
+          raw: item,
+        }))
+      : [],
     raw: section,
   };
 }
@@ -344,6 +354,102 @@ export function normalizeCalculationSnapshot(input) {
  * Compare two fully calculated snapshots without filling missing data.
  * `local` must expose total, attributes, and gain like a server snapshot.
  */
+function getComparableIdentity(row) {
+  if (!row || typeof row !== 'object' || Array.isArray(row)) return null;
+  const values = [];
+  for (const key of ['id', 'itemId', 'wardenId', 'loverId', 'attribute', 'position', 'skin_id', 'warden_id', 'lover_id', 'item_id']) {
+    if (row[key] !== undefined && row[key] !== null) values.push(key + ':' + String(row[key]));
+  }
+  if (row.raw && typeof row.raw === 'object') {
+    for (const key of ['item_id', 'warden_id', 'lover_id', 'skin_id', 'aura_id', 'presence_id']) {
+      if (row.raw[key] !== undefined && row.raw[key] !== null) values.push('raw.' + key + ':' + String(row.raw[key]));
+    }
+  }
+  return values.length ? values.join('|') : null;
+}
+
+function compareTree(local, server, path, tolerance, mismatches) {
+  if (local === undefined && server === undefined) return;
+  if (local === null && server === null) return;
+
+  if (local === undefined || server === undefined || local === null || server === null) {
+    mismatches.push({
+      path: path,
+      issue: local == null ? 'missing_local' : 'missing_server',
+      local: local === undefined ? undefined : local,
+      server: server === undefined ? undefined : server
+    });
+    return;
+  }
+
+  if (Array.isArray(local) || Array.isArray(server)) {
+    if (!Array.isArray(local) || !Array.isArray(server)) {
+      mismatches.push({ path: path, issue: 'type_mismatch' });
+      return;
+    }
+
+    const localIds = local.map(getComparableIdentity);
+    const serverIds = server.map(getComparableIdentity);
+    const canMatchByIdentity =
+      local.length > 0 &&
+      server.length > 0 &&
+      localIds.every(Boolean) &&
+      serverIds.every(Boolean) &&
+      new Set(localIds).size === localIds.length &&
+      new Set(serverIds).size === serverIds.length;
+
+    if (canMatchByIdentity) {
+      const localMap = new Map(local.map((row, index) => [localIds[index], row]));
+      const serverMap = new Map(server.map((row, index) => [serverIds[index], row]));
+      const allIds = new Set([...localMap.keys(), ...serverMap.keys()]);
+      for (const id of allIds) {
+        compareTree(localMap.get(id), serverMap.get(id), path + '[' + id + ']', tolerance, mismatches);
+      }
+      return;
+    }
+
+    if (local.length !== server.length) {
+      mismatches.push({ path: path, issue: 'array_length', local: local.length, server: server.length });
+    }
+    const count = Math.min(local.length, server.length);
+    for (let index = 0; index < count; index++) {
+      compareTree(local[index], server[index], path + '[' + index + ']', tolerance, mismatches);
+    }
+    return;
+  }
+
+  if (typeof local === 'object' || typeof server === 'object') {
+    if (typeof local !== 'object' || typeof server !== 'object') {
+      mismatches.push({ path: path, issue: 'type_mismatch' });
+      return;
+    }
+    const keys = new Set([...Object.keys(local), ...Object.keys(server)]);
+    for (const key of keys) {
+      if (key === 'raw' || key === 'bestPath') continue;
+      compareTree(local[key], server[key], path + '.' + key, tolerance, mismatches);
+    }
+    return;
+  }
+
+  const localNumber = toFiniteNumber(local);
+  const serverNumber = toFiniteNumber(server);
+  if (localNumber !== null && serverNumber !== null) {
+    const delta = localNumber - serverNumber;
+    if (Math.abs(delta) > tolerance) {
+      mismatches.push({ path: path, local: local, server: server, delta: delta });
+    }
+    return;
+  }
+  if (local !== server) {
+    mismatches.push({ path: path, local: local, server: server });
+  }
+}
+
+/**
+ * Compare two calculation snapshots. If both sides include normalized sections,
+ * compare nested costs and gains in addition to the headline totals/attributes.
+ * Missing fields are reported, never silently treated as zero.
+ */
 export function compareCalculationSnapshots(local, server, tolerance = 1e-7) {
   if (!local || !server) throw new TypeError('Both local and server snapshots are required.');
   const localAttributes = local.attributes ?? {};
@@ -366,19 +472,34 @@ export function compareCalculationSnapshots(local, server, tolerance = 1e-7) {
     gainAttributes[key] = compareValue(localGainAttributes[key], serverGainAttributes[key]);
   }
 
-  const checks = [
-    compareValue(local.total, server.total),
-    compareValue(local.gain?.total, server.gain?.total),
+  const total = compareValue(local.total, server.total);
+  const gainTotal = compareValue(local.gain?.total, server.gain?.total);
+  const headlineChecks = [
+    total,
+    gainTotal,
     ...Object.values(attributes),
     ...Object.values(gainAttributes),
   ];
 
+  const detailMismatches = [];
+  const detailAvailable = Boolean(local.sections && server.sections);
+  if (detailAvailable) {
+    compareTree(local.sections, server.sections, 'sections', tolerance, detailMismatches);
+  }
+
+  const sectionComparison = {
+    available: detailAvailable,
+    matches: !detailAvailable || detailMismatches.length === 0,
+    mismatches: detailMismatches,
+  };
+
   return {
-    matches: checks.every(check => check.matches),
-    total: compareValue(local.total, server.total),
-    gainTotal: compareValue(local.gain?.total, server.gain?.total),
+    matches: headlineChecks.every(check => check.matches) && sectionComparison.matches,
+    total,
+    gainTotal,
     attributes,
     gainAttributes,
+    sections: sectionComparison,
     tolerance,
   };
 }
