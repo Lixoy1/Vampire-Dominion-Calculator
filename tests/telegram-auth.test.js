@@ -37,7 +37,18 @@ assert.equal(verifyTelegramInitData(validInitData, '', { nowSeconds: now }), nul
 assert.equal(verifyTelegramInitData(validInitData, 'wrong-token', { nowSeconds: now }), null);
 assert.equal(verifyTelegramInitData(validInitData, token, { nowSeconds: now + 86401 }), null);
 assert.equal(verifyTelegramInitData(validInitData, token, { nowSeconds: now - 61 }), null);
-assert.equal(verifyTelegramInitData(validInitData, token, { nowSeconds: now + 61 }), null);
+const futureInitData = sign([
+  ['query_id', 'AAEAAAE'],
+  ['user', JSON.stringify(user)],
+  ['auth_date', String(now + 61)],
+]);
+assert.equal(verifyTelegramInitData(futureInitData, token, { nowSeconds: now }), null);
+const allowedFutureInitData = sign([
+  ['query_id', 'AAEAAAE'],
+  ['user', JSON.stringify(user)],
+  ['auth_date', String(now + 60)],
+]);
+assert.notEqual(verifyTelegramInitData(allowedFutureInitData, token, { nowSeconds: now }), null);
 
 const tampered = new URLSearchParams(validInitData);
 tampered.set('user', JSON.stringify({ ...user, id: 999 }));
