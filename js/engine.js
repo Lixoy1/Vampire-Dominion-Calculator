@@ -645,7 +645,7 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
 /**
  * 13. КАЛЬКУЛЯТОР ПРИЗЫВА СМОТРИТЕЛЕЙ И ПАРТНЁРОВ (CalcSummon)
  * Проверяет, кого можно призвать за предметы из сумки (`summon_item_id`, `summon_item_count`)
- * или бесплатно (ивенты/сюжет/VIP), и считает прямой прирост господства от призыва.
+ * либо по явному разрешению источника данных; неизвестные условия не считаются доступными.
  */
 export function getSummonCandidates(wardens, lovers, ownedWardenIds, ownedLoverIds, bagCountsById) {
   const getAvailability = template => {
