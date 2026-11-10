@@ -1,6 +1,6 @@
 /**
- * VAMPIRE DOMINION v3.0 — ГЛАВНОЕ ПРИЛОЖЕНИЕ КАЛЬКУЛЯТОРА (БЕЗ VIP-ОГРАНИЧЕНИЙ)
- * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
+ * НАСЛЕДИЕ ВАМПИРОВ V6 — CRIMSON OBSIDIAN
+ * Бесплатный Telegram Mini App с локальными профилями и проверяемыми расчётными модулями.
  */
 import { GAME_DB, getIconUrl } from './data.js';
 import { isCalculationSnapshotPayload, normalizeCalculationSnapshot } from './snapshot-adapter.js';
@@ -804,8 +804,8 @@ function renderDominanceTab(db, report) {
     <section class="card card-gold">
       <div class="card-head">
         <div>
-          <div class="card-title">Сводный прирост Господства</div>
-          <div class="row-sub">Автоматический расчёт по всем 8 веткам прокачки</div>
+          <div class="card-title">Локальный прогноз Господства</div>
+          <div class="row-sub">Расчёт по подтверждённым таблицам и отдельным модулям; оценки помечаются отдельно</div>
         </div>
         <div class="gain-pill">+${fmt(report.gain.total)}</div>
       </div>
@@ -833,7 +833,7 @@ function renderDominanceTab(db, report) {
       <div class="card-title" style="margin-top:14px;">Покрытие расчётами</div>
       ${coverageRows}
       <div class="bond-warning" style="margin-top:10px;">
-        Это не полный серверный итог. Кровь и Кровные узы пока рассчитываются ориентировочно; таланты, Вдохновения, Веяния и Облики не включены в локальную сумму. Для эталонных значений импортируй JSON-ответ сервера.
+        Это локальный прогноз, а не полный серверный итог. Стоимость Крови и Кровных уз пока ориентировочная; Таланты, Вдохновения, Веяния и Облики ещё не входят в локальную сумму. Для эталонных значений импортируй JSON-ответ калькулятора.
       </div>
       ${report.blockers?.length ? `<div class="row-sub" style="margin-top:8px;">${report.blockers.map(reason => `• ${reason}`).join('<br>')}</div>` : ''}
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
