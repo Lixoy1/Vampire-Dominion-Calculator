@@ -1,0 +1,46 @@
+name: Import original Vampire Dominion icons
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/import-original-icons.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  import-icons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout calculator
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download original v3.1 assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 "https://github.com/Lixoy1/Vampire-dominion/archive/refs/heads/blood-moon-v3.1.zip" -o /tmp/vampire-dominion-v3.1.zip
+          mkdir -p /tmp/vampire-dominion-source
+          unzip -q /tmp/vampire-dominion-v3.1.zip -d /tmp/vampire-dominion-source
+          ICON_DIR="$(find /tmp/vampire-dominion-source -type d -path '*/assets/icons' -print -quit)"
+          test -n "$ICON_DIR"
+          mkdir -p assets
+          cp -R "$ICON_DIR" assets/icons
+          COUNT="$(find assets/icons -type f -iname '*.webp' | wc -l | tr -d ' ')"
+          echo "Imported WebP files: $COUNT"
+          test "$COUNT" -eq 496
+      - name: Commit imported icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/icons
+          if git diff --cached --quiet; then
+            echo "Icons are already present; nothing to commit."
+            exit 0
+          fi
+          git commit -m "Add original v3.1 icon assets"
+          git push origin HEAD:main
