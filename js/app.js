@@ -438,6 +438,12 @@ function commitPlanToAccount() {
   }
   const report = calculateTotalDominanceReport({ db, account, plan });
   const fail = message => { alert(message); return false; };
+  if (!report.canApply) {
+    const reasons = report.blockers?.length
+      ? report.blockers
+      : ['В плане есть действия, которые пока не прошли проверку ресурсов или доступности.'];
+    return fail(`План пока нельзя безопасно применить:\\n• ${reasons.join('\\n• ')}\\n\\nСохрани профиль и дождись сверки этих расчётов с серверными данными.`);
+  }
   const inventoryLedger = createInventoryLedger(account.bag);
 
   if (report.spent.blood > account.blood) return fail('Недостаточно Крови для выбранного плана.');
@@ -632,7 +638,7 @@ function render() {
           </select>
           <button class="btn btn-sm" id="btn-new-account">＋ Аккаунт</button>
           <button class="btn btn-sm" id="btn-game-connect">🔗 Игра</button>
-          <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Авторасчёт</button>
+          <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Подбор плана</button>
           <button class="btn btn-sm" id="btn-theme">${state.settings.theme === 'light' ? '☀ Светлая' : '☾ Тёмная'}</button>
           <button class="btn btn-sm" id="btn-lang">${state.lang.toUpperCase()}</button>
           <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
@@ -765,6 +771,35 @@ function renderServerSnapshotCard() {
 }
 
 function renderDominanceTab(db, report) {
+  const coverageLabels = {
+    conclave: 'Конклав',
+    courtyard: 'Сад',
+    levels: 'Уровни Хранителей',
+    bonds: 'Кровные узы',
+    talents: 'Таланты',
+    auras: 'Вдохновения',
+    presences: 'Веяния',
+    skins: 'Облики',
+    summons: 'Призыв',
+  };
+  const coverageStatus = status => ({
+    table_based: 'По таблице',
+    approximate: 'Оценка',
+    partial: 'Частично',
+    not_included: 'Не входит в итог',
+  }[status] || 'Не проверено');
+  const coverageRows = Object.entries(report.coverage || {}).map(([key, value]) => `
+    <div class="item-row">
+      <div class="row-info"><div class="row-name">${coverageLabels[key] || key}</div></div>
+      <span class="badge ${value.status === 'table_based' ? 'badge-ok' : ''}">${coverageStatus(value.status)}</span>
+    </div>
+  `).join('');
+  const attributeRows = ATTRIBUTES.map(attr => `
+    <div class="card" style="margin:0;padding:10px;">
+      <div class="row-sub">${tName('attribute', attr)}</div>
+      <div class="row-name">${fmt(report.gain.byAttribute?.[attr] || 0)}</div>
+    </div>
+  `).join('');
   return `
     <section class="card card-gold">
       <div class="card-head">
@@ -792,9 +827,18 @@ function renderDominanceTab(db, report) {
           <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds + report.gain.summon)}</div>
         </div>
       </div>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-gold" id="btn-quick-run">⚡ Распределить все ресурсы оптимально</button>
-        <button class="btn btn-primary" id="btn-commit-plan">✅ Применить план и списать ресурсы</button>
+      <div class="card-title" style="margin-top:14px;">Прирост по атрибутам</div>
+      <div class="grid-4">${attributeRows}</div>
+      <div class="row-sub" style="margin-top:8px;">Нераспределённый по атрибутам прирост: ${fmt(report.gain.unallocated || 0)}</div>
+      <div class="card-title" style="margin-top:14px;">Покрытие расчётами</div>
+      ${coverageRows}
+      <div class="bond-warning" style="margin-top:10px;">
+        Это не полный серверный итог. Кровь и Кровные узы пока рассчитываются ориентировочно; таланты, Вдохновения, Веяния и Облики не включены в локальную сумму. Для эталонных значений импортируй JSON-ответ сервера.
+      </div>
+      ${report.blockers?.length ? `<div class="row-sub" style="margin-top:8px;">${report.blockers.map(reason => `• ${reason}`).join('<br>')}</div>` : ''}
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+        <button class="btn btn-gold" id="btn-quick-run">⚡ Подобрать план по доступным данным</button>
+        <button class="btn btn-primary" id="btn-commit-plan" ${report.canApply ? '' : 'disabled'}>✅ ${report.canApply ? 'Применить проверенный план' : 'Применение заблокировано'}</button>
         <button class="btn" id="btn-reset-plan">↺ Сбросить план</button>
       </div>
     </section>
