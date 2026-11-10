@@ -191,3 +191,79 @@ body {
 }
 .stat-label { font-size:11px; color:var(--text-muted); }
 .stat-value { color:var(--accent-ice); font-size:18px; font-weight:bold; }
+
+
+/* ==========================================================================
+   V4.1 — КОМПОНЕНТЫ СВИТЫ, КАЗНЫ, РИТУАЛОВ И ЭКРАННОГО НУМПАДА
+   ========================================================================== */
+html.light-theme {
+  --bg-deep: #f4efe6;
+  --bg-panel: rgba(255, 252, 247, 0.96);
+  --bg-glass: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(168, 126, 51, 0.25);
+  --text-main: #1d1824;
+  --text-muted: #685c75;
+  --accent-gold: #a87e33;
+  --accent-ice: #0284c7;
+}
+.pill-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;scrollbar-width:none}
+.pill-row::-webkit-scrollbar{display:none}
+.pill-btn{flex:none;padding:7px 14px;border-radius:999px;border:1px solid var(--glass-border);background:var(--bg-glass);color:var(--text-muted);font-size:12px;font-weight:600;cursor:pointer}
+.pill-btn.active{background:linear-gradient(135deg,#a61628,var(--accent-crimson));color:#fff;border-color:var(--accent-gold)}
+.hero-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:var(--bg-glass);border:1px solid var(--glass-border);margin-bottom:8px;cursor:pointer;transition:transform .12s ease}
+.hero-row:active{transform:scale(.985)}
+.hero-ava{width:46px;height:46px;border-radius:12px;object-fit:cover;border:1px solid var(--accent-gold);background:#1a1423;flex:none}
+.hero-placeholder{display:grid;place-items:center;color:var(--accent-gold);font-size:24px}
+.hero-meta{flex:1;min-width:0}
+.hero-title{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-sub{font-size:12px;color:var(--text-muted)}
+.num-chip{min-width:68px;padding:7px 10px;border-radius:10px;border:1px solid var(--glass-border);background:rgba(0,0,0,.18);color:var(--accent-gold);font-weight:700;font-size:13px;text-align:center;font-variant-numeric:tabular-nums;cursor:pointer}
+.prog-track{width:100%;height:6px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:8px}
+.prog-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent-crimson),var(--accent-gold));transition:width .25s ease}
+.numpad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.np-key{padding:14px 0;border-radius:12px;border:1px solid var(--glass-border);background:rgba(255,255,255,.05);color:var(--text-main);font-size:20px;font-weight:700;cursor:pointer}
+.np-key:active{background:rgba(229,185,99,.25)}
+.np-display{background:rgba(0,0,0,.28);border:1px solid var(--accent-gold);border-radius:12px;padding:12px 16px;font-size:24px;font-weight:800;color:var(--accent-gold);text-align:right;font-variant-numeric:tabular-nums;min-height:54px}
+.sheet-head,.detail-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.sheet-title{font-weight:700;font-size:16px;color:var(--accent-gold)}
+.sheet-subtitle{font-size:12px;color:var(--text-muted);margin-top:3px}
+.sheet-close{background:none;border:0;color:var(--text-muted);font-size:22px;padding:4px 8px}
+.np-apply{margin-top:12px}
+.np-clear{color:var(--accent-crimson)}
+.detail-name{font-size:18px;color:var(--accent-gold)}
+.detail-card{padding:12px;margin-bottom:12px}
+.edit-line{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--glass-border)}
+.edit-line:last-child{border-bottom:0}
+.dark-select,.settings-input,.search-input{background:var(--bg-deep);color:var(--text-main);border:1px solid var(--glass-border);padding:9px 12px;border-radius:10px;max-width:58%}
+.field-label{display:block;font-size:12px;color:var(--accent-gold);margin:0 0 6px}
+.settings-input,.search-input{width:100%;max-width:none;margin-bottom:12px;font-size:15px}
+.search-input{margin-bottom:12px}
+.section-kicker{font-size:12px;color:var(--accent-gold);font-weight:700;margin-bottom:8px}
+.section-title-row,.summary-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.section-count{font-size:12px;color:var(--accent-gold)}
+.lord-card{display:flex;align-items:center;gap:14px}
+.lord-card .hero-ava{width:62px;height:62px;border-radius:50%}
+.lord-name{font-size:20px;font-weight:700;overflow:hidden;text-overflow:ellipsis}
+.btn-oracle{width:100%;border:1px solid var(--accent-gold);border-radius:12px;padding:13px 16px;margin:12px 0;background:linear-gradient(135deg,#8e1426,var(--accent-crimson));color:#fff;font-weight:800}
+.summary-grid,.resource-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.summary-grid>div,.resource-cell{padding:10px;border:1px solid var(--glass-border);border-radius:10px;background:var(--bg-glass)}
+.stat-label{font-size:11px;color:var(--text-muted)}
+.stat-value{font-size:16px;font-weight:700;color:var(--accent-ice);margin-top:3px}
+.resource-cell{display:flex;flex-direction:column;gap:5px;text-align:left;color:var(--text-main);cursor:pointer}
+.resource-cell span{font-size:11px;color:var(--text-muted)}
+.resource-cell b{color:var(--accent-gold);font-size:16px}
+.ritual-values{display:flex;align-items:center;gap:7px}
+.plan-chip{color:var(--accent-ice)}
+.gain-text{color:#4cd97b}
+.talent-list{max-height:180px;overflow:auto;margin-bottom:12px}
+.talent-line{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--glass-border);font-size:12px}
+.danger-action{width:100%;padding:12px;border-radius:12px;border:1px solid var(--accent-crimson);background:rgba(217,30,54,.1);color:var(--accent-crimson);font-weight:700;margin-top:10px}
+.empty-state{text-align:center;color:var(--text-muted);padding:24px 8px;font-size:13px}
+.full-btn{width:100%;margin-top:10px}
+.settings-actions{display:flex;gap:10px;margin:14px 0}
+.settings-actions .pill-btn{flex:1;padding:12px}
+.info-card{border-color:var(--accent-ice)}
+.info-card .hero-sub{line-height:1.45;margin-bottom:10px}
+.btn-connect{width:100%;padding:11px;border:0;border-radius:10px;background:var(--accent-ice);color:#071018;font-weight:700}
+.gothic-title{font-size:19px}
+@media(max-width:360px){.hero-row{gap:8px;padding:9px}.num-chip{min-width:58px;padding:7px 6px}.pill-btn{padding:7px 11px}}
