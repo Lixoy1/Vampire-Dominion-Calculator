@@ -52,4 +52,22 @@ assert.equal(comparison.matches, false);
 assert.equal(comparison.attributes.strength.delta, 1);
 assert.equal(comparison.attributes.strength.matches, false);
 
+
+const identicalDetailed = compareCalculationSnapshots(normalized, normalized);
+assert.equal(identicalDetailed.matches, true);
+assert.equal(identicalDetailed.sections.available, true);
+assert.equal(identicalDetailed.sections.matches, true);
+
+const nestedMismatch = structuredClone(normalized);
+nestedMismatch.sections.levels.wardens[0].nextCost += 1;
+const nestedComparison = compareCalculationSnapshots(normalized, nestedMismatch);
+assert.equal(nestedComparison.matches, false);
+assert.ok(nestedComparison.sections.mismatches.some(item => item.path.includes('sections.levels.wardens') && item.path.endsWith('.nextCost')));
+
+const missingSection = structuredClone(normalized);
+missingSection.sections.auras = null;
+const missingSectionComparison = compareCalculationSnapshots(normalized, missingSection);
+assert.equal(missingSectionComparison.matches, false);
+assert.ok(missingSectionComparison.sections.mismatches.some(item => item.path === 'sections.auras' && item.issue === 'missing_server'));
+
 console.log('PASS server snapshot adapter fixture parity');
