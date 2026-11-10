@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Хроники Наследия</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <!-- Подключение Telegram WebApp API -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <!-- Главный контейнер приложения -->
+  <div id="app" class="app-container">
+    
+    <!-- Динамическая область для вкладок -->
+    <main id="main-content" class="view-area">
+      <!-- Контент подгружается через JS -->
+    </main>
+
+    <!-- Нижняя панель навигации (Tab Bar) -->
+    <nav class="bottom-tab-bar">
+      <button class="tab-item active" data-target="tab-citadel">
+        <span class="tab-icon">🏰</span>
+        <span class="tab-label">Цитадель</span>
+      </button>
+      <button class="tab-item" data-target="tab-roster">
+        <span class="tab-icon">⚔️</span>
+        <span class="tab-label">Свита</span>
+      </button>
+      <button class="tab-item" data-target="tab-treasury">
+        <span class="tab-icon">🎒</span>
+        <span class="tab-label">Казна</span>
+      </button>
+      <button class="tab-item" data-target="tab-rituals">
+        <span class="tab-icon">🔮</span>
+        <span class="tab-label">Ритуалы</span>
+      </button>
+      <button class="tab-item" data-target="tab-settings">
+        <span class="tab-icon">⚙️</span>
+        <span class="tab-label">Профиль</span>
+      </button>
+    </nav>
+
+    <!-- Модальное окно (Bottom Sheet) для ввода данных и калькуляторов -->
+    <div id="bottom-sheet" class="bottom-sheet hidden">
+      <div class="sheet-overlay"></div>
+      <div class="sheet-content">
+        <div class="sheet-handle"></div>
+        <div id="sheet-body"></div>
+      </div>
+    </div>
+
+    <!-- Встроенный Нумпад -->
+    <div id="custom-numpad" class="numpad-container hidden">
+      <!-- Клавиши нумпада генерируются в JS -->
+    </div>
+
+  </div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
