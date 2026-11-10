@@ -11,10 +11,12 @@
 <body>
   <!-- Главный контейнер приложения -->
   <div id="app" class="app-container">
+    
     <!-- Динамическая область для вкладок -->
     <main id="main-content" class="view-area">
       <!-- Контент подгружается через JS -->
     </main>
+
     <!-- Нижняя панель навигации (Tab Bar) -->
     <nav class="bottom-tab-bar">
       <button class="tab-item active" data-target="tab-citadel">
@@ -38,6 +40,7 @@
         <span class="tab-label">Профиль</span>
       </button>
     </nav>
+
     <!-- Модальное окно (Bottom Sheet) для ввода данных и калькуляторов -->
     <div id="bottom-sheet" class="bottom-sheet hidden">
       <div class="sheet-overlay"></div>
@@ -46,10 +49,12 @@
         <div id="sheet-body"></div>
       </div>
     </div>
+
     <!-- Встроенный Нумпад -->
     <div id="custom-numpad" class="numpad-container hidden">
       <!-- Клавиши нумпада генерируются в JS -->
     </div>
+
   </div>
   <script type="module" src="./js/app.js"></script>
 </body>
