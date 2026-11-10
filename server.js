@@ -32,7 +32,7 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, app: 'Vampire Dominion', botConfigured: Boolean(BOT_TOKEN) });
+  res.json({ ok: true, app: 'Наследие вампиров', botConfigured: Boolean(BOT_TOKEN) });
 });
 
 // Проверка подлинности Telegram Mini App initData на сервере.
@@ -74,7 +74,7 @@ app.post('/api/auth', (req, res) => {
 });
 
 const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Vampire Dominion web server listening on ${PORT}`);
+  console.log(`Наследие вампиров server listening on ${PORT}`);
 });
 
 if (!BOT_TOKEN) {
@@ -83,17 +83,21 @@ if (!BOT_TOKEN) {
   console.error('APP_URL / RENDER_EXTERNAL_URL is missing. Set the public Render URL.');
 } else {
   const bot = new Bot(BOT_TOKEN);
-  const keyboard = new InlineKeyboard().webApp('🩸 Открыть Vampire Dominion', APP_URL);
+  const keyboard = new InlineKeyboard().webApp('🩸 Открыть Наследие', APP_URL);
 
   bot.command('start', async (ctx) => {
     await ctx.reply(
-      'Добро пожаловать в «Хроники Наследия»! 🩸\n\nОткройте калькулятор и управляйте своей Цитаделью.',
+      'Добро пожаловать в «Наследие вампиров»! 🩸\n\nОткройте бесплатный калькулятор и управляйте своей Цитаделью.',
       { reply_markup: keyboard }
     );
   });
 
+  bot.command('open', async (ctx) => {
+    await ctx.reply('🩸 Открываем «Наследие вампиров».', { reply_markup: keyboard });
+  });
+
   bot.command('help', async (ctx) => {
-    await ctx.reply('Нажмите кнопку ниже, чтобы открыть Vampire Dominion.', { reply_markup: keyboard });
+    await ctx.reply('«Наследие вампиров» — бесплатный калькулятор и помощник. Нажмите кнопку ниже, чтобы открыть Цитадель.', { reply_markup: keyboard });
   });
 
   bot.catch((error) => console.error('Telegram bot error:', error));
@@ -102,7 +106,8 @@ if (!BOT_TOKEN) {
   }).catch((error) => console.error('Could not set Telegram menu button:', error));
 
   bot.api.setMyCommands([
-    { command: 'start', description: 'Открыть Vampire Dominion' },
+    { command: 'start', description: 'Открыть Наследие вампиров' },
+    { command: 'open', description: 'Открыть Цитадель' },
     { command: 'help', description: 'Помощь' }
   ]).catch((error) => console.error('Could not set bot commands:', error));
 
