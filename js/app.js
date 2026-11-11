@@ -89,7 +89,7 @@ function createStarterAccountData() {
       closeness: index === 0 ? 7 : 0,
       intimacy: index === 0 ? 7 : 0,
       affinity: index === 0 ? 10 : 0,
-      sex: lover.fixed_sex || (state?.settings?.loverSex ?? 'female'),
+      sex: lover.fixed_sex || 'female',
       bonds: {},
       presences: {},
     };
