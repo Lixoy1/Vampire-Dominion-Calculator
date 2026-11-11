@@ -628,6 +628,9 @@ function walkNumbers(value, path = 'root') {
           id: apiLover.id, affinity: 4321, closeness: 140,
           presences: [{ id: presence.id, level: 3, next_cost: 50, next_gain: 1.5 }],
         }],
+        attributes: {
+          strength: { talent: '30', conclave: '7125', avatar: '1800', familiar: '337500', total: '346455' },
+        },
         auras: {
           items: [{
             item_id: aura.upgrade_item_id,
@@ -686,6 +689,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(oracle.meta.helperApi.auraPathRows, 1);
   assert.equal(oracle.meta.helperApi.bookRows, 1);
   assert.equal(oracle.meta.helperApi.manuscriptTiers, 1);
+  assert.equal(oracle.meta.helperApi.attributeBreakdown.strength.total, '346455');
 }
 
 console.log('PASS unified server Oracle tests');
