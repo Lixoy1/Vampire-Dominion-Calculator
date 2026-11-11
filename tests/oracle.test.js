@@ -345,7 +345,9 @@ function walkNumbers(value, path = 'root') {
   assert.deepEqual(imported.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
   assert.equal(imported.provenance.sourceId, 'dhampir-helper-api');
   assert.equal(imported.provenance.gameServerVerified, false);
-  assert.ok(imported.warnings.length > 0);
+  assert.equal(imported.provenance.trustLevel, 'user-confirmed');
+  assert.equal(imported.account.helperImport.trustLevel, 'user-confirmed');
+  assert.equal(imported.warnings.length, 0);
 }
 
 
@@ -601,6 +603,89 @@ function walkNumbers(value, path = 'root') {
     },
   });
   assert.ok(allAuto.summary.bonds.addedLevels > 0, 'Auto All includes Scarlet Bond allocation');
+}
+
+
+{
+  const apiWarden = GAME_DB.wardens.find(item => (item.auras || []).some(aura => aura.upgrade_item_id));
+  const aura = apiWarden.auras.find(item => item.upgrade_item_id);
+  const apiLover = GAME_DB.lovers.find(item => (item.presences || []).some(presence => presence.presence_type === 'updatable'));
+  const presence = apiLover.presences.find(item => item.presence_type === 'updatable');
+  const skin = apiWarden.skins[0];
+  const imported = importDhampirSnapshot({
+    account: makeAccount(),
+    snapshots: [{
+      success: true,
+      data: {
+        wardens: [{
+          template_id: apiWarden.id, level: 123, promote_id: 3, talent_exp: 600,
+          dominance: '987654.25', filled: true,
+        }],
+        levels: {
+          wardens: [{ id: apiWarden.id, next_cost: 1234, next_gain: 567, next_kind: 'blood' }],
+        },
+        lovers: [{
+          id: apiLover.id, affinity: 4321, closeness: 140,
+          presences: [{ id: presence.id, level: 3, next_cost: 50, next_gain: 1.5 }],
+        }],
+        auras: {
+          items: [{
+            item_id: aura.upgrade_item_id,
+            count: 2,
+            best_path: { cost: [50, 75], gain: [2, 3] },
+            wardens: [{
+              warden_id: apiWarden.id,
+              owned: true,
+              levels: [{ aura_id: aura.id, level: 2, next_cost: 50, next_gain: 1 }],
+            }],
+          }],
+        },
+        talents: {
+          scripts: [{ id: 512, attribute: 'strength', type: 'sample', tries: 2, chance: 100, next_gain: 169 }],
+          scrolls: 12,
+        },
+        books: { items: [{ id: 1, min: 28, expected: 36, max: 48 }] },
+        manuscripts: { tiers: [{ stars: 1, chance: 50, protection: 0, guaranteed: 56, expected: 56 }] },
+        skins: [{
+          kind: 'warden', owner_id: apiWarden.id, template_id: skin.id,
+          level: 4, next_kind: 'fabric', next_cost: 50, next_gain: 250,
+        }],
+      },
+    }],
+  });
+
+  assert.equal(imported.summary.wardens, 1);
+  assert.equal(imported.summary.lovers, 1);
+  assert.equal(imported.summary.presences, 1);
+  assert.equal(imported.summary.auras, 1);
+  assert.equal(imported.summary.auraPaths, 1);
+  assert.equal(imported.summary.talentScripts, 1);
+  assert.equal(imported.summary.bookRows, 1);
+  assert.equal(imported.summary.manuscriptTiers, 1);
+  assert.equal(imported.summary.skins, 1);
+
+  assert.equal(imported.account.ownedWardens[apiWarden.id].level, 123);
+  assert.equal(imported.account.ownedWardens[apiWarden.id].auras[aura.id], 2);
+  assert.equal(imported.account.ownedLovers[apiLover.id].presences[presence.id], 3);
+  assert.equal(imported.account.skins[skin.id], 4);
+
+  const observations = imported.account.helperImport.apiObservations;
+  assert.deepEqual(observations.wardenSteps[apiWarden.id], {
+    nextCost: 1234, nextGain: 567, nextKind: 'blood', level: null, dominance: null,
+  });
+  assert.deepEqual(observations.auraItems[0].bestPath, { cost: [50, 75], gain: [2, 3] });
+  assert.equal(observations.talentScripts[0].next_gain, 169);
+  assert.equal(observations.bookItems[0].expected, 36);
+  assert.equal(observations.manuscriptTiers[0].expected, 56);
+  assert.equal(observations.presenceSteps[0].nextCost, 50);
+
+  const oracle = calculateOracle({ account: imported.account, plan: makePlan() });
+  assert.equal(oracle.meta.helperApi.trustLevel, 'user-confirmed');
+  assert.equal(oracle.meta.helperApi.observedWardenSteps, 1);
+  assert.equal(oracle.meta.helperApi.talentScriptRows, 1);
+  assert.equal(oracle.meta.helperApi.auraPathRows, 1);
+  assert.equal(oracle.meta.helperApi.bookRows, 1);
+  assert.equal(oracle.meta.helperApi.manuscriptTiers, 1);
 }
 
 console.log('PASS unified server Oracle tests');
