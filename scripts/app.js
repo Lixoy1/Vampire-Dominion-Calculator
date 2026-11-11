@@ -705,7 +705,7 @@ function renderWardenDetailScreen(db) {
   } else if (state.wardenTab === 'talents') {
     const cap = Number((db.promotes.find(p => p.id === Number(owned.promoteId || 1)) || {}).max_talent_lvl || 40);
     const planned = state.plan.talents?.[id] || {};
-    body = '<div class="attrs-box"><label class="field-stack"><span>Личный опыт талантов</span><input class="input talent-exp" type="number" min="0" data-wid="' + id + '" data-spa-warden-exp value="' + Number(owned.exp || 0) + '"></label>' +
+    body = '<div class="attrs-box"><label class="field-stack"><span>Личный опыт талантов</span><input class="input warden-personal-exp" type="number" min="0" data-wid="' + id + '" data-spa-warden-exp value="' + Number(owned.exp || 0) + '"></label>' +
       '<div class="row-sub">Доступно очков по модели Oracle: ' + Number(oracleWarden?.talentPointsAvailable || 0) + ' · потолок ' + cap + '</div>' +
       '<div class="grid-2">' + (warden.talents || []).map((talent, index) => {
         const level = Number(owned.talents?.[index] || 1);
@@ -1170,8 +1170,19 @@ function renderCoverageCard(report) {
 
 function renderDominanceCalcScreen(db, report) {
   return renderSubToolbar('calculations', 'Подсчёт Господства') +
-    '<section class="dominance-total-card"><div><div class="card-title">Прирост Господства</div><div class="row-sub">По локальным расчётным модулям</div></div><div class="dominance-number">+' + fmt(report.gain.total) + '</div></section>' +
+    '<section class="dominance-total-card"><div><div class="card-title">Прирост Господства</div><div class="row-sub">По серверной модели Oracle</div></div><div class="dominance-number">+' + fmt(report.gain.total) + '</div></section>' +
     renderDominanceTab(db, report) + renderCoverageCard(report);
+}
+
+function renderServerSnapshotCard() {
+  const helper = oracleSnapshot?.meta?.helperApi || {};
+  const imported = Boolean(helper.importedAt);
+  return '<section class="attrs-box"><div class="card-title">Данные и источники</div>' +
+    '<div class="item-row"><span>Версия Oracle</span><b>' + escHtml(oracleSnapshot?.meta?.oracleVersion || '—') + '</b></div>' +
+    '<div class="item-row"><span>Версия каталога</span><b>' + escHtml(oracleSnapshot?.meta?.dataVersion || '—') + '</b></div>' +
+    '<div class="item-row"><span>Импорт API-помощника</span><b>' + (imported ? 'Есть наблюдения' : 'Не загружен') + '</b></div>' +
+    '<div class="row-sub">JSON API «Помощника Дампира» является сторонним источником наблюдений. Его значения не считаются проверенными формулами официальной игры.</div>' +
+    '<div class="row-sub">' + escHtml(oracleSnapshot?.meta?.gameVerification?.note || 'Официальная игровая проверка расчётов не выполнялась.') + '</div></section>';
 }
 
 function renderSettingsScreen() {
@@ -1957,6 +1968,37 @@ function bindNumericPad() {
       });
     });
   }
+}
+
+function pushUndoSnapshot() {
+  state.history = state.history || [];
+  state.future = state.future || [];
+  const snapshot = JSON.stringify({ account: state.account, plan: state.plan });
+  if (state.history[state.history.length - 1] !== snapshot) {
+    state.history.push(snapshot);
+    if (state.history.length > 30) state.history.shift();
+    state.future = [];
+  }
+}
+
+function undoSpa() {
+  if (!state.history || !state.history.length) return;
+  state.future.push(JSON.stringify({ account: state.account, plan: state.plan }));
+  const snapshot = JSON.parse(state.history.pop());
+  state.account = normalizeAccountData(snapshot.account);
+  state.plan = normalizePlan(snapshot.plan, state.account);
+  saveState();
+  render();
+}
+
+function redoSpa() {
+  if (!state.future || !state.future.length) return;
+  state.history.push(JSON.stringify({ account: state.account, plan: state.plan }));
+  const snapshot = JSON.parse(state.future.pop());
+  state.account = normalizeAccountData(snapshot.account);
+  state.plan = normalizePlan(snapshot.plan, state.account);
+  saveState();
+  render();
 }
 
 function bindSpaEvents(db, report, oracle) {
