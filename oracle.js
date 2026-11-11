@@ -418,7 +418,7 @@ function makeWarnings(account, plan) {
   });
   if (hasLevelPlan) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Стоимость уровней в Крови использует аппроксимированную кривую из текущего движка. Проверь её по игровым значениям перед применением.',
+    message: 'Для уровней без импортированного Helper API next_cost используется расчётная кривая. Введённые API next_cost/next_gain сохраняются как точные наблюдения и не подменяются этой оценкой.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
@@ -427,7 +427,7 @@ function makeWarnings(account, plan) {
   });
   if (hasBondPlan) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
-    message: 'Стоимость уровней Кровных уз использует расчётную формулу, а не подтверждённую выгрузку игрового сервера.',
+    message: 'Для шагов Кровных уз без соответствующего Helper API next_cost применяется оценочная формула; импортированные API-наблюдения сохраняются отдельно.',
   });
   if (plan.summons.wardens.length) warnings.push({
     code: 'ESTIMATED_SUMMON_GAIN',
@@ -679,6 +679,8 @@ function getHelperApiImportSummary(account) {
     presenceSteps: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.length : 0,
     bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.length : 0,
     responseCount: Math.max(0, Math.round(numeric(observations.responseCount))),
+    attributeBreakdown: observations.attributes ?? null,
+    observedWardenDominance: record(imported.observedWardenDominance),
   };
 }
 
@@ -2039,12 +2041,12 @@ export function getOracleCapabilities() {
       'Warden blood costs currently use an approximate progression curve.',
       'Blood-bond costs currently use formula estimates.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
-      'Helper snapshot imports are reference data, not game-server verification.',
+      'User-confirmed Helper API responses are the parity source; dynamic next_cost/next_gain and best_path values are retained as exact observations.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
-      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula and is not game-server verified.',
-      'Aura levels are manually entered because no complete per-level upgrade-cost table is present in the catalogue.',
-      'Skin auto-ranking is disabled because verified per-level next-gain values are unavailable for all skins.',
+      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula when no matching Helper API step/path is supplied.',
+      'Aura best_path values from Helper API are retained; the fallback catalogue has no complete per-level aura cost table.',
+      'Skin next_kind/next_cost/next_gain observations are retained; automatic ranking still requires a complete mapping from API rows to owned skin cards.',
     ],
   };
 }
