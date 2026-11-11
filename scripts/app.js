@@ -1196,7 +1196,6 @@ async function render() {
   bindNumericPad();
   const renderId = ++oracleRequestSerial;
   applyTheme();
-
   let oracle;
   try {
     oracle = await requestOracle('/api/oracle/calculate', {
@@ -1206,125 +1205,39 @@ async function render() {
   } catch (error) {
     if (renderId !== oracleRequestSerial) return;
     oracleSnapshot = null;
-    root.innerHTML = `
-      <div class="app-shell">
-        <section class="card card-gold">
-          <div class="card-title">Oracle временно недоступен</div>
-          <p class="row-sub">${String(error.message || 'Не удалось получить серверный расчёт.').replace(/</g, '&lt;')}</p>
-          <p class="row-sub">Локальный fallback отключён: неподтверждённые цифры не будут показаны как результат Oracle.</p>
-          <button class="btn btn-primary" id="oracle-retry">Повторить запрос</button>
-        </section>
-      </div>`;
+    root.innerHTML = '<section class="card card-gold oracle-unavailable">' +
+      '<div class="card-title">Oracle временно недоступен</div>' +
+      '<p class="row-sub">' + escHtml(error.message || 'Не удалось получить серверный расчёт.') + '</p>' +
+      '<p class="row-sub">Локальный fallback отключён: неподтверждённые цифры не будут показаны как результат Oracle.</p>' +
+      '<button class="btn btn-primary" id="oracle-retry">Повторить запрос</button></section>';
     root.querySelector('#oracle-retry')?.addEventListener('click', render);
+    syncBottomNav(getPrimaryNav(state.screen || 'home'));
     return;
   }
   if (renderId !== oracleRequestSerial) return;
   oracleSnapshot = oracle;
-
   const db = getDbContext();
   const report = oracle.report;
-
-  const allTabs = [
-    ['dominance', '👑 Господство'],
-    ['conclave', '🏛 Конклав и Сад'],
-    ['levels', '🩸 Уровни и Кровь'],
-    ['talents', '📜 Таланты и Опыт'],
-    ['auras', '✨ Вдохновения и Веяния'],
-    ['bonds', '🔗 Кровные узы'],
-    ['skins', '🎭 Облики'],
-    ['summon', '➕ Призыв'],
-    ['bag', '🎒 Сумка и Очки'],
-  ];
-  const navGroups = {
-    home: ['dominance'],
-    resources: ['levels', 'bag', 'summon'],
-    calculations: ['conclave', 'talents', 'auras', 'bonds', 'skins'],
-    settings: [],
-  };
-  const activeMain = state.activeTab === 'settings' ? 'settings'
-    : navGroups.resources.includes(state.activeTab) ? 'resources'
-    : navGroups.calculations.includes(state.activeTab) ? 'calculations' : 'home';
-  const visibleTabs = allTabs.filter(([id]) => navGroups[activeMain].includes(id));
-
-  root.innerHTML = `
-    <div class="bloodmoon-shell">
-
-      <header class="top-bar bloodmoon-topbar">
-        <div class="brand-block">
-          <div class="brand-crest"><img src="./assets/crest.svg" alt="VD" /></div>
-          <div class="brand-copy">
-            <div class="brand-title">Vampire Dominion</div>
-            <div class="brand-sub">OPTIMIST · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
-          </div>
-        </div>
-        <div class="profile-controls">
-          <select class="select account-switch" id="account-switcher" aria-label="Аккаунт">
-            ${state.accounts.map(a => '<option value="' + String(a.id).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"' + (String(a.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + String(a.name || 'Аккаунт').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + ' · ' + String(a.server || 'сервер не указан').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>').join('')}
-          </select>
-          <button class="btn btn-sm profile-edit-btn" id="btn-profile-edit">Профиль</button>
-          <button class="btn btn-sm new-account-btn" id="btn-new-account" aria-label="Новый аккаунт">＋</button>
-        </div>
-      </header>
-      <section class="custom-hero bloodmoon-hero">
-        <div class="hero-crest"><img src="./assets/crest.svg" alt="" /></div>
-        <div class="custom-hero-overlay">
-          <div class="hero-title">OPTIMIST</div>
-          <div class="hero-subtitle">BLOOD MOON · VAMPIRE DOMINION</div>
-          <div class="hero-meta">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · Oracle v${oracle.meta.oracleVersion}</div>
-          <div class="hero-actions">
-            <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Авторасчёт</button>
-            <button class="btn btn-sm" id="btn-game-connect">🔗 Игра</button>
-          </div>
-        </div>
-      </section>
-
-
-
-      <nav class="tabs-scroll bloodmoon-tabs" aria-label="Разделы">
-        ${visibleTabs.map(([id, label]) => '<button class="tab-link ' + (state.activeTab === id ? 'active' : '') + '" data-tab="' + id + '">' + label + '</button>').join('')}
-      </nav>
-
-      <main id="tab-view">
-        ${oracle.meta.helperApi?.importedAt ? `
-          <section class="card helper-api-card">
-            <div class="card-head">
-              <div>
-                <div class="card-title">Источник контрольных данных: API «Помощника Дампира»</div>
-                <div class="row-sub">Это данные стороннего API-помощника; они используются как контрольный источник, а не как подтверждение от сервера игры.</div>
-              </div>
-              <span class="badge badge-gold">API-источник</span>
-            </div>
-            <div class="row-sub">
-              Смотрители ${oracle.meta.helperApi.observedWardens} · шаги ${oracle.meta.helperApi.observedWardenSteps} ·
-              таланты ${oracle.meta.helperApi.talentScriptRows} · пути аур ${oracle.meta.helperApi.auraPathRows} ·
-              книги ${oracle.meta.helperApi.bookRows} · манускрипты ${oracle.meta.helperApi.manuscriptTiers} ·
-              Веяния ${oracle.meta.helperApi.presenceSteps} · узы ${oracle.meta.helperApi.bondSteps} ·
-              облики ${oracle.meta.helperApi.skinSteps}
-            </div>
-            ${oracle.meta.helperApi.attributeBreakdown ? `
-              <div class="table-wrap" style="margin-top:10px;">
-                <div class="row-sub">Точные значения атрибутов из ответа API</div>
-                <div class="grid-4" style="margin-top:6px;">
-                  ${['strength','allure','intellect','spirit'].map((attr, i) => {
-                    const labels = ['Сила','Харизма','Интеллект','Воля'];
-                    const value = oracle.meta.helperApi.attributeBreakdown[attr];
-                    const total = value && typeof value === 'object' ? (value.total ?? value.dominance ?? '—') : (value ?? '—');
-                    return `<div><div class="row-sub">${labels[i]}</div><div class="row-name">${String(total)}</div></div>`;
-                  }).join('')}
-                </div>
-              </div>` : ''}
-            ${renderHelperApiPaths(oracle.meta.helperApi)}
-          </section>` : ''}
-        ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
-        ${renderActiveTab(db, report, oracle)}
-      </main>
-
-</nav>
-    </div>
-  `;
-
-  syncBottomNav(activeMain);
+  const notice = oracle.meta?.helperApi?.importedAt
+    ? '<section class="card helper-api-card"><div class="card-title">Наблюдения API «Помощника Дампира»</div>' +
+      '<div class="row-sub">Снимок стороннего API сохранён отдельно. Он не подтверждает формулы официальной игры.</div>' +
+      '<div class="row-sub">Смотрители ' + Number(oracle.meta.helperApi.observedWardens || 0) +
+      ' · шаги ' + Number(oracle.meta.helperApi.observedWardenSteps || 0) +
+      ' · таланты ' + Number(oracle.meta.helperApi.talentScriptRows || 0) +
+      ' · пути аур ' + Number(oracle.meta.helperApi.auraPathRows || 0) +
+      ' · книги ' + Number(oracle.meta.helperApi.bookRows || 0) +
+      ' · Веяния ' + Number(oracle.meta.helperApi.presenceSteps || 0) +
+      ' · узы ' + Number(oracle.meta.helperApi.bondSteps || 0) +
+      ' · облики ' + Number(oracle.meta.helperApi.skinSteps || 0) + '</div></section>'
+    : '';
+  const warnings = oracle.warnings?.length
+    ? '<section class="card oracle-warnings"><div class="card-title">Ограничения расчёта</div>' +
+      oracle.warnings.map(item => '<div class="row-sub">⚠ ' + escHtml(item.message || item) + '</div>').join('') + '</section>'
+    : '';
+  root.innerHTML = renderSpaTopbar() + notice + warnings + renderSpaScreen(db, report, oracle);
+  syncBottomNav(getPrimaryNav(state.screen || 'home'));
   bindEvents(db);
+  bindSpaEvents(db, report, oracle);
 }
 
 function renderActiveTab(db, report, oracle) {
