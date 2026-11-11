@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "test": "node tests/engine.test.js && node tests/oracle-engine.test.js && node tests/app-smoke.test.js",
-    "check": "node --check js/app.js && node --check js/engine.js && node --check js/data.js",
+    "check": "node --check js/app.js && node --check js/engine.js && node --check js/oracle-engine.js && node --check js/data.js",
     "verify:icons": "python verify_icons.py"
   },
   "dependencies": {
