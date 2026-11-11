@@ -51,7 +51,31 @@ function createDefaultState() {
   const account = createBlankAccountData();
   const plan = createBlankPlan(account);
   return {
-    version: 5,
+    version: 6,
+    screen: 'home',
+    currentWardenId: 10020,
+    currentLoverId: GAME_DB.lovers[0]?.id ?? 20010,
+    wardenTab: 'attributes',
+    expandedAttr: null,
+    wardenListFilter: 'all',
+    wardenListSearch: '',
+    wardenListSort: 'name',
+    loverListSearch: '',
+    bagCategory: 'all',
+    bagView: 'grid',
+    bagShowAll: true,
+    skinTab: 'wardens',
+    skinSearch: '',
+    wardenExpFilter: 'all',
+    wardenExpSearch: '',
+    calcPriority: 'dominance',
+    calcEnabledBranches: {
+      conclave: true, courtyard: true, summon: true, skins: true, books: true,
+      levels: true, auras: true, talents: true, bonds: true, presences: true,
+    },
+    lastCalcReport: null,
+    history: [],
+    future: [],
     lang: 'ru',
     preferLocalIcons: true,
     activeTab: 'dominance',
@@ -864,6 +888,297 @@ function openFormulaInfo() {
     '<p class="row-sub">Суммы, отмеченные как модельные или оценочные, нельзя трактовать как точные игровые значения.</p>' +
   '</div>';
   openAppModal('Формулы и точность расчётов', html);
+}
+
+function escHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]);
+  });
+}
+
+function createOwnedWarden(warden) {
+  const talents = {};
+  (warden.talents || []).forEach(function (item, index) { talents[index] = 1; });
+  const auras = {};
+  (warden.auras || []).forEach(function (item) { auras[item.id] = Number(item.min_lvl || 0); });
+  return {
+    level: 1,
+    promoteId: 1,
+    exp: 0,
+    books: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    talents: talents,
+    auras: auras
+  };
+}
+
+function createOwnedLover(lover) {
+  return {
+    closeness: 0,
+    intimacy: 0,
+    affinity: 0,
+    sex: lover.fixed_sex || state.settings.loverSex || 'female',
+    bonds: {},
+    presences: {}
+  };
+}
+
+function navigate(screen, params) {
+  Object.assign(state, params || {});
+  state.screen = screen;
+  saveState();
+  try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (error) {}
+  render();
+}
+
+function getPrimaryNav(screen) {
+  if (screen === 'settings') return 'settings';
+  if (['resources','wardens_list','warden-detail','lovers','lover-detail','bag','skins','conclave','warden_exp'].includes(screen)) return 'resources';
+  if (['calculations','calc_dominance','calc_talents','calc_intimacy'].includes(screen)) return 'calculations';
+  return 'home';
+}
+
+function getAccountProgressPercent(account) {
+  const wPct = Object.keys(account.ownedWardens || {}).length / Math.max(1, GAME_DB.wardens.length);
+  const lPct = Object.keys(account.ownedLovers || {}).length / Math.max(1, GAME_DB.lovers.length);
+  const bagPct = Object.values(account.bag || {}).filter(function (value) { return Number(value) > 0; }).length / Math.max(1, GAME_DB.items.length);
+  return Math.max(1, Math.min(100, Math.round(((wPct + lPct + bagPct) / 3) * 100)));
+}
+
+function renderSpaTopbar() {
+  const avatar = GAME_DB.wardens.find(function (warden) {
+    return warden.id === Number(state.profile.avatarId);
+  }) || GAME_DB.wardens[0];
+  return [
+    '<header class="spa-topbar">',
+      '<div class="spa-brand">',
+        '<img src="./assets/crest.svg" class="spa-crest" alt="VD">',
+        '<div class="spa-brand-copy">',
+          '<div class="spa-brand-title">Vampire Dominion</div>',
+          '<div class="spa-brand-sub">OPTIMIST · ' + escHtml(state.profile.server || 'сервер не указан') + ' · локальный профиль</div>',
+        '</div>',
+      '</div>',
+      '<div class="spa-top-actions">',
+        '<button class="spa-avatar-button" type="button" data-action="nav" data-screen="settings"><img src="' + getIconUrl(avatar.icon_path, state.preferLocalIcons) + '" alt="Профиль"></button>',
+        '<button class="spa-icon-button" type="button" id="btn-new-account" aria-label="Новый аккаунт">＋</button>',
+      '</div>',
+    '</header>'
+  ].join('');
+}
+
+function renderSubToolbar(backTarget, title) {
+  return '<div class="spa-screen-toolbar">' +
+    '<button type="button" class="back-pill" data-action="nav" data-screen="' + backTarget + '">← Назад</button>' +
+    '<div class="spa-screen-title">' + title + '</div>' +
+    '<div class="spa-toolbar-actions">' +
+      '<button type="button" class="icon-btn" data-action="undo" ' + (state.history && state.history.length ? '' : 'disabled') + '>↶</button>' +
+      '<button type="button" class="icon-btn" data-action="redo" ' + (state.future && state.future.length ? '' : 'disabled') + '>↷</button>' +
+    '</div></div>';
+}
+
+function renderHomeScreen() {
+  const progress = getAccountProgressPercent(state.account);
+  const avatar = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
+  return '<section class="home-screen">' +
+    '<div class="home-hero">' +
+      '<div class="home-eyebrow">OPTIMIST · ПОМОЩНИК</div>' +
+      '<div class="home-brand-title">Наследие<br>Вампиров</div>' +
+      '<div class="home-brand-sub">Vampire Dominion · Blood Moon Edition</div>' +
+      '<img src="./assets/crest.svg" class="home-sticker" alt="Эмблема">' +
+    '</div>' +
+    '<div class="profile-main-card" data-action="nav" data-screen="settings">' +
+      '<img src="' + getIconUrl(avatar.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt="Портрет">' +
+      '<div class="profile-main-info"><div class="profile-main-name">' + escHtml(state.profile.name) + '</div>' +
+      '<div class="profile-main-server">' + escHtml(state.profile.server || 'сервер не указан') + '</div>' +
+      '<div class="profile-badge-row"><span class="badge-pill">👑 Локальный профиль · полный набор разделов</span></div></div><div class="card-right">⌄</div>' +
+    '</div>' +
+    '<div class="card-stack">' +
+      '<div class="nav-card" data-action="nav" data-screen="resources"><div class="card-icon-box">✎</div><div class="card-body"><div class="card-title">Ресурсы</div><div class="card-subtitle">Смотрители, партнёры, сумка, облики, Конклав</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div><span class="progress-percent">' + progress + '%</span></div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="calculations"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Расчёты</div><div class="card-subtitle">Господство, таланты, близость, влечение, гильдия</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="settings"><div class="card-icon-box">⚙</div><div class="card-body"><div class="card-title">Настройки и профили</div><div class="card-subtitle">Сервер, портрет, импорт и экспорт данных</div></div><div class="card-right">›</div></div>' +
+    '</div>' +
+  '</section>';
+}
+
+function renderResourcesScreen() {
+  const account = state.account;
+  const wCount = Object.keys(account.ownedWardens || {}).length;
+  const lCount = Object.keys(account.ownedLovers || {}).length;
+  const bagCount = Object.values(account.bag || {}).filter(function (value) { return Number(value) > 0; }).length;
+  const allSkins = GAME_DB.wardens.reduce(function (sum, w) { return sum + (w.skins || []).length; }, 0) +
+    GAME_DB.lovers.reduce(function (sum, l) { return sum + (l.skins || []).length; }, 0);
+  const ownedSkins = Object.values(account.skins || {}).filter(function (value) { return Number(value) > 0; }).length;
+  return renderSubToolbar('home', 'Ресурсы') +
+    '<div class="resource-summary">' +
+      '<div class="resource-chip"><span>🩸 Кровь</span><b>' + fmt(account.blood || 0) + '</b><input class="input" type="number" min="0" data-resource-field="blood" value="' + Number(account.blood || 0) + '"></div>' +
+      '<div class="resource-chip"><span>🏛 Очки Конклава</span><b>' + fmt(account.conclaveExp || 0) + '</b><input class="input" type="number" min="0" data-resource-field="conclaveExp" value="' + Number(account.conclaveExp || 0) + '"></div>' +
+      '<div class="resource-chip"><span>🌿 Очки Сада</span><b>' + fmt(account.courtyardExp || 0) + '</b><input class="input" type="number" min="0" data-resource-field="courtyardExp" value="' + Number(account.courtyardExp || 0) + '"></div>' +
+    '</div>' +
+    '<div class="card-stack">' +
+      '<div class="nav-card" data-action="nav" data-screen="wardens_list"><div class="card-icon-box">🛡</div><div class="card-body"><div class="card-title">Смотрители</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * wCount / GAME_DB.wardens.length) + '%"></div></div><span>' + wCount + '/' + GAME_DB.wardens.length + '</span></div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="lovers"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Партнёры</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * lCount / GAME_DB.lovers.length) + '%"></div></div><span>' + lCount + '/' + GAME_DB.lovers.length + '</span></div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="bag"><div class="card-icon-box">👜</div><div class="card-body"><div class="card-title">Сумка</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * bagCount / GAME_DB.items.length) + '%"></div></div><span>' + bagCount + '/' + GAME_DB.items.length + '</span></div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="skins"><div class="card-icon-box">◇</div><div class="card-body"><div class="card-title">Облики</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * ownedSkins / Math.max(1, allSkins)) + '%"></div></div><span>' + ownedSkins + '/' + allSkins + '</span></div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="conclave"><div class="card-icon-box">🏛</div><div class="card-body"><div class="card-title">Конклав и Сад</div><div class="card-subtitle">Сад ' + Number(account.courtyardLvl || 0) + ' / 210 · Конклав ' + fmt(account.conclaveExp || 0) + '</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Быстрый ввод опыта талантов для всей коллекции</div></div><div class="card-right">›</div></div>' +
+    '</div>';
+}
+
+function renderWardensListScreen(db) {
+  const ownedIds = Object.keys(state.account.ownedWardens || {}).map(Number);
+  let list = ownedIds.map(function (id) { return db.wardens.find(function (warden) { return warden.id === id; }); }).filter(Boolean);
+  const filter = state.wardenListFilter || 'all';
+  if (filter !== 'all') list = list.filter(function (warden) { return warden.attributes.includes(filter); });
+  const query = String(state.wardenListSearch || '').trim().toLocaleLowerCase();
+  if (query) list = list.filter(function (warden) { return tName('warden', warden.name).toLocaleLowerCase().includes(query); });
+  list.sort(function (a, b) {
+    if (state.wardenListSort === 'sum') return (computeWardenDetailedStats(state.account, b.id).sum - computeWardenDetailedStats(state.account, a.id).sum);
+    return tName('warden', a.name).localeCompare(tName('warden', b.name), state.lang === 'en' ? 'en' : 'ru');
+  });
+  return renderSubToolbar('resources', 'Смотрители') +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden" placeholder="Поиск смотрителя..." value="' + escHtml(state.wardenListSearch || '') + '"></div><button class="pill-tab" data-action="toggle-warden-sort">' + (state.wardenListSort === 'sum' ? 'Сумма ↓' : 'Имя ↑') + '</button></div>' +
+    '<div class="pill-tabs"><button class="pill-tab ' + (filter === 'all' ? 'active' : '') + '" data-action="warden-filter" data-val="all">Все ' + ownedIds.length + '</button>' +
+    ATTRIBUTES.map(function (attr) { return '<button class="pill-tab ' + (filter === attr ? 'active' : '') + '" data-action="warden-filter" data-val="' + attr + '"><span class="dot ' + attr + '"></span>' + tName('attribute', attr) + '</button>'; }).join('') + '</div>' +
+    '<div class="card-stack">' + list.map(function (warden) {
+      const owned = state.account.ownedWardens[warden.id];
+      const stats = computeWardenDetailedStats(state.account, warden.id);
+      return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '">' +
+        '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
+        '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(function (attr) { return '<span class="dot ' + attr + '"></span>'; }).join(' ') + ' · ур. ' + Number(owned.level || 1) + ' · ' + tName('warden_promote', (db.promotes.find(function (p) { return p.id === Number(owned.promoteId || 1); }) || {}).name || '') + '</div></div>' +
+        '<div class="card-right"><b>' + fmt(stats.sum) + '</b> ›</div></div>';
+    }).join('') +
+    '<button type="button" class="nav-card add-dashed" data-action="open-add-warden"><strong>＋ Добавить смотрителей (' + ownedIds.length + '/' + db.wardens.length + ')</strong></button></div>';
+}
+
+function renderLoversScreen(db) {
+  const ownedIds = Object.keys(state.account.ownedLovers || {}).map(Number);
+  let list = ownedIds.map(function (id) { return db.lovers.find(function (lover) { return lover.id === id; }); }).filter(Boolean);
+  const query = String(state.loverListSearch || '').trim().toLocaleLowerCase();
+  if (query) list = list.filter(function (lover) { return tName('lover', lover.name).toLocaleLowerCase().includes(query); });
+  return renderSubToolbar('resources', 'Партнёры') +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="lover" placeholder="Поиск партнёра..." value="' + escHtml(state.loverListSearch || '') + '"></div></div>' +
+    '<div class="card-stack">' + list.map(function (lover) {
+      const owned = state.account.ownedLovers[lover.id];
+      return '<div class="nav-card" data-action="open-lover" data-id="' + lover.id + '"><img src="' + getIconUrl(getLoverIconPath(lover, owned), state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt=""><div class="card-body"><div class="card-title">' + tName('lover', lover.name) + '</div><div class="card-subtitle">♡ Близость: ' + fmt(owned.closeness || 0) + ' · Доверие: ' + fmt(owned.affinity || 0) + '</div></div><div class="card-right">›</div></div>';
+    }).join('') +
+    '<button class="nav-card add-dashed" data-action="open-add-lover"><strong>＋ Добавить партнёров (' + ownedIds.length + '/' + db.lovers.length + ')</strong></button>' +
+    '<details class="attrs-box add-owned-details"><summary>Добавить из полного каталога</summary><div class="grid-2">' + db.lovers.filter(function (lover) { return !state.account.ownedLovers[lover.id]; }).map(function (lover) {
+      return '<button class="catalog-pick" data-action="add-lover" data-id="' + lover.id + '">' + tName('lover', lover.name) + '</button>';
+    }).join('') + '</div></details>';
+}
+
+function itemBelongsToCategory(item, category) {
+  if (category === 'all') return true;
+  const tags = item.tags || [];
+  const cat = String(item.category || '').toLowerCase();
+  if (category === 'lovers') return tags.includes('for_lover') || ['intimacy','attraction','lover_summon'].includes(cat);
+  if (category === 'wardens') return tags.includes('for_warden') || ['talent','books','scrolls','scripts','promote','talentexp','warden_summon','rosen'].includes(cat);
+  return !itemBelongsToCategory(item, 'lovers') && !itemBelongsToCategory(item, 'wardens');
+}
+
+function renderBagScreen(db) {
+  const category = state.bagCategory || 'all';
+  let items = db.items.filter(function (item) { return itemBelongsToCategory(item, category); });
+  const query = String(state.searchQuery || '').trim().toLocaleLowerCase();
+  if (query) items = items.filter(function (item) { return tName('item', item.name).toLocaleLowerCase().includes(query); });
+  const filled = items.filter(function (item) { return Number(state.account.bag[item.id] || 0) > 0; }).length;
+  if (!state.bagShowAll) items = items.filter(function (item) { return Number(state.account.bag[item.id] || 0) > 0; });
+  const categoryButtons = [['all','Все'],['wardens','Смотрители'],['lovers','Партнёры'],['other','Другое']];
+  const list = items.map(function (item) {
+    const amount = Number(state.account.bag[item.id] || 0);
+    const url = getIconUrl(item.icon_path, state.preferLocalIcons);
+    if (state.bagView === 'grid') {
+      return '<button type="button" class="bag-cell ' + (amount === 0 ? 'empty' : '') + '" data-action="edit-bag-item" data-id="' + item.id + '"><div class="bag-cell-icon-wrap"><img src="' + url + '" loading="lazy" alt=""></div><div class="bag-cell-name">' + tName('item', item.name) + '</div><div class="bag-cell-count">' + fmt(amount) + '</div></button>';
+    }
+    return '<div class="nav-card bag-list-row" style="cursor:default"><div class="bag-cell-icon-wrap"><img src="' + url + '" loading="lazy" alt=""></div><div class="card-body"><div class="card-title">' + tName('item', item.name) + '</div><div class="card-subtitle">' + escHtml(item.category) + ' · ID ' + item.id + '</div></div><input class="input stepper-input bag-item-input" type="number" min="0" data-iid="' + item.id + '" value="' + amount + '"></div>';
+  }).join('');
+  return renderSubToolbar('resources', 'Сумка') +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" id="inp-bag-search" placeholder="Поиск предмета..." value="' + escHtml(query) + '"></div><div class="toolbar-group"><button class="icon-btn ' + (state.bagView === 'list' ? 'selected' : '') + '" data-action="bag-view" data-view="list">☰</button><button class="icon-btn ' + (state.bagView === 'grid' ? 'selected' : '') + '" data-action="bag-view" data-view="grid">⊞</button></div></div>' +
+    '<div class="pill-tabs">' + categoryButtons.map(function (item) { return '<button class="pill-tab ' + (category === item[0] ? 'active' : '') + '" data-action="bag-cat" data-cat="' + item[0] + '">' + item[1] + '</button>'; }).join('') + '</div>' +
+    '<div class="bag-tools"><span>' + filled + ' из ' + items.length + ' · ' + db.items.length + ' предметов в каталоге</span><button class="toggle-pill ' + (state.bagShowAll ? 'active' : '') + '" data-action="toggle-bag-all"><span class="toggle-dot"></span>Показать все</button></div>' +
+    (state.bagView === 'grid' ? '<div class="bag-grid-4">' + list + '</div>' : '<div class="card-stack">' + list + '</div>');
+}
+
+function renderSkinsScreen(db) {
+  const type = state.skinTab || 'wardens';
+  const isWardens = type === 'wardens';
+  const entities = (isWardens ? db.wardens : db.lovers).filter(function (item) { return item.skins && item.skins.length; });
+  const search = String(state.skinSearch || '').trim().toLocaleLowerCase();
+  const visible = entities.filter(function (entity) { return !search || tName(isWardens ? 'warden' : 'lover', entity.name).toLocaleLowerCase().includes(search); });
+  const rows = visible.map(function (entity) {
+    const ownerName = tName(isWardens ? 'warden' : 'lover', entity.name);
+    return '<section class="attrs-box"><div class="section-owner"><img src="' + getIconUrl(entity.icon_path || entity.icon_path_female || entity.icon_path_male, state.preferLocalIcons) + '" alt=""><b>' + ownerName + '</b><span>' + entity.skins.filter(function (skin) { return Number(state.account.skins[skin.id] || 0) > 0; }).length + '/' + entity.skins.length + '</span></div>' +
+      entity.skins.map(function (skin) {
+        const level = Number(state.account.skins[skin.id] || 0);
+        return '<div class="skin-row"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" alt=""><div class="card-body"><b>' + tName(isWardens ? 'warden_skin' : 'lover_skin', skin.name) + '</b><div class="row-sub">' + String(skin.quality || '').toUpperCase() + ' · макс. ур. ' + (skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
+      }).join('') + '</section>';
+  }).join('');
+  return renderSubToolbar('resources', 'Облики') +
+    '<section class="attrs-box"><div class="grid-2">' +
+      '<label class="field-stack"><span>Магазин обликов</span><input class="input" type="number" min="0" max="30" data-spa-skin-meta="skinShopCount" value="' + Number(state.account.skinShopCount || 0) + '"></label>' +
+      '<label class="field-stack"><span>Опыт магазина</span><input class="input" type="number" min="0" max="100" data-spa-skin-meta="skinShopExp" value="' + Number(state.account.skinShopExp || 0) + '"></label></div></section>' +
+    '<div class="pill-tabs"><button class="pill-tab ' + (isWardens ? 'active' : '') + '" data-action="skin-tab" data-tab="wardens">Смотрители</button><button class="pill-tab ' + (!isWardens ? 'active' : '') + '" data-action="skin-tab" data-tab="lovers">Партнёры</button></div>' +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="skin" placeholder="Поиск персонажа..." value="' + escHtml(search) + '"></div></div>' + rows;
+}
+
+function renderWardenExpScreen(db) {
+  const withExp = Object.values(state.account.ownedWardens || {}).filter(function (owned) { return Number(owned.exp || 0) > 0; }).length;
+  let list = db.wardens.slice();
+  if (state.wardenExpFilter === 'with_exp') list = list.filter(function (warden) { return Number(state.account.ownedWardens[warden.id] && state.account.ownedWardens[warden.id].exp || 0) > 0; });
+  const query = String(state.wardenExpSearch || '').trim().toLocaleLowerCase();
+  if (query) list = list.filter(function (warden) { return tName('warden', warden.name).toLocaleLowerCase().includes(query); });
+  const total = Object.values(state.account.ownedWardens || {}).reduce(function (sum, owned) { return sum + Number(owned.exp || 0); }, 0);
+  return renderSubToolbar('resources', 'Опыт смотрителей') +
+    '<section class="attrs-box"><div class="card-title">Суммарный опыт талантов</div><div class="dominance-number">' + fmt(total) + '</div><div class="row-sub">' + withExp + ' смотрителей с накопленным опытом</div></section>' +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden-exp" placeholder="Поиск..." value="' + escHtml(query) + '"></div></div>' +
+    '<div class="pill-tabs"><button class="pill-tab ' + (state.wardenExpFilter !== 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="all">Все ' + db.wardens.length + '</button><button class="pill-tab ' + (state.wardenExpFilter === 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="with_exp">С опытом ' + withExp + '</button></div>' +
+    '<div class="row-sub">Ввод опыта добавляет смотрителя в профиль, если его ещё нет.</div><div class="card-stack">' + list.map(function (warden) {
+      const owned = state.account.ownedWardens[warden.id];
+      return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:44px;height:44px" alt=""><div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + (owned ? 'В профиле' : 'Не призван') + '</div></div><input class="input stepper-input" type="number" min="0" data-spa-quick-exp="' + warden.id + '" value="' + Number(owned && owned.exp || 0) + '"></div>';
+    }).join('') + '</div>';
+}
+
+function renderCalculationsHubScreen() {
+  return renderSubToolbar('home', 'Расчёты') +
+    '<div class="calc-hub-card" data-action="nav" data-screen="calc_dominance"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Подсчёт Господства</div><div class="card-subtitle">10 направлений вложения ресурсов и проверка доступности</div></div><div class="card-right">›</div></div>' +
+    '<div class="card-stack">' +
+      '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты и опыт</div><div class="card-subtitle">Звёзды, потолки уровня, личный опыт и прорывы</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="calc_intimacy"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Близость и влечение</div><div class="card-subtitle">Минимум, ожидание и максимум из предметов сумки</div></div><div class="card-right">›</div></div>' +
+    '</div>';
+}
+
+function renderCoverageCard(report) {
+  const labels = {
+    conclave: 'Конклав', courtyard: 'Сад', levels: 'Уровни', bonds: 'Кровные узы',
+    talents: 'Таланты', auras: 'Вдохновения', presences: 'Веяния', skins: 'Облики', summons: 'Призыв'
+  };
+  return '<section class="attrs-box"><div class="card-title">Покрытие расчётов</div>' +
+    Object.keys(report.coverage || {}).map(function (key) {
+      const item = report.coverage[key];
+      const status = item.status === 'table_based' ? 'По таблице' : item.status === 'approximate' ? 'Оценочная формула' : item.status === 'partial' ? 'Частично' : 'Не включено в общий итог';
+      return '<div class="item-row"><span>' + (labels[key] || key) + '</span><span class="coverage-status ' + item.status + '">' + status + '</span></div>';
+    }).join('') +
+    '<div class="row-sub">Итоговое Господство не суммирует неподдержанные ветки. Оценочные значения помечены отдельно и не выдаются за подтверждённые сервером.</div>' +
+    (report.blockers && report.blockers.length ? '<ul class="coverage-notes">' + report.blockers.map(function (item) { return '<li>' + escHtml(item) + '</li>'; }).join('') + '</ul>' : '') +
+    '</section>';
+}
+
+function renderDominanceCalcScreen(db, report) {
+  return renderSubToolbar('calculations', 'Подсчёт Господства') +
+    '<section class="dominance-total-card"><div><div class="card-title">Прирост Господства</div><div class="row-sub">По локальным расчётным модулям</div></div><div class="dominance-number">+' + fmt(report.gain.total) + '</div></section>' +
+    renderDominanceTab(db, report) + renderCoverageCard(report);
+}
+
+function renderSettingsScreen() {
+  const selected = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
+  return renderSubToolbar('home', 'Настройки и профиль') +
+    '<section class="attrs-box"><div class="card-title">Активный профиль</div><div class="settings-profile-row"><img src="' + getIconUrl(selected.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt=""><div class="card-body"><b>' + escHtml(state.profile.name) + '</b><div class="row-sub">' + escHtml(state.profile.server || 'сервер не указан') + '</div></div></div>' +
+      '<label class="field-stack"><span>Никнейм</span><input class="input" type="text" data-spa-profile="name" value="' + escHtml(state.profile.name) + '"></label>' +
+      '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
+      '<label class="field-stack"><span>Портрет профиля</span><select class="select" id="profile-avatar-select">' + GAME_DB.wardens.map(function (warden) { return '<option value="' + warden.id + '"' + (Number(state.profile.avatarId) === warden.id ? ' selected' : '') + '>' + tName('warden', warden.name) + '</option>'; }).join('') + '</select></label></section>' +
+    '<section class="attrs-box"><div class="card-title">Профили</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) { return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>'; }).join('') + '</select>' +
+      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля / JSON API</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
+      '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Импорт JSON сохраняет контрольный серверный снимок отдельно от ручного профиля.</div></section>' +
+    renderServerSnapshotCard();
 }
 
 function syncBottomNav(activeMain) {
