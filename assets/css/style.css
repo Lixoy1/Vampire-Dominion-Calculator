@@ -1206,3 +1206,20 @@ body { overflow-x: hidden; }
   .talent-actions { grid-template-columns:1fr; }
   .talent-grid { grid-template-columns:1fr 1fr; }
 }
+
+.talent-help-section { display:grid; gap:9px; padding:10px 0; border-top:1px solid var(--line); }
+.talent-help-heading { color:var(--gold); font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+.talent-help-item { display:grid; gap:2px; }
+.talent-help-item b { color:var(--text); font-size:12px; }
+.talent-help-item span { color:var(--muted); font-size:11px; line-height:1.45; }
+.talent-actions-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.warden-exp-summary .grid-2 { margin-top:12px; }
+.warden-exp-summary .grid-2>div { padding:9px; border:1px solid var(--line); border-radius:11px; background:rgba(0,0,0,.12); }
+.warden-exp-summary .grid-2 b { display:block; margin-top:3px; color:var(--gold); font-size:17px; }
+.warden-exp-note { padding:9px 11px; border-left:2px solid var(--gold); background:rgba(214,176,109,.06); border-radius:0 9px 9px 0; }
+.warden-exp-row { align-items:center; gap:9px; }
+.warden-exp-row .stepper-input { flex:0 0 92px; width:92px; text-align:center; }
+@media(max-width:520px) {
+  .talent-actions-three { grid-template-columns:1fr; }
+  .warden-exp-row .stepper-input { flex-basis:84px; width:84px; }
+}
