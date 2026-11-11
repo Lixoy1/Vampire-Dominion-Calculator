@@ -112,3 +112,8 @@ API принимает только JSON-объект с `account`; при от�
 Проверка API запускает отдельный экземпляр Express на временном порту, вызывает health/meta/calculate и проверяет ошибочный вход без профиля.
 
 Публичный релиз возможен после зелёного CI, проверки реального Render deployment и сверки отмеченных приближённых формул по игровым контрольным данным.
+
+
+## Skin upgrade transaction
+
+The account's current skin level is separate from the planned target (`plan.skins[skinId]`). Oracle resolves each target against the catalogue and current account state, then computes card and fabric usage. A skin's own card item (same ID as the skin) is consumed before quality fabric: A = item 4421 / 50, S = 4422 / 100, SS = 4423 / 200 per level. Fabric is rejected for non-purchasable skins. The commit validates all required resources before mutating the cloned account, updates skin levels and adds the catalogue `store_exp` for each gained level. This changes shop experience, not the exact dominance total. Automatic skin ranking is intentionally withheld until trustworthy per-level `next_gain` data is available for every skin.
