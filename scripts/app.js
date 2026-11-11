@@ -813,7 +813,7 @@ function renderSpaScreen(db, report, oracle) {
     case 'bag': return renderBagScreen(db);
     case 'skins': return renderSkinsScreen(db);
     case 'conclave': return renderConclaveScreen(db, report, oracle);
-    case 'warden_exp': return renderWardenExpScreen(db);
+    case 'warden_exp': return renderWardenExpScreen(db, oracle);
     case 'calculations': return renderCalculationsHubScreen();
     case 'calc_dominance': return renderDominanceCalcScreen(db, report);
     case 'calc_talents': return renderSubToolbar('calculations', 'Таланты и опыт') + renderTalentsTab(db, oracle);
@@ -1118,27 +1118,43 @@ function renderSkinsScreen(db) {
 }
 
 function renderWardenExpScreen(db) {
-  const withExp = Object.values(state.account.ownedWardens || {}).filter(function (owned) { return Number(owned.exp || 0) > 0; }).length;
+  const ownedMap = state.account.ownedWardens || {};
+  const withExp = Object.values(ownedMap).filter(function (owned) { return Number(owned.exp || 0) > 0; }).length;
+  const totalExp = Object.values(ownedMap).reduce(function (sum, owned) { return sum + Math.max(0, Number(owned.exp || 0)); }, 0);
+  const totalPoints = Object.values(ownedMap).reduce(function (sum, owned) { return sum + Math.floor(Math.max(0, Number(owned.exp || 0)) / 200); }, 0);
   let list = db.wardens.slice();
-  if (state.wardenExpFilter === 'with_exp') list = list.filter(function (warden) { return Number(state.account.ownedWardens[warden.id] && state.account.ownedWardens[warden.id].exp || 0) > 0; });
+  if (state.wardenExpFilter === 'with_exp') {
+    list = list.filter(function (warden) { return Number(ownedMap[warden.id] && ownedMap[warden.id].exp || 0) > 0; });
+  }
   const query = String(state.wardenExpSearch || '').trim().toLocaleLowerCase();
   if (query) list = list.filter(function (warden) { return tName('warden', warden.name).toLocaleLowerCase().includes(query); });
-  const total = Object.values(state.account.ownedWardens || {}).reduce(function (sum, owned) { return sum + Number(owned.exp || 0); }, 0);
-  return renderSubToolbar('resources', 'Опыт смотрителей') +
-    '<section class="attrs-box"><div class="card-title">Суммарный опыт талантов</div><div class="dominance-number">' + fmt(total) + '</div><div class="row-sub">' + withExp + ' смотрителей с накопленным опытом</div></section>' +
-    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden-exp" placeholder="Поиск..." value="' + escHtml(query) + '"></div></div>' +
+  return renderSubToolbar('calculations', 'Опыт смотрителей') +
+    '<section class="attrs-box warden-exp-summary"><div class="card-head"><div><div class="card-title">Опыт талантов</div><div class="row-sub">200 EXP = 1 очко · расчёт отдельно для каждого смотрителя</div></div><span class="badge badge-gold">' + fmt(totalPoints) + ' очк.</span></div>' +
+    '<div class="grid-2"><div><div class="row-sub">Всего личного опыта</div><b>' + fmt(totalExp) + ' EXP</b></div><div><div class="row-sub">С опытом</div><b>' + withExp + ' / ' + db.wardens.length + '</b></div></div></section>' +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden-exp" placeholder="Поиск смотрителя..." value="' + escHtml(query) + '"></div></div>' +
     '<div class="pill-tabs"><button class="pill-tab ' + (state.wardenExpFilter !== 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="all">Все ' + db.wardens.length + '</button><button class="pill-tab ' + (state.wardenExpFilter === 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="with_exp">С опытом ' + withExp + '</button></div>' +
-    '<div class="row-sub">Ввод опыта добавляет смотрителя в профиль, если его ещё нет.</div><div class="card-stack">' + list.map(function (warden) {
-      const owned = state.account.ownedWardens[warden.id];
-      return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:44px;height:44px" alt=""><div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + (owned ? 'В профиле' : 'Не призван') + '</div></div><input class="input stepper-input" type="number" min="0" data-spa-quick-exp="' + warden.id + '" value="' + Number(owned && owned.exp || 0) + '"></div>';
-    }).join('') + '</div>';
+    '<div class="row-sub warden-exp-note">Опыт не общий: он расходуется только на таланты того смотрителя, которому записан. Остаток меньше 200 EXP сохраняется у персонажа.</div>' +
+    '<div class="card-stack">' + list.map(function (warden) {
+      const owned = ownedMap[warden.id];
+      const exp = Math.max(0, Number(owned && owned.exp || 0));
+      const points = Math.floor(exp / 200);
+      const remainder = exp % 200;
+      return '<div class="nav-card warden-exp-row" style="cursor:default">' +
+        '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
+        '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div>' +
+        '<div class="card-subtitle">' + points + ' очков · остаток ' + fmt(remainder) + ' EXP' + (owned ? ' · в профиле' : ' · добавится при вводе опыта') + '</div></div>' +
+        '<input class="input stepper-input" type="number" min="0" step="1" aria-label="Опыт талантов: ' + escHtml(tName('warden', warden.name)) + '" data-spa-quick-exp="' + warden.id + '" value="' + exp + '">' +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="talent-actions"><button class="btn" data-action="nav" data-screen="calc_talents">← К талантам</button><button class="btn" data-action="nav" data-screen="resources">Ресурсы</button></div>';
 }
 
 function renderCalculationsHubScreen() {
   return renderSubToolbar('home', 'Расчёты') + '<div class="collection-banner calculations-banner"><div><b>АРХИВ РАСЧЁТОВ</b><span>Господство · оптимизация · прогноз</span></div></div>' +
     '<div class="calc-hub-card" data-action="nav" data-screen="calc_dominance"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Подсчёт Господства</div><div class="card-subtitle">10 направлений вложения ресурсов и проверка доступности</div></div><div class="card-right">›</div></div>' +
     '<div class="card-stack">' +
-      '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты и опыт</div><div class="card-subtitle">Звёзды, потолки уровня, личный опыт и прорывы</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты</div><div class="card-subtitle">Свитки, рукописи, звёзды и оптимизация</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Личный опыт, очки талантов и остаток EXP</div></div><div class="card-right">›</div></div>'
       '<div class="nav-card" data-action="nav" data-screen="calc_intimacy"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Близость и влечение</div><div class="card-subtitle">Минимум, ожидание и максимум из предметов сумки</div></div><div class="card-right">›</div></div>' +
     '</div>';
 }
@@ -1527,16 +1543,26 @@ function renderTalentsTab(db, oracle = oracleSnapshot) {
       </div>
       ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels} · личный опыт ${oracle.talentPlan.expLevels} (${fmt(oracle.talentPlan.expSpentTotal)} EXP)</div>` : ''}
       <details class="talent-help-card" open>
-        <summary>Как работает расчёт талантов</summary>
-        <div class="talent-help-list">
-          <div><b>Опыт смотрителя</b><span>200 EXP дают один звёздный пункт. Стоимость повышения зависит от числа звёзд таланта.</span></div>
-          <div><b>Свитки талантов</b><span>Свиток подходит таланту с соответствующим числом звёзд. Количество доступных свитков берётся из Сумки.</span></div>
-          <div><b>Рукописи</b><span>Рукопись привязана к атрибуту. Шанс срабатывания показывается отдельно для каждого таланта.</span></div>
-          <div><b>Прорывы</b><span>Бонусный опыт прорыва учитывается отдельно от личного опыта. Максимальный уровень таланта зависит от ступени прорыва.</span></div>
-          <div><b>Сохранение</b><span>Автораспределение сначала создаёт предварительный план. Предметы и опыт списываются только после «Применить изменения».</span></div>
+        <summary>Как считаются таланты и опыт</summary>
+        <div class="talent-help-section">
+          <div class="talent-help-item"><b>200 опыта — 1 очко</b><span>Опыт смотрителя переводится в очки талантов по 200 EXP за звёздный пункт.</span></div>
+          <div class="talent-help-item"><b>Свитки опыта</b><span>Накопленный опыт складывается в очки; остаток меньше 200 EXP остаётся у персонажа.</span></div>
+          <div class="talent-help-item"><b>Свитки таланта</b><span>Свитки соответствуют звёздности таланта. Для повышения выбирай предмет нужной звёздности.</span></div>
+          <div class="talent-help-item"><b>Рукописи</b><span>Рукописи срабатывают не всегда. Шанс успеха зависит от звёздности и показан в карточке таланта.</span></div>
         </div>
-      </details>
-      <div class="talent-actions">
+        <div class="talent-help-section">
+          <div class="talent-help-heading">Опыт смотрителей</div>
+          <div class="talent-help-item"><b>Только свои таланты</b><span>Личный опыт смотрителя расходуется только на таланты этого персонажа.</span></div>
+          <div class="talent-help-item"><b>200 опыта — 1 очко</b><span>Неважно, в какой талант направить очки: личный опыт считается по одной шкале.</span></div>
+          <div class="talent-help-item"><b>Сумка отдельно</b><span>Свитки и рукописи учитываются по остаткам в Сумке и не смешиваются с личным EXP.</span></div>
+          <div class="talent-help-item"><b>Откуда берутся очки</b><span>Из личного опыта талантов и бонусного опыта за прорывы смотрителя.</span></div>
+        </div>
+        <div class="talent-help-section">
+          <div class="talent-help-heading">Новые смотрители и отмена</div>
+          <div class="talent-help-item"><b>Только расчёт</b><span>Планирование не списывает ресурсы. Смотритель должен быть добавлен в профиль, чтобы его таланты попали в расчёт.</span></div>
+          <div class="talent-help-item"><b>Можно отменить</b><span>План можно сбросить до применения. Изменения профиля можно вернуть кнопками отмены и повтора.</span></div>
+        </div>
+      </details>     <div class="talent-actions">
         <button class="btn" id="btn-reset-plan">↶ Отменить план</button>
         <button class="btn btn-gold" id="btn-commit-plan">✓ Применить изменения</button>
       </div>
@@ -2079,6 +2105,7 @@ function bindSpaEvents(db, report, oracle) {
       if (action === 'toggle-attr-detail') { state.expandedAttr = state.expandedAttr === button.dataset.attr ? null : button.dataset.attr; return render(); }
       if (action === 'toggle-warden-sort') { state.wardenListSort = state.wardenListSort === 'sum' ? 'name' : 'sum'; return render(); }
       if (action === 'warden-filter') { state.wardenListFilter = button.dataset.val; return render(); }
+      if (action === 'warden-exp-filter') { state.wardenExpFilter = button.dataset.val === 'with_exp' ? 'with_exp' : 'all'; return render(); }
       if (action === 'add-warden') {
         const warden = db.wardens.find(function (item) { return item.id === Number(button.dataset.id); });
         if (!warden || state.account.ownedWardens[warden.id]) return;
