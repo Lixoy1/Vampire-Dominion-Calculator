@@ -28,6 +28,8 @@ const staticOptions = {
 app.use('/js', express.static(path.join(__dirname, 'js'), staticOptions));
 app.use('/css', express.static(path.join(__dirname, 'css'), staticOptions));
 app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
+app.use('/scripts', express.static(path.join(__dirname, 'scripts'), staticOptions));
+app.use('/data', express.static(path.join(__dirname, 'data'), staticOptions));
 
 app.get('/', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
