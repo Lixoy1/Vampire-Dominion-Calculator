@@ -175,6 +175,27 @@ try {
   assert.equal(skinCommit.result.account.bag[4421], 0);
   assert.equal(skinCommit.result.account.skinStoreExp, skin.store_exp);
 
+
+  const presenceLover = GAME_DB.lovers.find(item => (item.presences || []).some(p => p.presence_type === 'updatable'));
+  const presence = presenceLover.presences.find(p => p.presence_type === 'updatable');
+  const presenceAccount = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {},
+    ownedLovers: {
+      [presenceLover.id]: { affinity: 0, closeness: 0, sex: 'female', presences: { [presence.id]: 0 }, bonds: {} },
+    },
+    bag: { [presence.upgrade_item_id]: 100 }, skins: {},
+  };
+  const autoPresenceResponse = await post('/api/oracle/auto-presences', {
+    account: presenceAccount,
+    plan: {},
+  });
+  assert.equal(autoPresenceResponse.status, 200);
+  const autoPresence = await autoPresenceResponse.json();
+  assert.equal(autoPresence.ok, true);
+  assert.ok(autoPresence.result.summary.addedLevels > 0);
+  assert.ok(autoPresence.result.plan.presences[presenceLover.id][presence.id] > 0);
+
   const invalidResponse = await post('/api/oracle/calculate', { plan: {} });
   assert.equal(invalidResponse.status, 400);
   const invalid = await invalidResponse.json();
