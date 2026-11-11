@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.6.0';
+export const ORACLE_VERSION = '1.7.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
@@ -1108,7 +1108,7 @@ export function autoDistributeAll(input = {}) {
   ).wardens;
   plan.summons.lovers = [];
   for (const candidate of wardenCandidates) {
-    if (!candidate.canSummon) continue;
+    if (!candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
     if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
@@ -1123,7 +1123,7 @@ export function autoDistributeAll(input = {}) {
     summonBag
   ).lovers;
   for (const candidate of loverCandidates) {
-    if (!candidate.hasWarden || !candidate.canSummon) continue;
+    if (!candidate.hasWarden || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
     if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
@@ -1694,7 +1694,7 @@ export function getOracleCapabilities() {
     stateless: true,
     sections: [
       'dominance', 'conclave', 'courtyard', 'warden-levels', 'talents',
-      'auras', 'presences', 'presence-auto-distribution', 'blood-bonds', 'skins', 'summons', 'inventory',
+      'auras', 'presences', 'presence-auto-distribution', 'blood-bonds', 'bond-auto-distribution', 'talent-exp-allocation', 'skins', 'summons', 'inventory',
       'intimacy', 'attraction', 'guild-exp', 'helper-snapshot-import',
     ],
     formulaCaveats: [
@@ -1703,6 +1703,8 @@ export function getOracleCapabilities() {
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Helper snapshot imports are reference data, not game-server verification.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
+      'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
+      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula and is not game-server verified.',
     ],
   };
 }
