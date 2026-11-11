@@ -106,7 +106,8 @@ function walkNumbers(value, path = 'root') {
 
   const capabilities = getOracleCapabilities();
   assert.equal(capabilities.gameApiConnected, false);
-  assert.equal(capabilities.catalogProvenance.trustLevel, 'reference-unverified');
+  assert.equal(capabilities.catalogProvenance.trustLevel, 'user-confirmed');
+  assert.equal(capabilities.gameVerification.status, 'helper-api-confirmed');
   assert.equal(capabilities.gameVerification.verifiedAgainstGame, false);
   assert.ok(capabilities.sections.includes('dominance'));
   assert.ok(capabilities.sections.includes('inventory'));
