@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { GAME_DB } from '../js/data.js';
-import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../js/engine.js';
+import { GAME_DB } from '../scripts/data.js';
+import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../scripts/engine.js';
 
 function EngineFabricCost(quality) { return EngineFabricCostMap[quality] ?? null; }
 import {
