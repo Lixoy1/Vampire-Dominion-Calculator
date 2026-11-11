@@ -474,7 +474,7 @@ function renderActiveTab(db, report, oracle) {
     case 'talents': return renderTalentsTab(db, oracle);
     case 'auras': return renderAurasPresencesTab(db, oracle);
     case 'bonds': return renderBondsTab(db, oracle);
-    case 'skins': return renderSkinsTab(db);
+    case 'skins': return renderSkinsTab(db, oracle);
     case 'summon': return renderSummonTab(db, oracle);
     case 'bag': return renderBagTab(db, report, oracle);
     default: return renderDominanceTab(db, report);
@@ -829,7 +829,7 @@ function renderBondsTab(db, oracle) {
   `;
 }
 
-function renderSkinsTab(db) {
+function renderSkinsTab(db, oracle) {
   const allWardenSkins = db.wardens.flatMap(w => (w.skins || []).map(s => ({ ...s, ownerType: 'warden', ownerName: tName('warden', w.name) })));
   const allLoverSkins = db.lovers.flatMap(l => (l.skins || []).map(s => ({ ...s, ownerType: 'lover', ownerName: tName('lover', l.name) })));
   const allSkins = [...allWardenSkins, ...allLoverSkins];
@@ -842,16 +842,18 @@ function renderSkinsTab(db) {
           <div class="row-sub">Стоимость уровня в ткани: A = 50 (Атлас) · S = 100 (Кашемир) · SS = 200 (Шёлк)</div>
         </div>
       </div>
-      ${allSkins.map(s => `
+      ${allSkins.map(s => {
+        const result = oracle.skins[s.id];
+        return `
         <div class="item-row">
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
           <div class="row-info">
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
-            <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${s.store_exp} · ${FABRIC_COST_BY_QUALITY[s.quality]}/ур. ткани · ${s.purchasable ? 'Доступен за ткань' : 'Нужна карточка'}</div>
+            <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
           </div>
-          <div class="row-controls"><input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${state.account.skins[s.id] || 0}" aria-label="Уровень облика" /></div>
+          <div class="row-controls"><input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Уровень облика" /></div>
         </div>
-      `).join('')}
+      `;}).join('')}
     </section>
   `;
 }
@@ -917,7 +919,7 @@ function renderBagTab(db, report, oracle) {
         <input type="text" class="input" id="inp-bag-search" placeholder="Поиск предмета по названию..." value="${state.searchQuery}" />
       </div>
       ${filteredItems.map(it => {
-        const count = state.account.bag[it.id] ?? 0;
+        const count = oracle.inventory[it.category]?.items.find(row => row.id === it.id)?.count ?? 0;
         return `
           <div class="item-row bag-item-row">
             <img class="avatar" src="${getIconUrl(it.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
