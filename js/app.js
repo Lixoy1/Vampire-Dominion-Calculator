@@ -3,36 +3,12 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
-import { buildOraclePlan, normalizeOracleSnapshot } from './oracle-engine.js';
-import {
-  ATTRIBUTES,
-  FABRIC_COST_BY_QUALITY,
-  calcAuraPercent,
-  buildPresenceCurvesMap,
-  calcPresencePercents,
-  calcBagPoints,
-  calcGuildExp,
-  calcWardenBaseTalentStars,
-  calcWardenTalentSum,
-  calcWardenLevelMultiplier,
-  calcLoverBonds,
-  calcPromoteBonusExp,
-  calcAchievableExpTalentPoints,
-  calcConclaveBranch,
-  autoDistributeConclave,
-  calcCourtyardUpgrade,
-  calcMaxCourtyardLevel,
-  calcWardenLevelsUpgrade,
-  getSummonCandidates,
-  summarizeBag,
-  calculateTotalDominanceReport,
-} from './engine.js';
+const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
+const FABRIC_COST_BY_QUALITY = { a: 50, s: 100, ss: 200 };
 
 const STORAGE_KEY = 'vd_crimson_obsidian_v5';
 const tg = globalThis.Telegram?.WebApp ?? null;
 try { tg?.expand(); tg?.ready(); } catch {}
-
-const presenceCurvesMap = buildPresenceCurvesMap(GAME_DB.lover_presence_levels);
 
 function createBlankAccountData() {
   return {
@@ -40,13 +16,13 @@ function createBlankAccountData() {
     conclaveExp: 0,
     courtyardExp: 0,
     courtyardLvl: 0,
+    guildProgress: { level: 0, exp: 0, nextLevelExp: 0 },
     conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
     ownedWardens: {},
     ownedLovers: {},
     skins: {},
     bag: {},
-    oracleSnapshot: null,
-    oracleImportedAt: null,
+    guildProgress: { exp: 0, level: 0, nextLevelExp: 0 },
   };
 }
 
@@ -56,7 +32,9 @@ function createBlankPlan(account = createBlankAccountData()) {
     courtyardToLvl: account.courtyardLvl,
     levels: {},
     promotes: {},
+    talents: {},
     bonds: {},
+    presences: {},
     skins: {},
     summons: { wardens: [], lovers: [] },
   };
@@ -93,13 +71,17 @@ function normalizeAccountData(incoming = {}) {
   return {
     ...base,
     ...(incoming || {}),
+    guildProgress: { ...base.guildProgress, ...(incoming?.guildProgress || incoming?.guild || {}) },
     conclave: { ...base.conclave, ...(incoming?.conclave || {}) },
     ownedWardens: { ...(incoming?.ownedWardens || {}) },
     ownedLovers: { ...(incoming?.ownedLovers || {}) },
     skins: { ...(incoming?.skins || {}) },
     bag: { ...(incoming?.bag || {}) },
-    oracleSnapshot: incoming?.oracleSnapshot ?? null,
-    oracleImportedAt: incoming?.oracleImportedAt ?? null,
+    guildProgress: {
+      exp: Math.max(0, Number(incoming?.guildProgress?.exp ?? incoming?.guild?.exp) || 0),
+      level: Math.max(0, Number(incoming?.guildProgress?.level ?? incoming?.guild?.level) || 0),
+      nextLevelExp: Math.max(0, Number(incoming?.guildProgress?.nextLevelExp ?? incoming?.guild?.next_level_exp ?? incoming?.guild?.nextLevelExp) || 0),
+    },
   };
 }
 
@@ -112,6 +94,12 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
     levels: { ...(incoming?.levels || {}) },
     promotes: { ...(incoming?.promotes || {}) },
     bonds: { ...(incoming?.bonds || {}) },
+    presences: Object.fromEntries(Object.entries(incoming?.presences || {}).map(([id, value]) => [id, { ...(value || {}) }])),
+    talents: Object.fromEntries(Object.entries(incoming?.talents || {}).map(([id, value]) => [id, {
+      scrolls: { ...(value?.scrolls || {}) },
+      scripts: { ...(value?.scripts || {}) },
+      exp_levels: { ...(value?.exp_levels || {}) },
+    }])),
     skins: { ...(incoming?.skins || {}) },
     summons: {
       ...base.summons,
@@ -122,7 +110,56 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
   };
 }
 
-function normalizeState(parsed = {}) {
+function adaptDhampirSnapshot(parsed = {}) {
+  const source = parsed && typeof parsed === 'object' ? parsed : {};
+  const rows = Array.isArray(source.wardens) ? source.wardens : [];
+  const skinRows = Array.isArray(source.skins) ? source.skins : [];
+  if (!rows.some(row => row && row.template_id != null && row.level != null)
+      && !skinRows.some(row => row && row.template_id != null && row.level != null)
+      && !source.guild && !source.guildProgress) return source;
+
+  const accountSource = { ...(source.account || {}) };
+  const ownedWardens = { ...(accountSource.ownedWardens || {}) };
+  for (const row of rows) {
+    const id = Number(row?.template_id);
+    if (!Number.isSafeInteger(id) || !GAME_DB.wardens.some(item => item.id === id)) continue;
+    ownedWardens[id] = {
+      ...(ownedWardens[id] || {}),
+      level: Math.max(1, Math.min(450, Math.round(Number(row.level) || 1))),
+      promoteId: Math.max(1, Math.min(8, Math.round(Number(row.promote_id) || 1))),
+      exp: Math.max(0, Number(row.talent_exp) || 0),
+      talents: { ...(ownedWardens[id]?.talents || {}) },
+      auras: { ...(ownedWardens[id]?.auras || {}) },
+      observedDominance: Math.max(0, Number(row.dominance) || 0),
+      referenceFilled: Boolean(row.filled),
+    };
+  }
+
+  const skins = { ...(accountSource.skins || {}) };
+  for (const row of skinRows) {
+    const id = Number(row?.template_id);
+    if (!Number.isSafeInteger(id) || row?.kind && !['warden', 'lover'].includes(row.kind)) continue;
+    skins[id] = Math.max(0, Math.min(10, Math.round(Number(row.level) || 0)));
+  }
+
+  const guild = source.guildProgress || source.guild || {};
+  return {
+    ...source,
+    account: {
+      ...accountSource,
+      ownedWardens,
+      skins,
+      guildProgress: {
+        exp: Math.max(0, Number(guild.exp) || 0),
+        level: Math.max(0, Number(guild.level) || 0),
+        nextLevelExp: Math.max(0, Number(guild.nextLevelExp ?? guild.next_level_exp) || 0),
+      },
+    },
+  };
+}
+
+export function normalizeState(parsed = {}) {
+  parsed = adaptDhampirSnapshot(parsed);
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const base = createDefaultState();
   const lang = source.lang || source.settings?.lang || base.lang;
@@ -253,22 +290,52 @@ function switchAccount(id) {
 }
 
 function createNewAccount() {
-  const name = globalThis.prompt?.('Название нового аккаунта:', `Аккаунт ${state.accounts.length + 1}`);
-  if (name == null) return;
-  const server = globalThis.prompt?.('Сервер (например, EU S-629):', 'EU S-629');
-  if (server == null) return;
-  saveState();
-  const id = `account-${Date.now()}`;
-  const account = createBlankAccountData();
-  const profile = { name: name.trim() || `Аккаунт ${state.accounts.length + 1}`, server: server.trim(), region: 'EU', avatarId: 10010 };
-  const plan = createBlankPlan(account);
-  state.accounts.push({ id, ...profile, account, plan });
-  state.activeAccountId = id;
-  state.profile = profile;
-  state.account = account;
-  state.plan = plan;
-  saveState();
-  render();
+  const dialog = document.createElement('div');
+  dialog.className = 'account-wizard';
+  dialog.innerHTML = `
+    <div class="account-wizard-backdrop" data-wizard-close></div>
+    <section class="account-wizard-panel" role="dialog" aria-modal="true" aria-labelledby="account-wizard-title">
+      <div class="number-sheet-handle"></div>
+      <div class="account-wizard-head">
+        <div><div class="eyebrow">CRIMSON OBSIDIAN</div><h2 id="account-wizard-title">Новый аккаунт</h2></div>
+        <button class="number-sheet-close" type="button" data-wizard-close aria-label="Закрыть">×</button>
+      </div>
+      <div class="account-wizard-sync"><strong>Подтянуть из игры</strong><span>Недоступно без игрового подключения. Создай профиль вручную — пароль и токены не нужны.</span></div>
+      <label class="account-wizard-field">Имя аккаунта<input class="input" id="wizard-name" maxlength="40" value="Аккаунт ${state.accounts.length + 1}" autocomplete="off"></label>
+      <div class="grid-2">
+        <label class="account-wizard-field">Номер сервера<input class="input" id="wizard-server" inputmode="numeric" type="number" min="1" max="9999" placeholder="Например, 629"></label>
+        <label class="account-wizard-field">Регион<select class="select" id="wizard-region"><option value="EU">EU</option><option value="AS">AS</option><option value="US">US</option></select></label>
+      </div>
+      <label class="account-wizard-field">Портрет профиля<select class="select" id="wizard-avatar">${GAME_DB.wardens.map(w => `<option value="${w.id}">${tName('warden', w.name)}</option>`).join('')}</select></label>
+      <div class="account-wizard-note">После создания внеси реальные значения из игры в разделах «Ресурсы» и «Расчёты».</div>
+      <div class="account-wizard-actions"><button class="btn" type="button" data-wizard-close>Отмена</button><button class="btn btn-primary" type="button" id="wizard-create">Создать аккаунт</button></div>
+    </section>`;
+  document.body.appendChild(dialog);
+  const close = () => dialog.remove();
+  dialog.querySelectorAll('[data-wizard-close]').forEach(button => button.addEventListener('click', close));
+  dialog.querySelector('#wizard-create').addEventListener('click', () => {
+    const name = dialog.querySelector('#wizard-name').value.trim();
+    const server = String(Math.max(1, Math.min(9999, Number(dialog.querySelector('#wizard-server').value) || 0)));
+    const region = dialog.querySelector('#wizard-region').value;
+    const avatarId = Number(dialog.querySelector('#wizard-avatar').value) || 10010;
+    if (!name || !server || server === '0') {
+      alert('Укажи имя аккаунта и номер сервера.');
+      return;
+    }
+    saveState();
+    const id = `account-${Date.now()}`;
+    const account = createBlankAccountData();
+    const profile = { name, server, region, avatarId };
+    const plan = createBlankPlan(account);
+    state.accounts.push({ id, ...profile, account, plan });
+    state.activeAccountId = id;
+    state.profile = profile;
+    state.account = account;
+    state.plan = plan;
+    saveState();
+    close();
+    render();
+  });
 }
 
 let state = loadState();
@@ -315,26 +382,11 @@ function getDbContext() {
     promotes: GAME_DB.warden_promotes,
     conclaveLevels: GAME_DB.conclave_levels,
     courtyardLevels: GAME_DB.courtyard_levels,
-    presenceCurvesMap,
   };
-}
-
-function getWardenBaseAttributes(wardenId) {
-  const warden = GAME_DB.wardens.find(w => w.id === Number(wardenId));
-  const owned = state.account.ownedWardens[wardenId];
-  const result = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
-  if (!warden || !owned) return result;
-  const multiplier = calcWardenLevelMultiplier(owned.level || 1);
-  warden.talents.forEach((talent, index) => {
-    const level = Number(owned.talents?.[index] ?? 1);
-    result[talent.attribute] += level * talent.stars * multiplier;
-  });
-  return result;
 }
 
 function getBondPlan(lover, owned) {
   const plan = state.plan.bonds[lover.id] || (state.plan.bonds[lover.id] = {});
-  plan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id);
   for (const bond of lover.scarlet_bonds || []) {
     const current = owned.bonds?.[bond.attribute] || { level: 0, percentLevel: 0 };
     plan[bond.attribute] ||= {
@@ -352,212 +404,173 @@ function getLoverIconPath(lover, owned = null) {
   return sex === 'male' ? (lover.icon_path_male || lover.icon_path_female) : (lover.icon_path_female || lover.icon_path_male);
 }
 
-// Бесплатное автораспределение доступных ресурсов по всем поддерживаемым разделам.
-function runFullAutoDistribute() {
-  const db = getDbContext();
-  const acc = state.account;
-
-  const wardensByAttr = {};
-  for (const attr of ATTRIBUTES) {
-    wardensByAttr[attr] = db.wardens.filter(w => acc.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
+// Автораспределение выполняется только серверным Oracle. Ошибки не подменяются локальными расчётами.
+async function runAutoTalentDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-talents', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План талантов готов.\\n' +
+      'Уровней: ' + (summary.plannedLevels || 0) + '\\n' +
+      'Свитки: ' + (summary.scrollLevels || 0) + '\\n' +
+      'Рукописи: ' + (summary.scriptLevels || 0) + '\\n' +
+      'За личный опыт: ' + (summary.expLevels || 0) + ' уровн. / ' + (summary.expSpentTotal || 0) + ' EXP'
+    );
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить свитки и рукописи.');
   }
-  state.plan.conclave = autoDistributeConclave(db.conclaveLevels, acc.conclave, acc.conclaveExp, wardensByAttr).levels;
-  state.plan.courtyardToLvl = calcMaxCourtyardLevel(db.courtyardLevels, acc.courtyardLvl, acc.courtyardExp).toLvl;
-
-  // Симулируем каждый уровень и резервируем предметы прорыва в общей временной сумке.
-  let bloodLeft = Math.max(0, Number(acc.blood) || 0);
-  const tempBag = { ...acc.bag };
-  const nextLevels = {};
-  const nextPromotes = {};
-  for (const [id, owned] of Object.entries(acc.ownedWardens)) {
-    nextLevels[id] = Math.max(1, Number(owned.level) || 1);
-    nextPromotes[id] = Math.max(1, Number(owned.promoteId) || 1);
-  }
-
-  while (bloodLeft > 0) {
-    let best = null;
-    let bestEfficiency = 0;
-    for (const [id, owned] of Object.entries(acc.ownedWardens)) {
-      const warden = db.wardens.find(item => item.id === Number(id));
-      if (!warden) continue;
-      const from = nextLevels[id];
-      if (from >= 450) continue;
-      const promoteId = nextPromotes[id];
-      const step = calcWardenLevelsUpgrade(warden, from, from + 1, promoteId, db.promotes, tempBag, owned.talents || {});
-      if (!step.canPromote || step.bloodSpent <= 0 || step.bloodSpent > bloodLeft) continue;
-      const efficiency = step.baseGain / step.bloodSpent;
-      if (efficiency > bestEfficiency) {
-        bestEfficiency = efficiency;
-        best = { id, step, promoteId };
-      }
-    }
-    if (!best) break;
-
-    nextLevels[best.id]++;
-    let resultingPromoteId = best.promoteId;
-    for (const promote of best.step.neededPromotes || []) {
-      resultingPromoteId = Math.max(resultingPromoteId, promote.id);
-      for (const itemId of promote.item_ids || []) {
-        tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - promote.price);
-      }
-    }
-    nextPromotes[best.id] = resultingPromoteId;
-    bloodLeft -= best.step.bloodSpent;
-  }
-  state.plan.levels = nextLevels;
-  state.plan.promotes = nextPromotes;
-
-  // Не призываем всех бесплатных персонажей автоматически; выбираем только платные,
-  // доступные прямо сейчас, чтобы не менять состав аккаунта неожиданно.
-  const candidates = getSummonCandidates(
-    db.wardens,
-    db.lovers,
-    new Set(Object.keys(acc.ownedWardens).map(Number)),
-    new Set(Object.keys(acc.ownedLovers).map(Number)),
-    tempBag,
-  );
-  const summonBag = { ...tempBag };
-  state.plan.summons.wardens = [];
-  for (const candidate of candidates.wardens) {
-    if (!candidate.canSummon || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
-    state.plan.summons.wardens.push(candidate.id);
-  }
-
-  saveState();
-  render();
 }
 
-// Применение плана атомарно: сначала проверяем все ресурсы, потом записываем изменения.
-function commitPlanToAccount() {
-  const db = getDbContext();
-  const account = structuredClone(state.account);
-  const plan = structuredClone(state.plan);
-  for (const [loverId, bondPlan] of Object.entries(plan.bonds || {})) {
-    const lover = db.lovers.find(item => item.id === Number(loverId));
-    if (lover) bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id);
-  }
-  const report = calculateTotalDominanceReport({ db, account, plan });
-  const fail = message => { alert(message); return false; };
-
-  if (report.spent.blood > account.blood) return fail('Недостаточно Крови для выбранного плана.');
-  if (report.spent.conclaveExp > account.conclaveExp) return fail('Недостаточно очков Конклава для выбранного плана.');
-  if (report.spent.courtyardExp > account.courtyardExp) return fail('Недостаточно очков Сада для выбранного плана.');
-
-  // Резервируем предметы прорыва по каждому смотрителю в общей копии сумки.
-  const wardenPromotes = {};
-  for (const [id, targetLevelRaw] of Object.entries(plan.levels || {})) {
-    const owned = account.ownedWardens[id];
-    const warden = db.wardens.find(item => item.id === Number(id));
-    const targetLevel = Math.max(Number(owned?.level) || 1, Number(targetLevelRaw) || 1);
-    if (!owned || !warden || targetLevel <= (Number(owned.level) || 1)) continue;
-    const currentPromoteId = Math.max(1, Number(owned.promoteId) || 1);
-    const upgrade = calcWardenLevelsUpgrade(
-      warden, owned.level, targetLevel, currentPromoteId, db.promotes, account.bag, owned.talents || {}
+async function runAutoBondDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-bonds', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План Кровных уз рассчитан.\\n' +
+      'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
+      'Доверие по расчётной формуле: ' + (summary.estimatedAffinity || 0) + '\\n' +
+      'Оценка прироста: +' + (summary.estimatedGain || 0) + ' Господства'
     );
-    if (!upgrade.canPromote) {
-      const detail = upgrade.missingItems.map(item => `${tName('item', db.items.find(i => i.id === item.itemId)?.name || item.itemId)}: ещё ${item.need}`).join('\n');
-      return fail(`Нельзя применить уровни ${tName('warden', warden.name)}. Не хватает предметов прорыва:\n${detail}`);
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить Доверие.');
+  }
+}
+
+async function runAutoPresenceDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-presences', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План Веяний рассчитан.\\n' +
+      'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
+      'Прирост модификаторов: +' + (summary.addedPercentPoints || 0) + ' п.п.'
+    );
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить жетоны Веяний.');
+  }
+}
+
+async function runFullAutoDistribute() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-distribute', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const presenceAdded = result.summary?.presences?.addedLevels || 0;
+    const bondAdded = result.summary?.bonds?.addedLevels || 0;
+    const expLevels = result.summary?.talents?.expLevels || 0;
+    if (presenceAdded || bondAdded || expLevels) alert('Авторасчёт готов.\\nВеяния: +' + presenceAdded + ' уровн.\\nКровные узы: +' + bondAdded + ' уровн.\\nТаланты за личный опыт: +' + expLevels + ' уровн.');
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить ресурсы.');
+  }
+}
+
+// Применение плана и проверка ресурсов выполняются серверным Oracle.
+async function commitPlanToAccount() {
+  try {
+    const result = await requestOracle('/api/oracle/commit-plan', {
+      account: state.account,
+      plan: state.plan,
+    });
+    if (!result.ok) {
+      const detail = result.error?.missingItems?.map(item => {
+        const itemName = tName('item', GAME_DB.items.find(entry => entry.id === item.itemId)?.name || item.itemId);
+        return `${itemName}: ещё ${item.need}`;
+      }).join('\\n');
+      alert(detail ? `${result.error.message}\\n${detail}` : (result.error?.message || 'Oracle отклонил план.'));
+      return;
     }
-    let nextPromoteId = currentPromoteId;
-    for (const promote of upgrade.neededPromotes || []) {
-      nextPromoteId = Math.max(nextPromoteId, promote.id);
-      for (const itemId of promote.item_ids || []) {
-        const cost = Number(promote.price) || 0;
-        if ((account.bag[itemId] || 0) < cost) {
-          const itemName = tName('item', db.items.find(i => i.id === itemId)?.name || itemId);
-          return fail(`Недостаточно предметов для прорыва ${tName('warden', warden.name)}: ${itemName}.`);
-        }
-        account.bag[itemId] = Math.max(0, (account.bag[itemId] || 0) - cost);
-      }
-    }
-    wardenPromotes[id] = nextPromoteId;
+
+    state.account = normalizeAccountData(result.account);
+    state.plan = createBlankPlan(state.account);
+    saveState();
+    await render();
+    alert('План проверен Oracle и применён. Ресурсы и предметы списаны из профиля.');
+  } catch (error) {
+    alert(error.message || 'Oracle не смог применить план. Данные профиля не изменены.');
   }
-
-  // Проверяем и резервируем стоимость всех выбранных призывов.
-  const summonCandidates = getSummonCandidates(
-    db.wardens, db.lovers,
-    new Set(Object.keys(account.ownedWardens).map(Number)),
-    new Set(Object.keys(account.ownedLovers).map(Number)),
-    account.bag,
-  );
-  const summonIds = [...new Set((plan.summons?.wardens || []).map(Number))];
-  for (const id of summonIds) {
-    const candidate = summonCandidates.wardens.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь предметы в сумке.`);
-    if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
-  }
-
-  // Проверяем очки доверия по каждому партнёру отдельно и фиксируем уровни.
-  const bondUpdates = {};
-  for (const [id, bondPlan] of Object.entries(plan.bonds || {})) {
-    const owned = account.ownedLovers[id];
-    const lover = db.lovers.find(item => item.id === Number(id));
-    if (!owned || !lover) continue;
-    const result = calcLoverBonds(lover, owned.affinity || 0, bondPlan, bondPlan.wardenBaseAttrs, owned.closeness || 0);
-    if (result.spentAffinity > (owned.affinity || 0)) {
-      return fail(`Недостаточно очков Доверия у ${tName('lover', lover.name)}: нужно ${fmt(result.spentAffinity)}, есть ${fmt(owned.affinity || 0)}.`);
-    }
-    bondUpdates[id] = { spent: result.spentAffinity, states: bondPlan };
-  }
-
-  // Все проверки пройдены — применяем изменения к копии аккаунта.
-  account.conclave = { ...account.conclave, ...plan.conclave };
-  account.conclaveExp = Math.max(0, account.conclaveExp - report.spent.conclaveExp);
-  account.courtyardLvl = Math.max(account.courtyardLvl, Number(plan.courtyardToLvl) || account.courtyardLvl);
-  account.courtyardExp = Math.max(0, account.courtyardExp - report.spent.courtyardExp);
-  account.blood = Math.max(0, account.blood - report.spent.blood);
-
-  for (const [id, targetLevel] of Object.entries(plan.levels || {})) {
-    const owned = account.ownedWardens[id];
-    if (!owned) continue;
-    owned.level = Math.max(owned.level || 1, Number(targetLevel) || 1);
-    owned.promoteId = wardenPromotes[id] || plan.promotes?.[id] || owned.promoteId || 1;
-  }
-
-  for (const [id, update] of Object.entries(bondUpdates)) {
-    const owned = account.ownedLovers[id];
-    const lover = db.lovers.find(item => item.id === Number(id));
-    owned.affinity = Math.max(0, (owned.affinity || 0) - update.spent);
-    owned.bonds ||= {};
-    for (const bond of lover?.scarlet_bonds || []) {
-      const target = update.states[bond.attribute];
-      if (!target) continue;
-      owned.bonds[bond.attribute] = {
-        level: Number(target.targetLevel ?? target.level ?? 0),
-        percentLevel: Number(target.targetPercentLevel ?? target.percentLevel ?? 0),
-      };
-    }
-  }
-
-  for (const id of summonIds) {
-    account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
-  }
-
-  state.account = account;
-  state.plan = createBlankPlan(account);
-  saveState();
-  render();
-  alert('План применён. Ресурсы и предметы списаны из копии аккаунта.');
 }
 
 function explainGameConnection() {
-  alert('Прямая синхронизация с Game of Vampires пока не подключена: приложенный проект не содержит авторизации или игрового API. Не вводи здесь пароль от игры. Сейчас можно вести профиль вручную и переносить его через JSON. Для автоматической синхронизации нужен официальный API или поддерживаемый разработчиком экспорт.');
+  alert('Калькулятор не подключается к игровому аккаунту. Вручную внеси значения из игры — кровь, очки, уровни, таланты и предметы. Render Oracle рассчитает план на сервере и вернёт результат. Пароль от игры не нужен.');
 }
 
-// Главный рендер вкладок
-function render() {
+// Единая точка вызова Oracle. При ошибке сети серверный расчёт не подменяется локальным.
+let oracleSnapshot = null;
+let oracleRequestSerial = 0;
+
+async function requestOracle(endpoint, payload) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.ok) {
+    throw new Error(body?.error?.message || `Oracle недоступен (HTTP ${response.status}).`);
+  }
+  return body.result;
+}
+
+// Главный рендер вкладок: сначала серверный расчёт, затем отображение ответа Oracle.
+async function render() {
   const root = document.getElementById('app');
   if (!root) return;
+  bindNumericPad();
+  const renderId = ++oracleRequestSerial;
   applyTheme();
 
+  let oracle;
+  try {
+    oracle = await requestOracle('/api/oracle/calculate', {
+      account: state.account,
+      plan: state.plan,
+    });
+  } catch (error) {
+    if (renderId !== oracleRequestSerial) return;
+    oracleSnapshot = null;
+    root.innerHTML = `
+      <div class="app-shell">
+        <section class="card card-gold">
+          <div class="card-title">Oracle временно недоступен</div>
+          <p class="row-sub">${String(error.message || 'Не удалось получить серверный расчёт.').replace(/</g, '&lt;')}</p>
+          <p class="row-sub">Локальный fallback отключён: неподтверждённые цифры не будут показаны как результат Oracle.</p>
+          <button class="btn btn-primary" id="oracle-retry">Повторить запрос</button>
+        </section>
+      </div>`;
+    root.querySelector('#oracle-retry')?.addEventListener('click', render);
+    return;
+  }
+  if (renderId !== oracleRequestSerial) return;
+  oracleSnapshot = oracle;
+
   const db = getDbContext();
-  const report = calculateTotalDominanceReport({ db, account: state.account, plan: state.plan });
+  const report = oracle.report;
 
   const tabs = [
     ['dominance', '👑 Господство'],
-    ['oracle', '🔮 Оракул'],
     ['conclave', '🏛 Конклав и Сад'],
     ['levels', '🩸 Уровни и Кровь'],
     ['talents', '📜 Таланты и Опыт'],
@@ -575,7 +588,7 @@ function render() {
           <div class="brand-crest">VD</div>
           <div>
             <div class="brand-title">Vampire Dominion</div>
-            <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
+            <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · ручной профиль · Oracle v${oracle.meta.oracleVersion}</div>
           </div>
         </div>
         <div class="top-actions">
@@ -594,6 +607,7 @@ function render() {
           <button class="btn btn-sm" id="btn-lang">${state.lang.toUpperCase()}</button>
           <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
           <button class="btn btn-sm" id="btn-import">📂 Импорт</button>
+          <button class="btn btn-sm" id="btn-import-helper">🧩 Импорт дампа</button>
         </div>
       </header>
 
@@ -604,10 +618,40 @@ function render() {
       </nav>
 
       <main id="tab-view">
-        ${renderActiveTab(db, report)}
+        ${oracle.meta.helperApi?.importedAt ? `
+          <section class="card helper-api-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Источник контрольных данных: API «Помощника Дампира»</div>
+                <div class="row-sub">Дамп принят как подтверждённый источник для сверки и воспроизведения расчётов бота.</div>
+              </div>
+              <span class="badge badge-gold">Подтверждён</span>
+            </div>
+            <div class="row-sub">
+              Смотрители ${oracle.meta.helperApi.observedWardens} · шаги ${oracle.meta.helperApi.observedWardenSteps} ·
+              таланты ${oracle.meta.helperApi.talentScriptRows} · пути аур ${oracle.meta.helperApi.auraPathRows} ·
+              книги ${oracle.meta.helperApi.bookRows} · манускрипты ${oracle.meta.helperApi.manuscriptTiers} ·
+              Веяния ${oracle.meta.helperApi.presenceSteps} · узы ${oracle.meta.helperApi.bondSteps} ·
+              облики ${oracle.meta.helperApi.skinSteps}
+            </div>
+            ${oracle.meta.helperApi.attributeBreakdown ? `
+              <div class="table-wrap" style="margin-top:10px;">
+                <div class="row-sub">Точные значения атрибутов из ответа API</div>
+                <div class="grid-4" style="margin-top:6px;">
+                  ${['strength','allure','intellect','spirit'].map((attr, i) => {
+                    const labels = ['Сила','Харизма','Интеллект','Воля'];
+                    const value = oracle.meta.helperApi.attributeBreakdown[attr];
+                    const total = value && typeof value === 'object' ? (value.total ?? value.dominance ?? '—') : (value ?? '—');
+                    return `<div><div class="row-sub">${labels[i]}</div><div class="row-name">${String(total)}</div></div>`;
+                  }).join('')}
+                </div>
+              </div>` : ''}
+          </section>` : ''}
+        ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
+        ${renderActiveTab(db, report, oracle)}
       </main>
       <footer class="app-footnote">
-        <span>CRIMSON OBSIDIAN</span><span>Локальный помощник · без VIP-ограничений</span>
+        <span>CRIMSON OBSIDIAN</span><span>Server Oracle · ручной ввод данных · без связи с игровым аккаунтом</span>
       </footer>
     </div>
   `;
@@ -615,192 +659,19 @@ function render() {
   bindEvents(db);
 }
 
-function renderActiveTab(db, report) {
+function renderActiveTab(db, report, oracle) {
   switch (state.activeTab) {
     case 'dominance': return renderDominanceTab(db, report);
-    case 'oracle': return renderOracleTab(db);
-    case 'conclave': return renderConclaveGardenTab(db, report);
-    case 'levels': return renderLevelsTab(db, report);
-    case 'talents': return renderTalentsTab(db);
-    case 'auras': return renderAurasPresencesTab(db);
-    case 'bonds': return renderBondsTab(db);
-    case 'skins': return renderSkinsTab(db);
-    case 'summon': return renderSummonTab(db);
-    case 'bag': return renderBagTab(db, report);
+    case 'conclave': return renderConclaveGardenTab(db, report, oracle);
+    case 'levels': return renderLevelsTab(db, report, oracle);
+    case 'talents': return renderTalentsTab(db, oracle);
+    case 'auras': return renderAurasPresencesTab(db, oracle);
+    case 'bonds': return renderBondsTab(db, oracle);
+    case 'skins': return renderSkinsTab(db, oracle);
+    case 'summon': return renderSummonTab(db, oracle);
+    case 'bag': return renderBagTab(db, report, oracle);
     default: return renderDominanceTab(db, report);
   }
-}
-
-function htmlSafe(value) {
-  return String(value ?? '').replace(/[&<>"']/g, char => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  })[char]);
-}
-
-function renderOracleTab(db) {
-  const snapshot = state.account.oracleSnapshot;
-  let model = null;
-  let modelError = '';
-  if (snapshot) {
-    try {
-      const wardenNames = Object.fromEntries(db.wardens.map(item => [String(item.id), tName('warden', item.name)]));
-      const loverNames = Object.fromEntries(db.lovers.map(item => [String(item.id), tName('lover', item.name)]));
-      const itemNames = Object.fromEntries(db.items.map(item => [String(item.id), tName('item', item.name)]));
-      model = buildOraclePlan(snapshot, { wardens: wardenNames, lovers: loverNames, items: itemNames });
-    } catch (error) {
-      modelError = error?.message || 'Не удалось разобрать снимок API.';
-    }
-  }
-
-  const header = `
-    <section class="card card-gold oracle-header">
-      <div class="card-head">
-        <div>
-          <div class="card-title">🔮 OPTIMIST ORACLE</div>
-          <div class="row-sub">Серверные ответы «Помощника Дампира» · без выдуманных игровых формул</div>
-        </div>
-        <span class="badge badge-gold">${model ? 'Данные загружены' : 'Ожидает JSON'}</span>
-      </div>
-      <div class="oracle-toolbar">
-        <input type="file" id="oracle-json-file" accept=".json,application/json,text/json" hidden />
-        <button class="btn btn-gold" id="btn-oracle-import">📥 Загрузить JSON API</button>
-        <button class="btn" id="btn-oracle-export" ${model ? '' : 'disabled'}>💾 Экспорт снимка</button>
-        <button class="btn" id="btn-oracle-clear" ${model ? '' : 'disabled'}>Очистить</button>
-      </div>
-      ${state.account.oracleImportedAt ? `<div class="row-sub oracle-stamp">Последняя загрузка: ${htmlSafe(new Date(state.account.oracleImportedAt).toLocaleString())}</div>` : ''}
-    </section>
-  `;
-
-  if (modelError) {
-    return header + `
-      <section class="card oracle-warning">
-        <div class="card-title">Не удалось прочитать сохранённый снимок</div>
-        <div class="row-sub">${htmlSafe(modelError)}. Загрузите корректный JSON-ответ API.</div>
-      </section>
-    `;
-  }
-
-  if (!model) {
-    return header + `
-      <section class="card oracle-empty">
-        <div class="oracle-emblem">ORACLE</div>
-        <div class="card-title">Загрузите ответ из режима разработчика</div>
-        <p class="row-sub">Подойдёт JSON-объект, в котором есть разделы <code>levels</code>, <code>conclave</code>, <code>bonds</code>, <code>auras</code>, <code>presences</code>, <code>skins</code> или <code>talents</code>.</p>
-        <p class="row-sub">Oracle прочитает итоговое Господство, четыре атрибута, остатки ресурсов, серверный <code>best_path</code> и точные значения <code>next_cost / next_gain</code>. Файл хранится локально в выбранном профиле.</p>
-        <div class="oracle-security">Не загружайте пароли, cookies, токены авторизации или полные данные входа. Нужен только JSON-ответ с расчётами.</div>
-      </section>
-    `;
-  }
-
-  const attrLabel = key => tName('attribute', key);
-  const metric = model.metrics;
-  const resourceCards = [
-    ['Кровь', metric.blood.available, metric.blood.spent, metric.blood.left],
-    ['Конклав', metric.conclave.available, metric.conclave.spent, metric.conclave.left],
-    ['Доверие', metric.trust.available, metric.trust.spent, metric.trust.left],
-  ];
-  const resourceMarkup = resourceCards.map(([label, available, spent, left]) => `
-    <div class="oracle-resource">
-      <div class="row-sub">${label}</div>
-      <div class="oracle-value">${fmt(available)}</div>
-      <div class="row-sub">Потрачено: ${fmt(spent)} · Остаток: <strong>${fmt(left)}</strong></div>
-    </div>
-  `).join('');
-
-  const attributesMarkup = metric.attributes.map(row => {
-    const gain = metric.gains.find(item => item.attribute === row.attribute)?.total ?? 0;
-    return `
-      <div class="item-row oracle-attribute">
-        <div class="row-info">
-          <div class="row-name">${htmlSafe(attrLabel(row.attribute))}</div>
-          <div class="row-sub">Прирост в ответе API: +${fmt(gain)}</div>
-        </div>
-        <div class="oracle-value">${fmt(row.total)}</div>
-      </div>
-    `;
-  }).join('');
-
-  const routeRow = item => {
-    const actor = item.section === 'levels'
-      ? (db.wardens.find(w => String(w.id) === item.key) ? tName('warden', db.wardens.find(w => String(w.id) === item.key).name) : `Смотритель ${item.key}`)
-      : item.section === 'conclave'
-        ? attrLabel(item.key)
-        : item.key;
-    return `
-      <div class="item-row oracle-route-row">
-        <span class="oracle-step">${item.index}</span>
-        <div class="row-info">
-          <div class="row-name">${htmlSafe(item.sectionLabel)} · ${htmlSafe(item.label)}</div>
-          <div class="row-sub">${htmlSafe(actor)} → цель ${htmlSafe(item.target)}</div>
-        </div>
-      </div>
-    `;
-  };
-  const visibleRoute = model.paths.slice(0, 16).map(routeRow).join('');
-  const fullRoute = model.paths.length > 16 ? `
-    <details class="oracle-more">
-      <summary>Показать весь серверный маршрут (${model.paths.length} шагов)</summary>
-      ${model.paths.slice(16).map(routeRow).join('')}
-    </details>
-  ` : '';
-
-  const recommendationGroups = Object.entries(model.recommendations).filter(([, rows]) => rows.length);
-  const recommendationsMarkup = recommendationGroups.length
-    ? recommendationGroups.map(([resource, rows]) => `
-      <section class="oracle-recommendation-group">
-        <div class="oracle-group-head">
-          <strong>${htmlSafe(rows[0].resourceLabel)}</strong>
-          <span class="badge">${rows.length} доступно</span>
-        </div>
-        ${rows.slice(0, 6).map((item, index) => `
-          <div class="item-row">
-            <span class="oracle-step">${index + 1}</span>
-            <div class="row-info">
-              <div class="row-name">${htmlSafe(item.label)}</div>
-              <div class="row-sub">${htmlSafe(item.detail)} · ${item.free ? 'без затрат' : `цена ${fmt(item.cost)}`}</div>
-            </div>
-            <div class="oracle-gain">+${fmt(item.gain)}</div>
-          </div>
-        `).join('')}
-      </section>
-    `).join('')
-    : '<div class="row-sub">По этому снимку нет доступных следующих улучшений с полными next_cost / next_gain и достаточным остатком ресурса.</div>';
-
-  return header + `
-    <section class="card">
-      <div class="card-head">
-        <div>
-          <div class="card-title">Снимок сервера</div>
-          <div class="row-sub">Значения перенесены из API без пересчёта</div>
-        </div>
-      </div>
-      <div class="oracle-summary-grid">
-        <div class="oracle-total"><div class="row-sub">Итоговое Господство</div><div class="oracle-big">${fmt(metric.total)}</div></div>
-        <div class="oracle-total"><div class="row-sub">Прирост в ответе</div><div class="oracle-big oracle-positive">+${fmt(metric.gain)}</div></div>
-      </div>
-      <div class="oracle-resource-grid">${resourceMarkup}</div>
-    </section>
-    <section class="card">
-      <div class="card-head"><div class="card-title">Атрибуты персонажа</div></div>
-      <div class="oracle-attributes">${attributesMarkup || '<div class="row-sub">В ответе нет агрегированных атрибутов.</div>'}</div>
-    </section>
-    <section class="card">
-      <div class="card-head">
-        <div><div class="card-title">Серверный best_path</div><div class="row-sub">Точный порядок действий, полученный из JSON</div></div>
-        <span class="gain-pill">${model.routeCount} шагов</span>
-      </div>
-      ${model.routeCount ? visibleRoute + fullRoute : '<div class="row-sub">Сервер не вернул непустой best_path для этого снимка.</div>'}
-    </section>
-    <section class="card">
-      <div class="card-head"><div><div class="card-title">Выгодные следующие шаги</div><div class="row-sub">Ранжирование по next_gain / next_cost внутри каждого ресурса</div></div></div>
-      ${recommendationsMarkup}
-    </section>
-    <section class="card oracle-notes">
-      <div class="card-title">Правила точности</div>
-      ${model.notes.map(note => `<div class="row-sub">• ${htmlSafe(note)}</div>`).join('')}
-      <div class="oracle-security">Это анализ загруженного снимка, а не живая синхронизация с игровым сервером. Oracle не списывает ресурсы в игре и не подменяет локальный профиль автоматически.</div>
-    </section>
-  `;
 }
 
 function renderDominanceTab(db, report) {
@@ -809,7 +680,7 @@ function renderDominanceTab(db, report) {
       <div class="card-head">
         <div>
           <div class="card-title">Сводный прирост Господства</div>
-          <div class="row-sub">Автоматический расчёт по всем 8 веткам прокачки</div>
+          <div class="row-sub">Прирост Господства и отдельные процентные модификаторы</div>
         </div>
         <div class="gain-pill">+${fmt(report.gain.total)}</div>
       </div>
@@ -827,10 +698,24 @@ function renderDominanceTab(db, report) {
           <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.levels)}</div>
         </div>
         <div class="card" style="margin:0; padding:10px;">
-          <div class="row-sub">Кровные узы и Призыв</div>
-          <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds + report.gain.summon)}</div>
+          <div class="row-sub">Кровные узы</div>
+          <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds)}</div>
         </div>
       </div>
+      ${report.modifiers ? `
+      <div class="card" style="margin:12px 0 0; padding:12px;">
+        <div class="card-title">✨ Модификаторы аур и Веяний</div>
+        <div class="row-sub">Отдельно от абсолютного прироста Господства — проценты не складываются с очками напрямую.</div>
+        <div class="grid-4" style="margin-top:10px;">
+          ${['strength','allure','intellect','spirit'].map((attr, index) => {
+            const labels = ['Сила','Харизма','Интеллект','Воля'];
+            const auras = report.modifiers.auras.totalByAttribute[attr] || 0;
+            const presence = report.modifiers.presences[attr] || 0;
+            return `<div><div class="row-sub">${labels[index]}</div><div class="row-name">Ауры ${auras.toFixed(1)}%</div><div class="row-sub">Веяния ${presence.toFixed(1)}%</div></div>`;
+          }).join('')}
+        </div>
+        <div class="row-sub" style="margin-top:8px;">Ауры: таланты ${Object.values(report.modifiers.auras.talent).reduce((a,b)=>a+b,0).toFixed(1)}% · книги ${Object.values(report.modifiers.auras.book).reduce((a,b)=>a+b,0).toFixed(1)}%</div>
+      </div>` : ''}
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-gold" id="btn-quick-run">⚡ Распределить все ресурсы оптимально</button>
         <button class="btn btn-primary" id="btn-commit-plan">✅ Применить план и списать ресурсы</button>
@@ -872,6 +757,18 @@ function renderDominanceTab(db, report) {
           <label class="row-sub">🌿 Текущий уровень Сада (1–210)</label>
           <input type="number" class="input res-input" data-res="courtyardLvl" min="0" max="210" value="${state.account.courtyardLvl}" />
         </div>
+        <div>
+          <label class="row-sub">🛡 Уровень Гильдии</label>
+          <input type="number" class="input guild-input" data-guild="level" min="0" max="999" value="${state.account.guildProgress?.level || 0}" />
+        </div>
+        <div>
+          <label class="row-sub">🛡 Опыт текущего уровня</label>
+          <input type="number" class="input guild-input" data-guild="exp" min="0" value="${state.account.guildProgress?.exp || 0}" />
+        </div>
+        <div>
+          <label class="row-sub">🛡 Опыт следующего уровня</label>
+          <input type="number" class="input guild-input" data-guild="nextLevelExp" min="0" value="${state.account.guildProgress?.nextLevelExp || 0}" />
+        </div>
       </div>
     </section>
 
@@ -906,8 +803,8 @@ function renderDominanceTab(db, report) {
   `;
 }
 
-function renderConclaveGardenTab(db, report) {
-  const courtUpgrade = calcCourtyardUpgrade(db.courtyardLevels, state.account.courtyardLvl, state.plan.courtyardToLvl);
+function renderConclaveGardenTab(db, report, oracle) {
+  const courtUpgrade = oracle.courtyardUpgrade;
   return `
     <section class="card card-gold">
       <div class="card-head">
@@ -921,7 +818,7 @@ function renderConclaveGardenTab(db, report) {
         const cur = state.account.conclave[attr] ?? 0;
         const tgt = Math.max(cur, state.plan.conclave[attr] ?? cur);
         const wCount = db.wardens.filter(w => state.account.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
-        const br = calcConclaveBranch(db.conclaveLevels, cur, tgt, wCount);
+        const br = oracle.conclaveBranches[attr];
         return `
           <div class="item-row">
             <span class="dot ${attr}" style="width:14px;height:14px;"></span>
@@ -956,7 +853,7 @@ function renderConclaveGardenTab(db, report) {
   `;
 }
 
-function renderLevelsTab(db, report) {
+function renderLevelsTab(db, report, oracle) {
   const ownedIds = Object.keys(state.account.ownedWardens).map(Number);
   return `
     <section class="card card-gold">
@@ -970,7 +867,7 @@ function renderLevelsTab(db, report) {
       ${db.wardens.filter(w => state.account.ownedWardens[w.id]).map(w => {
         const ow = state.account.ownedWardens[w.id];
         const tgt = Math.max(ow.level, state.plan.levels[w.id] ?? ow.level);
-        const upg = calcWardenLevelsUpgrade(w, ow.level, tgt, ow.promoteId || 1, db.promotes, state.account.bag, ow.talents);
+        const upg = oracle.wardens[w.id]?.levelUpgrade;
         const prom = db.promotes.find(p => p.id === (ow.promoteId || 1));
         return `
           <div class="item-row">
@@ -996,26 +893,27 @@ function renderLevelsTab(db, report) {
   `;
 }
 
-function renderTalentsTab(db) {
+function renderTalentsTab(db, oracle) {
   return `
     <section class="card card-gold">
       <div class="card-head">
         <div>
           <div class="card-title">📜 Таланты, Рукописи и Опыт смотрителей</div>
-          <div class="row-sub">200 опыта = 1 очко таланта · Расчёт Subset Sum DP для прорывов</div>
+          <div class="row-sub">200 опыта = 1 очко таланта · планирование свитков и рукописей по приросту Господства</div>
         </div>
+        <button class="btn btn-primary btn-sm" id="btn-auto-talents">⚡ Распределить таланты</button>
       </div>
+      ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels} · личный опыт ${oracle.talentPlan.expLevels} (${fmt(oracle.talentPlan.expSpentTotal)} EXP)</div>` : ''}
       ${db.wardens.map(w => {
         const isOwned = !!state.account.ownedWardens[w.id];
         const owned = state.account.ownedWardens[w.id];
-        const baseStars = calcWardenBaseTalentStars(w);
-        const promId = owned?.promoteId || 1;
-        const bonusExp = calcPromoteBonusExp(db.promotes, promId);
-        const personalExp = Math.max(0, Number(owned?.exp) || 0);
-        const totalTalentExp = bonusExp + personalExp;
-        const maxTalentLvl = db.promotes.find(p => p.id === promId)?.max_talent_lvl ?? 40;
-        const dpPoints = calcAchievableExpTalentPoints(w, maxTalentLvl, totalTalentExp);
-        const trainedStars = owned ? calcWardenTalentSum(w, owned.talents || {}) : 0;
+        const talentResult = oracle.wardens[w.id];
+        const baseStars = talentResult.baseTalentStars;
+        const bonusExp = talentResult.promotionExp;
+        const personalExp = talentResult.personalExp;
+        const maxTalentLvl = talentResult.maxTalentLevel;
+        const dpPoints = talentResult.talentPointsAvailable;
+        const trainedStars = talentResult.talentSum;
         return `
           <div class="item-row">
             <img class="avatar" src="${getIconUrl(w.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
@@ -1033,7 +931,13 @@ function renderTalentsTab(db) {
             <label class="talent-control"><span>Личный опыт талантов (бонус прорыва учитывается отдельно)</span><input class="input talent-exp" type="number" min="0" step="1" data-wid="${w.id}" value="${owned.exp || 0}" /></label>
             <div class="talent-grid">${w.talents.map((talent, index) => {
               const lvl = owned.talents?.[index] ?? 1;
-              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" /></label>`;
+              const selected = state.plan.talents?.[w.id] || {};
+              const scrolls = Number(selected.scrolls?.[index]) || 0;
+              const scripts = Number(selected.scripts?.[index]) || 0;
+              const expLevels = Number(selected.exp_levels?.[index]) || 0;
+              const planned = scrolls + scripts + expLevels;
+              const target = Math.min(maxTalentLvl, lvl + planned);
+              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" />${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} уровн. за опыт</small>` : ''}</label>`;
             }).join('')}</div>
           </details>` : ''}
         `;
@@ -1042,7 +946,7 @@ function renderTalentsTab(db) {
   `;
 }
 
-function renderAurasPresencesTab(db) {
+function renderAurasPresencesTab(db, oracle) {
   const wardensWithAuras = db.wardens.filter(w => w.auras && w.auras.length > 0);
   const loversWithPresences = db.lovers.filter(l => l.presences && l.presences.length > 0);
 
@@ -1058,7 +962,7 @@ function renderAurasPresencesTab(db) {
             <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
             ${w.auras.map(a => {
               const curLvl = state.account.ownedWardens[w.id]?.auras?.[a.id] ?? (a.min_lvl || 0);
-              const pct = calcAuraPercent(a, curLvl);
+              const pct = oracle.wardens[w.id]?.auras?.[a.id]?.percent ?? 0;
               const owned = state.account.ownedWardens[w.id];
               return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''})
                 ${owned ? `<input class="input mini-level aura-level" type="number" min="${a.min_lvl || 0}" max="${a.max_lvl || curLvl}" data-wid="${w.id}" data-aid="${a.id}" value="${curLvl}" aria-label="Уровень вдохновения" />` : '<span class="row-sub">· добавь смотрителя в профиль для редактирования</span>'}
@@ -1072,6 +976,7 @@ function renderAurasPresencesTab(db) {
     <section class="card">
       <div class="card-head">
         <div class="card-title">💫 Веяния партнёров (${loversWithPresences.length})</div>
+        <button class="btn btn-gold btn-sm" id="btn-auto-presences">⚡ Распределить жетоны</button>
       </div>
       ${loversWithPresences.map(l => `
         <div class="item-row">
@@ -1080,10 +985,13 @@ function renderAurasPresencesTab(db) {
             <div class="row-name">${tName('lover', l.name)} ${attrDotsHtml(l.attributes)}</div>
             ${l.presences.map(p => {
               const curLvl = state.account.ownedLovers[l.id]?.presences?.[p.id] ?? (p.min_lvl || 0);
-              const percs = calcPresencePercents(p, curLvl, presenceCurvesMap);
+              const percs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || { strength: 0, allure: 0, intellect: 0, spirit: 0 };
               const owned = state.account.ownedLovers[l.id];
-              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${percs.strength}% · Хар. ${percs.allure}% · Инт. ${percs.intellect}% · Воля ${percs.spirit}%
-                ${owned ? `<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Уровень веяния" />` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
+              const targetLvl = state.plan.presences?.[l.id]?.[p.id] ?? curLvl;
+              const targetPercs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || percs;
+              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}%
+                ${owned ? `<label class="mini-field">Сейчас<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Текущий уровень веяния" /></label>` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
+                ${owned && p.presence_type === 'updatable' ? `<label class="mini-field">Цель<input class="input mini-level presence-target" type="number" min="${curLvl}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${targetLvl}" aria-label="Целевой уровень веяния" /></label>` : ''}
               </div>`;
             }).join('')}
           </div>
@@ -1093,7 +1001,7 @@ function renderAurasPresencesTab(db) {
   `;
 }
 
-function renderBondsTab(db) {
+function renderBondsTab(db, oracle) {
   const owned = state.account.ownedLovers;
   const ownedCount = Object.keys(owned).length;
   return `
@@ -1101,7 +1009,8 @@ function renderBondsTab(db) {
       <div class="card-head">
         <div>
           <div class="card-title">🔗 Кровные узы и спутники (${ownedCount} в профиле)</div>
-          <div class="row-sub">Близость открывает ветви уз; очки Доверия расходуются на уровни. План считается локально.</div>
+          <div class="row-sub">Близость открывает ветви уз; очки Доверия расходуются на уровни. Расчёт выполняет Server Oracle.</div>
+          <button class="btn btn-gold btn-sm" id="btn-auto-bonds">⚡ Распределить Доверие</button>
         </div>
       </div>
       ${db.lovers.map(l => {
@@ -1112,8 +1021,8 @@ function renderBondsTab(db) {
             <div class="row-info"><div class="row-name">${tName('lover', l.name)}</div><div class="row-sub">${tName('warden', db.wardens.find(w => w.id === l.warden_id)?.name || '—')} · Не добавлен в профиль</div></div>
             <button class="btn btn-sm toggle-owned-lover" data-lid="${l.id}">Добавить</button>
           </div>`;
-        const bondPlan = getBondPlan(l, current);
-        const result = calcLoverBonds(l, current.affinity || 0, bondPlan, bondPlan.wardenBaseAttrs, current.closeness || 0);
+        const bondPlan = oracle.lovers[l.id]?.bondPlan || getBondPlan(l, current);
+        const result = oracle.lovers[l.id]?.bondResult;
         const warden = db.wardens.find(w => w.id === l.warden_id);
         return `
           <details class="lover-panel" open>
@@ -1152,7 +1061,7 @@ function renderBondsTab(db) {
   `;
 }
 
-function renderSkinsTab(db) {
+function renderSkinsTab(db, oracle) {
   const allWardenSkins = db.wardens.flatMap(w => (w.skins || []).map(s => ({ ...s, ownerType: 'warden', ownerName: tName('warden', w.name) })));
   const allLoverSkins = db.lovers.flatMap(l => (l.skins || []).map(s => ({ ...s, ownerType: 'lover', ownerName: tName('lover', l.name) })));
   const allSkins = [...allWardenSkins, ...allLoverSkins];
@@ -1165,33 +1074,30 @@ function renderSkinsTab(db) {
           <div class="row-sub">Стоимость уровня в ткани: A = 50 (Атлас) · S = 100 (Кашемир) · SS = 200 (Шёлк)</div>
         </div>
       </div>
-      ${allSkins.map(s => `
+      ${allSkins.map(s => {
+        const result = oracle.skins[s.id];
+        return `
         <div class="item-row">
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
           <div class="row-info">
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
-            <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${s.store_exp} · ${FABRIC_COST_BY_QUALITY[s.quality]}/ур. ткани · ${s.purchasable ? 'Доступен за ткань' : 'Нужна карточка'}</div>
+            <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
           </div>
-          <div class="row-controls"><input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${state.account.skins[s.id] || 0}" aria-label="Уровень облика" /></div>
+          <div class="row-controls skin-controls">
+            <label class="mini-field">Сейчас<input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Текущий уровень облика" /></label>
+            <label class="mini-field">Цель<input class="input stepper-input skin-target" type="number" min="${result.level}" max="${s.max_lvl}" data-skin-id="${s.id}" value="${state.plan.skins?.[s.id] ?? result.level}" aria-label="Целевой уровень облика" /></label>
+          </div>
         </div>
-      `).join('')}
+      `;}).join('')}
     </section>
   `;
 }
 
-function renderSummonTab(db) {
-  const cands = getSummonCandidates(
-    db.wardens,
-    db.lovers,
-    new Set(Object.keys(state.account.ownedWardens).map(Number)),    new Set(Object.keys(state.account.ownedLovers).map(Number)),
-    state.account.bag
-  );
-
+function renderSummonTab(db, oracle) {
+  const cands = oracle.summonCandidates;
   return `
     <section class="card card-gold">
-      <div class="card-head">
-        <div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div>
-      </div>
+      <div class="card-head"><div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div></div>
       ${cands.wardens.map(c => {
         const w = db.wardens.find(x => x.id === c.id);
         const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
@@ -1200,20 +1106,34 @@ function renderSummonTab(db) {
             <img class="avatar" src="${getIconUrl(w?.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
             <div class="row-info">
               <div class="row-name">${tName('warden', c.name)} (${c.baseTalentStars}★)</div>
-              <div class="row-sub">
-                ${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}
-              </div>
+              <div class="row-sub">${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}</div>
             </div>
             <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
-          </div>
-        `;
+          </div>`;
+      }).join('')}
+    </section>
+    <section class="card">
+      <div class="card-head"><div class="card-title">💞 Доступные для призыва Возлюбленные (${cands.lovers.length})</div></div>
+      ${cands.lovers.map(c => {
+        const lover = db.lovers.find(x => x.id === c.id);
+        const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
+        const warden = db.wardens.find(x => x.id === c.wardenId);
+        return `
+          <div class="item-row">
+            <img class="avatar" src="${getIconUrl(getLoverIconPath(lover || {}, null), state.preferLocalIcons)}" alt="" loading="lazy" />
+            <div class="row-info">
+              <div class="row-name">${tName('lover', c.name)}</div>
+              <div class="row-sub">${warden ? `Смотритель: ${tName('warden', warden.name)} · ` : ''}${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / Событие)'}${c.hasWarden ? '' : ' · Смотритель ещё не добавлен в профиль'}</div>
+            </div>
+            <button class="btn btn-sm btn-primary summon-lover" data-lid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
+          </div>`;
       }).join('')}
     </section>
   `;
 }
 
-function renderBagTab(db, report) {
-  const categories = summarizeBag(db.items, state.account.bag);
+function renderBagTab(db, report, oracle) {
+  const events = oracle.eventCalculators || {};
   const catNames = {
     all: 'Все (237)',
     coins: 'Печати и Жетоны',
@@ -1233,6 +1153,20 @@ function renderBagTab(db, report) {
   );
 
   return `
+    <section class="card card-gold">
+      <div class="card-head"><div class="card-title">🧮 Близость, Влечение и Опыт гильдии</div></div>
+      <div class="guild-progress-grid">
+        <label>Уровень гильдии<input class="input guild-progress-input" type="number" min="0" data-guild-field="level" value="${state.account.guildProgress?.level || 0}"></label>
+        <label>Текущий опыт<input class="input guild-progress-input" type="number" min="0" data-guild-field="exp" value="${state.account.guildProgress?.exp || 0}"></label>
+        <label>Опыт следующего уровня<input class="input guild-progress-input" type="number" min="0" data-guild-field="nextLevelExp" value="${state.account.guildProgress?.nextLevelExp || 0}"></label>
+      </div>
+      <div class="row-sub guild-progress-remaining">До следующего уровня: ${fmt(Math.max(0, (state.account.guildProgress?.nextLevelExp || 0) - (state.account.guildProgress?.exp || 0)))}</div>
+      <div class="grid-3 event-calculators">
+        <div class="event-metric"><div class="row-sub">Близость</div><strong>${fmt(events.intimacy?.expected || 0)}</strong><small>Мин. ${fmt(events.intimacy?.minimum || 0)} · Макс. ${fmt(events.intimacy?.maximum || 0)}</small></div>
+        <div class="event-metric"><div class="row-sub">Влечение</div><strong>${fmt(events.attraction?.expected || 0)}</strong><small>Мин. ${fmt(events.attraction?.minimum || 0)} · Макс. ${fmt(events.attraction?.maximum || 0)}</small></div>
+        <div class="event-metric"><div class="row-sub">Опыт гильдии</div><strong>${fmt(events.guildExp?.expected || 0)}</strong><small>Учтено вложений за 3 дня · ${fmt(events.guildExp?.items?.length || 0)} типов предметов</small></div>
+      </div>
+    </section>
     <section class="card">
       <div class="card-head">
         <div class="card-title">🎒 Инвентарь Сумки <span id="bag-result-count">(${filteredItems.length} предм.)</span></div>
@@ -1246,7 +1180,7 @@ function renderBagTab(db, report) {
         <input type="text" class="input" id="inp-bag-search" placeholder="Поиск предмета по названию..." value="${state.searchQuery}" />
       </div>
       ${filteredItems.map(it => {
-        const count = state.account.bag[it.id] ?? 0;
+        const count = oracle.inventory[it.category]?.items.find(row => row.id === it.id)?.count ?? 0;
         return `
           <div class="item-row bag-item-row">
             <img class="avatar" src="${getIconUrl(it.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
@@ -1264,6 +1198,107 @@ function renderBagTab(db, report) {
   `;
 }
 
+
+let numericPadBound = false;
+function openNumericPad(input) {
+  if (!input || input.disabled || input.readOnly) return;
+  let digits = String(Math.max(0, Math.round(Number(input.value) || 0)));
+  let multiplier = 1;
+  const min = Number.isFinite(Number(input.min)) && input.min !== '' ? Number(input.min) : 0;
+  const max = Number.isFinite(Number(input.max)) && input.max !== '' ? Number(input.max) : 1_000_000_000_000_000;
+  const label = input.getAttribute('aria-label')
+    || input.closest('label')?.querySelector('span')?.textContent
+    || input.closest('.item-row')?.querySelector('.row-name')?.textContent
+    || input.dataset.res
+    || 'Введите значение';
+
+  let sheet = document.getElementById('vd-number-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'vd-number-sheet';
+    sheet.className = 'number-sheet hidden';
+    sheet.innerHTML = `
+      <div class="number-sheet-backdrop" data-np-close></div>
+      <section class="number-sheet-panel" role="dialog" aria-modal="true" aria-label="Ввод значения">
+        <div class="number-sheet-handle"></div>
+        <div class="number-sheet-head">
+          <div><div class="number-sheet-title" id="np-title"></div><div class="number-sheet-subtitle">Точное значение или сокращённая запись</div></div>
+          <button class="number-sheet-close" type="button" data-np-close aria-label="Закрыть">×</button>
+        </div>
+        <output class="number-sheet-display" id="np-display">0</output>
+        <div class="number-sheet-units">
+          <button type="button" data-np-unit="1000">K</button>
+          <button type="button" data-np-unit="1000000">M</button>
+          <button type="button" data-np-unit="1000000000">B</button>
+          <button type="button" data-np-unit="1000000000000">T</button>
+        </div>
+        <div class="number-sheet-keys">
+          ${[7,8,9,4,5,6,1,2,3].map(n => `<button type="button" data-np-digit="${n}">${n}</button>`).join('')}
+          <button type="button" class="np-clear" data-np-clear>Очистить</button>
+          <button type="button" data-np-digit="0">0</button>
+          <button type="button" data-np-back>⌫</button>
+        </div>
+        <div class="number-sheet-actions">
+          <button type="button" class="btn" data-np-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="np-confirm">Готово</button>
+        </div>
+      </section>`;
+    document.body.appendChild(sheet);
+  }
+
+  const display = sheet.querySelector('#np-display');
+  const update = () => {
+    const value = Math.min(max, Math.max(0, (Number(digits) || 0) * multiplier));
+    display.textContent = value.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+    sheet.querySelectorAll('[data-np-unit]').forEach(button => {
+      button.classList.toggle('active', Number(button.dataset.npUnit) === multiplier);
+    });
+  };
+  sheet.querySelector('#np-title').textContent = label;
+  sheet.classList.remove('hidden');
+  update();
+
+  sheet.onclick = event => {
+    const target = event.target.closest('button,[data-np-close]');
+    if (!target) return;
+    if (target.hasAttribute('data-np-close')) {
+      sheet.classList.add('hidden');
+      return;
+    }
+    if (target.dataset.npDigit !== undefined) {
+      digits = (digits === '0' ? '' : digits) + target.dataset.npDigit;
+    } else if (target.hasAttribute('data-np-clear')) {
+      digits = '0'; multiplier = 1;
+    } else if (target.hasAttribute('data-np-back')) {
+      digits = digits.length > 1 ? digits.slice(0, -1) : '0';
+    } else if (target.dataset.npUnit) {
+      multiplier = Number(target.dataset.npUnit);
+    } else if (target.id === 'np-confirm') {
+      const value = Math.min(max, Math.max(min, (Number(digits) || 0) * multiplier));
+      input.value = String(Math.round(value));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      sheet.classList.add('hidden');
+      return;
+    }
+    update();
+  };
+}
+
+function bindNumericPad() {
+  if (numericPadBound) return;
+  numericPadBound = true;
+  document.addEventListener('pointerdown', event => {
+    const input = event.target.closest('input[type="number"], input[inputmode="numeric"]');
+    if (!input || input.disabled || input.readOnly || input.id === 'inp-bag-search') return;
+    event.preventDefault();
+    openNumericPad(input);
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') document.getElementById('vd-number-sheet')?.classList.add('hidden');
+  });
+}
+
 function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
   document.getElementById('btn-profile-edit')?.addEventListener('click', editProfile);
@@ -1272,41 +1307,6 @@ function bindEvents(db) {
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
-  document.getElementById('btn-oracle-import')?.addEventListener('click', () => {
-    document.getElementById('oracle-json-file')?.click();
-  });
-  document.getElementById('oracle-json-file')?.addEventListener('change', async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const parsed = JSON.parse(await file.text());
-      state.account.oracleSnapshot = normalizeOracleSnapshot(parsed);
-      state.account.oracleImportedAt = new Date().toISOString();
-      state.activeTab = 'oracle';
-      saveState();
-      render();
-    } catch (error) {
-      alert(`Не удалось импортировать ответ API: ${error?.message || 'ошибка формата'}`);
-      event.target.value = '';
-    }
-  });
-  document.getElementById('btn-oracle-export')?.addEventListener('click', () => {
-    if (!state.account.oracleSnapshot) return;
-    const blob = new Blob([JSON.stringify(state.account.oracleSnapshot, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    const downloadUrl = URL.createObjectURL(blob);
-    link.href = downloadUrl;
-    link.download = 'optimist-oracle-api-snapshot.json';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
-  });
-  document.getElementById('btn-oracle-clear')?.addEventListener('click', () => {
-    if (!state.account.oracleSnapshot || !confirm('Удалить сохранённый JSON-снимок Oracle из этого профиля?')) return;
-    state.account.oracleSnapshot = null;
-    state.account.oracleImportedAt = null;
-    saveState();
-    render();
-  });
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
@@ -1322,6 +1322,9 @@ function bindEvents(db) {
   });
 
   document.getElementById('btn-auto-all')?.addEventListener('click', runFullAutoDistribute);
+  document.getElementById('btn-auto-talents')?.addEventListener('click', runAutoTalentDistribution);
+  document.getElementById('btn-auto-presences')?.addEventListener('click', runAutoPresenceDistribution);
+  document.getElementById('btn-auto-bonds')?.addEventListener('click', runAutoBondDistribution);
   document.getElementById('btn-quick-run')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-commit-plan')?.addEventListener('click', commitPlanToAccount);
 
@@ -1330,7 +1333,9 @@ function bindEvents(db) {
       conclave: { ...state.account.conclave },
       courtyardToLvl: state.account.courtyardLvl,
       levels: {},
+      talents: {},
       bonds: {},
+      presences: {},
       skins: {},
       summons: { wardens: [], lovers: [] },
     };
@@ -1339,14 +1344,22 @@ function bindEvents(db) {
   });
 
   document.getElementById('btn-auto-conclave')?.addEventListener('click', () => {
-    const wardensByAttr = {};
-    for (const attr of ATTRIBUTES) {
-      wardensByAttr[attr] = db.wardens.filter(w => state.account.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
-    }
-    const res = autoDistributeConclave(db.conclaveLevels, state.account.conclave, state.account.conclaveExp, wardensByAttr);
-    state.plan.conclave = res.levels;
-    saveState();
-    render();
+    requestOracle('/api/oracle/auto-conclave', { account: state.account, plan: state.plan }).then(res => {
+      state.plan.conclave = res.levels;
+      saveState();
+      render();
+    }).catch(error => alert(error.message || 'Oracle не смог распределить Конклав.'));
+  });
+
+  document.querySelectorAll('.guild-progress-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const field = inp.dataset.guildField;
+      if (!['exp', 'level', 'nextLevelExp'].includes(field)) return;
+      state.account.guildProgress ||= { exp: 0, level: 0, nextLevelExp: 0 };
+      state.account.guildProgress[field] = Math.max(0, Number(inp.value) || 0);
+      saveState();
+      render();
+    });
   });
 
   document.querySelectorAll('.res-input').forEach(inp => {
@@ -1446,6 +1459,27 @@ function bindEvents(db) {
     });
   });
 
+  document.querySelectorAll('.presence-target').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const lid = Number(inp.dataset.lid), pid = Number(inp.dataset.pid);
+      const lover = db.lovers.find(item => item.id === lid);
+      const template = lover?.presences?.find(item => item.id === pid);
+      const owned = state.account.ownedLovers[lid];
+      if (!template || !owned || template.presence_type !== 'updatable') return;
+      const current = Math.max(template.min_lvl || 0, Number(owned.presences?.[pid] ?? template.min_lvl ?? 0));
+      const target = Math.max(current, Math.min(template.max_lvl || current, Math.round(Number(inp.value) || current)));
+      state.plan.presences ||= {};
+      state.plan.presences[lid] ||= {};
+      if (target > current) state.plan.presences[lid][pid] = target;
+      else {
+        delete state.plan.presences[lid][pid];
+        if (!Object.keys(state.plan.presences[lid]).length) delete state.plan.presences[lid];
+      }
+      saveState();
+      render();
+    });
+  });
+
   document.querySelectorAll('.presence-level').forEach(inp => {
     inp.addEventListener('change', () => {
       const lid = Number(inp.dataset.lid), pid = Number(inp.dataset.pid);
@@ -1454,6 +1488,21 @@ function bindEvents(db) {
       if (!owned || !template) return;
       owned.presences ||= {};
       owned.presences[pid] = Math.min(template.max_lvl ?? 999, Math.max(template.min_lvl || 0, Number(inp.value) || 0));
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.skin-target').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const id = Number(inp.dataset.skinId);
+      const skin = [...db.wardens.flatMap(w => w.skins || []), ...db.lovers.flatMap(l => l.skins || [])].find(item => item.id === id);
+      if (!skin) return;
+      const current = Math.max(0, Number(state.account.skins[id]) || 0);
+      state.plan.skins ||= {};
+      const target = Math.min(skin.max_lvl || 10, Math.max(current, Number(inp.value) || current));
+      if (target > current) state.plan.skins[id] = target;
+      else delete state.plan.skins[id];
       saveState();
       render();
     });
@@ -1471,17 +1520,36 @@ function bindEvents(db) {
   });
 
   document.querySelectorAll('.summon-warden').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = Number(btn.dataset.wid);
-      const candidate = getSummonCandidates(db.wardens, db.lovers,
-        new Set(Object.keys(state.account.ownedWardens).map(Number)),
-        new Set(Object.keys(state.account.ownedLovers).map(Number)), state.account.bag
-      ).wardens.find(item => item.id === id);
+      const candidate = oracle.summonCandidates.wardens.find(item => item.id === id);
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
-      if (candidate.itemId && candidate.cost > 0) state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
-      state.account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
-      saveState();
-      render();
+      try {
+        const result = await requestOracle('/api/oracle/summon', { account: state.account, wardenId: id });
+        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        state.account = normalizeAccountData(result.account);
+        saveState();
+        render();
+      } catch (error) {
+        alert(error.message || 'Oracle не смог выполнить призыв.');
+      }
+    });
+  });
+
+  document.querySelectorAll('.summon-lover').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = Number(btn.dataset.lid);
+      const candidate = oracle.summonCandidates.lovers.find(item => item.id === id);
+      if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
+      try {
+        const result = await requestOracle('/api/oracle/summon-lover', { account: state.account, loverId: id });
+        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        state.account = normalizeAccountData(result.account);
+        saveState();
+        render();
+      } catch (error) {
+        alert(error.message || 'Oracle не смог выполнить призыв.');
+      }
     });
   });
 
@@ -1591,6 +1659,53 @@ function bindEvents(db) {
     };
     inp.click();
   });
+  document.querySelectorAll('.guild-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const key = inp.dataset.guild;
+      if (!['level', 'exp', 'nextLevelExp'].includes(key)) return;
+      state.account.guildProgress ||= { level: 0, exp: 0, nextLevelExp: 0 };
+      state.account.guildProgress[key] = Math.max(0, Number(inp.value) || 0);
+      if (key === 'level') state.account.guildProgress.level = Math.min(999, Math.round(state.account.guildProgress.level));
+      saveState();
+      render();
+    });
+  });
+
+  document.getElementById('btn-import-helper')?.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'application/json,.json';
+    inp.multiple = true;
+    inp.onchange = async () => {
+      const files = [...(inp.files || [])];
+      if (!files.length) return;
+      try {
+        const snapshots = await Promise.all(files.map(async file => JSON.parse(await file.text())));
+        const imported = await requestOracle('/api/oracle/import-helper', { account: state.account, snapshots });
+        state.account = normalizeAccountData(imported.account);
+        state.plan = createBlankPlan(state.account);
+        saveState();
+        await render();
+        const sum = imported.summary || {};
+        const lines = [
+          'Смотрители: ' + (sum.wardens || 0),
+          'Кровные узы: ' + (sum.bonds || 0),
+          'Облики: ' + (sum.skins || 0),
+          'Предметы сумки: ' + (sum.inventory || 0),
+          'Атрибуты Конклава: ' + (sum.conclaveAttributes || 0),
+          'Опыт Гильдии: ' + (sum.guildProgress ? 'импортирован' : 'без изменений'),
+          'Шаги Warden next_cost/next_gain: ' + (sum.wardenSteps || 0),
+          'Таланты / пути аур / книги: ' + [sum.talentScripts || 0, sum.auraPaths || 0, sum.bookRows || 0].join(' / '),
+          'Манускрипты / Веяния / узы / облики: ' + [sum.manuscriptTiers || 0, sum.presences || 0, sum.bonds || 0, sum.skinSteps || 0].join(' / '),
+        ];
+        alert('Импорт ответов API «Помощника Дампира» завершён.\\n' + lines.join('\\n') + '\\n\\nОтветы сохранены как подтверждённые контрольные данные. Серверные next_cost/next_gain и best_path сохраняются без подмены оценочными формулами.');
+      } catch (error) {
+        alert(error.message || 'Не удалось прочитать JSON-дамп помощника.');
+      }
+    };
+    inp.click();
+  });
+
 }
 
 document.addEventListener('DOMContentLoaded', render);
