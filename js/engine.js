@@ -785,11 +785,12 @@ export function calculateTotalDominanceReport({
     return sum + (c?.estimatedBaseGain ?? 0);
   }, 0);
 
-  const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain + summonGain;
+  const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain;
 
   return {
     gain: {
       total: totalDominanceGain,
+      totalWithSummonEstimate: totalDominanceGain + summonGain,
       conclave: conclaveGain,
       courtyard: courtyardRes.totalGain,
       levels: levelsGain,
