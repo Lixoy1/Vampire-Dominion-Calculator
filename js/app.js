@@ -902,8 +902,11 @@ function renderAurasPresencesTab(db, oracle) {
               const curLvl = state.account.ownedLovers[l.id]?.presences?.[p.id] ?? (p.min_lvl || 0);
               const percs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || { strength: 0, allure: 0, intellect: 0, spirit: 0 };
               const owned = state.account.ownedLovers[l.id];
-              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${percs.strength}% · Хар. ${percs.allure}% · Инт. ${percs.intellect}% · Воля ${percs.spirit}%
-                ${owned ? `<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Уровень веяния" />` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
+              const targetLvl = state.plan.presences?.[l.id]?.[p.id] ?? curLvl;
+              const targetPercs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || percs;
+              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}%
+                ${owned ? `<label class="mini-field">Сейчас<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Текущий уровень веяния" /></label>` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
+                ${owned && p.presence_type === 'updatable' ? `<label class="mini-field">Цель<input class="input mini-level presence-target" type="number" min="${curLvl}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${targetLvl}" aria-label="Целевой уровень веяния" /></label>` : ''}
               </div>`;
             }).join('')}
           </div>
@@ -1362,6 +1365,27 @@ function bindEvents(db) {
       if (!owned || !template) return;
       owned.auras ||= {};
       owned.auras[aid] = Math.min(template.max_lvl ?? 999, Math.max(template.min_lvl || 0, Number(inp.value) || 0));
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.presence-target').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const lid = Number(inp.dataset.lid), pid = Number(inp.dataset.pid);
+      const lover = db.lovers.find(item => item.id === lid);
+      const template = lover?.presences?.find(item => item.id === pid);
+      const owned = state.account.ownedLovers[lid];
+      if (!template || !owned || template.presence_type !== 'updatable') return;
+      const current = Math.max(template.min_lvl || 0, Number(owned.presences?.[pid] ?? template.min_lvl ?? 0));
+      const target = Math.max(current, Math.min(template.max_lvl || current, Math.round(Number(inp.value) || current)));
+      state.plan.presences ||= {};
+      state.plan.presences[lid] ||= {};
+      if (target > current) state.plan.presences[lid][pid] = target;
+      else {
+        delete state.plan.presences[lid][pid];
+        if (!Object.keys(state.plan.presences[lid]).length) delete state.plan.presences[lid];
+      }
       saveState();
       render();
     });
