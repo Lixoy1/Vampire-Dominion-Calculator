@@ -6,7 +6,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/oracle.test.js && node tests/app-smoke.test.js",
+    "test": "node tests/engine.test.js && node tests/oracle.test.js && node tests/oracle-api.test.js && node tests/app-smoke.test.js",
     "check": "node --check server.js && node --check oracle.js && node --check js/app.js && node --check js/engine.js && node --check js/data.js",
     "verify:icons": "python verify_icons.py"
   },
