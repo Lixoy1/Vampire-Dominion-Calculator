@@ -216,6 +216,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.eventCalculators.intimacy.expected, 20);
   assert.equal(snapshot.eventCalculators.attraction.expected, 30);
   assert.equal(snapshot.eventCalculators.guildExp.expected, 2220);
+  assert.deepEqual(snapshot.guildProgress, { exp: 0, level: 0, nextLevelExp: 0 });
   assert.equal(snapshot.eventCalculators.guildExp.items.find(item => item.item_id === 4002)?.counted, 1);
 }
 
