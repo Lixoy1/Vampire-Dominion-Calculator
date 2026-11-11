@@ -6,11 +6,15 @@ const root = {
   get innerHTML() { return this._html; },
   set innerHTML(value) {
     this._html = value;
-    navButtons = [...value.matchAll(/data-tab="([^"]+)"/g)].map(match => ({
-      dataset: { tab: match[1] },
+    navButtons = [...value.matchAll(/data-nav="([^"]+)"/g)].map(match => ({
+      dataset: { nav: match[1] },
       handlers: {},
       addEventListener(event, handler) { this.handlers[event] = handler; },
     }));
+  },
+  querySelectorAll(selector) {
+    if (selector === '[data-nav]') return navButtons;
+    return [];
   },
 };
 let readyHandler = null;
@@ -24,29 +28,41 @@ globalThis.localStorage = {
 globalThis.prompt = () => null;
 globalThis.alert = () => {};
 globalThis.confirm = () => false;
+globalThis.window = { scrollTo() {} };
 globalThis.document = {
   addEventListener(event, handler) { if (event === 'DOMContentLoaded') readyHandler = handler; },
-  getElementById(id) { return id === 'app' ? root : null; },
-  querySelectorAll(selector) { return selector === '[data-tab]' ? navButtons : []; },
+  getElementById(id) {
+    if (id === 'app' || id === 'screen-container') return root;
+    return null;
+  },
+  querySelectorAll() { return []; },
 };
 
 await import('../js/app.js');
 assert.equal(typeof readyHandler, 'function', 'app registers DOMContentLoaded');
 readyHandler();
 
-const expectedTabs = ['dominance', 'conclave', 'levels', 'talents', 'auras', 'bonds', 'skins', 'summon', 'bag'];
-for (const expected of expectedTabs) {
-  const tab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === expected);
-  assert.ok(tab, `tab ${expected} is rendered`);
-  assert.equal(typeof tab.handlers.click, 'function', `tab ${expected} has a click handler`);
-  tab.handlers.click();
-  assert.ok(root.innerHTML.includes('class="app-shell"'), `app shell renders on ${expected}`);
-}
-assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
-const dominanceTab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === 'dominance');
-dominanceTab.handlers.click();
-assert.ok(root.innerHTML.includes('Проверка по серверному расчёту'), 'dominance tab explains server snapshot import');
-assert.ok(root.innerHTML.includes('total, attributes и gain'), 'server response import schema is explained');
-assert.ok(root.innerHTML.includes('assets/icons/'), 'local icon URLs are used');
-assert.ok(localStore.size > 0, 'state is stored locally');
-console.log(`PASS app render smoke: ${expectedTabs.length} tabs`);
+const assertScreen = (name, expectedText) => {
+  const button = navButtons.find(item => item.dataset.nav === name);
+  assert.ok(button, 'bottom navigation contains ' + name);
+  assert.equal(typeof button.handlers.click, 'function', 'bottom navigation ' + name + ' is wired');
+  button.handlers.click();
+  assert.ok(root.innerHTML.includes(expectedText), 'screen ' + name + ' renders expected content');
+};
+
+assertScreen('home', 'OPTIMIST');
+assertScreen('resources', 'Смотрители');
+assert.ok(root.innerHTML.includes('Партнёры'), 'resources hub includes partners');
+assert.ok(root.innerHTML.includes('Сумка'), 'resources hub includes inventory');
+assertScreen('calculations', 'Подсчёт Господства');
+assert.ok(root.innerHTML.includes('Близость и влечение'), 'calculations hub includes intimacy/attraction calculator');
+assertScreen('settings', 'Активный профиль');
+assert.ok(root.innerHTML.includes('btn-import'), 'settings screen includes profile/JSON import');
+assert.ok(root.innerHTML.includes('profile-avatar-select'), 'settings screen includes avatar selection');
+
+const stored = [...localStore.values()].map(value => JSON.parse(value)).find(value => value && value.account);
+assert.ok(stored, 'state is saved locally after SPA navigation');
+assert.equal(Object.keys(stored.account.ownedWardens).length, 4, 'starter profile contains the four reference wardens');
+assert.equal(Object.keys(stored.account.ownedLovers).length, 2, 'starter profile contains the two reference partners');
+assert.ok(root.innerHTML.includes('spa-bottom-nav'), 'fixed bottom navigation is rendered');
+console.log('PASS app SPA smoke: home, resources, calculations, settings, local profile');
