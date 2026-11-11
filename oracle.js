@@ -27,6 +27,9 @@ const GAME_VERIFICATION = Object.freeze({
 });
 
 const ATTRIBUTES = Engine.ATTRIBUTES;
+const INTIMACY_ITEM_IDS = [4211, 4212, 4213, 4230, 4231, 4232, 30005, 30006, 30007, 30008];
+const ATTRACTION_ITEM_IDS = [4221, 4222, 4223, 4235, 4236, 4237, 30009, 30010, 30011, 30012];
+
 const db = {
   wardens: GAME_DB.wardens,
   lovers: GAME_DB.lovers,
@@ -315,6 +318,14 @@ export function calculateOracle(input = {}) {
   }
 
   const inventory = Engine.summarizeBag(db.items, account.bag);
+  // Event and guild calculators use the same server-side inventory snapshot.
+  // The three-day donation cap is part of the reference helper's calculation.
+  const eventCalculators = {
+    intimacy: Engine.calcBagPoints(account.bag, INTIMACY_ITEM_IDS),
+    attraction: Engine.calcBagPoints(account.bag, ATTRACTION_ITEM_IDS),
+    guildExp: Engine.calcGuildExp(account.bag, 3),
+  };
+
   const skins = {};
   for (const warden of db.wardens) {
     for (const skin of warden.skins || []) {
@@ -391,6 +402,7 @@ export function calculateOracle(input = {}) {
     },
     report,
     inventory,
+    eventCalculators,
     skins,
     conclaveBranches,
     courtyardUpgrade,
