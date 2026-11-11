@@ -48,7 +48,7 @@ function normalizeAccount(input = {}) {
     ownedWardens[id] = {
       ...warden,
       level: Math.max(1, Math.min(500, Math.round(numeric(warden.level, 1)))),
-      promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(warden.promoteId, 1))),
+      promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(warden.promoteId, 1)))),
       exp: nonNegative(warden.exp),
       talents: record(warden.talents),
       auras: record(warden.auras),
