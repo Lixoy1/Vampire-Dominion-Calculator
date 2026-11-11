@@ -20,7 +20,7 @@ for (const name of [
   'renderWardensListScreen', 'renderWardenDetailScreen', 'renderLoversScreen',
   'renderLoverDetailScreen', 'renderBagScreen', 'renderSkinsScreen',
   'renderConclaveScreen', 'renderWardenExpScreen', 'renderCalculationsHubScreen',
-  'renderDominanceCalcScreen', 'renderTalentsTab', 'renderIntimacyCalcScreen', 'renderSettingsScreen',
+  'renderDominanceCalcScreen', 'renderTalentsTab', 'renderWardenExpScreen', 'renderIntimacyCalcScreen', 'renderSettingsScreen',
   'openQuickCalculation', 'openFormulaInfo', 'bindSpaEvents',
 ]) {
   fn(name);
@@ -100,5 +100,13 @@ assert.ok(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'), 'compac
 assert.ok(css.includes('.talent-help-card') && css.includes('.talent-help-list'), 'talent explanations have mobile styling');
 assert.ok(!app.includes('Помощник Дампира') && !html.includes('Помощник Дампира'), 'legacy helper branding is absent from the app');
 assert.ok(!app.includes('/api/oracle/import-helper'), 'legacy third-party JSON import is absent from the client');
+
+
+assert.ok(fn('renderCalculationsHubScreen').includes('data-screen="warden_exp"'), 'calculations hub opens the separate Warden EXP screen');
+assert.ok(fn('renderSpaScreen').includes("case 'warden_exp': return renderWardenExpScreen(db, oracle)"), 'Warden EXP screen has a first-class SPA route');
+assert.ok(fn('renderWardenExpScreen').includes('data-spa-search="warden-exp"'), 'Warden EXP screen has a search field');
+assert.ok(fn('renderWardenExpScreen').includes('data-action="warden-exp-filter"'), 'Warden EXP screen has working filter controls');
+assert.ok(fn('bindSpaEvents').includes("action === 'warden-exp-filter'"), 'Warden EXP filters are interactive');
+assert.ok(fn('renderTalentsTab').includes('data-screen="warden_exp"'), 'talent planner links to Warden EXP entry');
 
 console.log('PASS full SPA screen routes, Oracle-only detail formulas, and modal actions');
