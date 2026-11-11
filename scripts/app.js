@@ -209,7 +209,7 @@ export function normalizeState(parsed = {}) {
     return {
       ...base,
       ...source,
-      version: 5,
+      version: 6,
       lang,
       profile: { name: selected.name, server: selected.server, region: selected.region, avatarId: selected.avatarId },
       settings: { ...base.settings, ...(source.settings || {}) },
@@ -234,7 +234,7 @@ export function normalizeState(parsed = {}) {
   return {
     ...base,
     ...source,
-    version: 5,
+    version: 6,
     lang,
     profile,
     settings: { ...base.settings, ...(source.settings || {}) },
@@ -244,6 +244,7 @@ export function normalizeState(parsed = {}) {
     accounts: [{ id, ...profile, account, plan }],
   };
 }
+
 
 function loadState() {
   const keys = [
@@ -1051,10 +1052,17 @@ function renderWardensListScreen(db) {
       return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '">' +
         '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
         '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(function (attr) { return '<span class="dot ' + attr + '"></span>'; }).join(' ') + ' · ур. ' + Number(owned.level || 1) + ' · ' + tName('warden_promote', (db.promotes.find(function (p) { return p.id === Number(owned.promoteId || 1); }) || {}).name || '') + '</div></div>' +
-        '<div class="card-right"><b>' + fmt(stats.sum) + '</b> ›</div></div>';
+        '<div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">база Oracle</div>›</div></div>';
     }).join('') +
-    '<button type="button" class="nav-card add-dashed" data-action="open-add-warden"><strong>＋ Добавить смотрителей (' + ownedIds.length + '/' + db.wardens.length + ')</strong></button></div>';
+    '<button type="button" class="nav-card add-dashed" data-action="open-add-warden"><strong>＋ Добавить смотрителей (' + ownedIds.length + '/' + db.wardens.length + ')</strong></button></div>' +
+    '<details class="attrs-box add-owned-details"><summary>Открыть полный каталог · ' + db.wardens.length + ' смотрителей</summary><div class="grid-2">' +
+      db.wardens.filter(function (warden) { return !state.account.ownedWardens[warden.id]; }).map(function (warden) {
+        return '<button type="button" class="catalog-pick" data-action="add-warden" data-id="' + warden.id + '">' +
+          '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" alt="" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px">' +
+          tName('warden', warden.name) + '</button>';
+      }).join('') + '</div></details>';
 }
+
 
 function renderLoversScreen(db) {
   const ownedIds = Object.keys(state.account.ownedLovers || {}).map(Number);
@@ -2029,6 +2037,16 @@ function bindSpaEvents(db, report, oracle) {
       if (action === 'toggle-attr-detail') { state.expandedAttr = state.expandedAttr === button.dataset.attr ? null : button.dataset.attr; return render(); }
       if (action === 'toggle-warden-sort') { state.wardenListSort = state.wardenListSort === 'sum' ? 'name' : 'sum'; return render(); }
       if (action === 'warden-filter') { state.wardenListFilter = button.dataset.val; return render(); }
+      if (action === 'add-warden') {
+        const warden = db.wardens.find(function (item) { return item.id === Number(button.dataset.id); });
+        if (!warden || state.account.ownedWardens[warden.id]) return;
+        pushUndoSnapshot();
+        state.account.ownedWardens[warden.id] = createOwnedWarden(warden);
+        state.currentWardenId = warden.id;
+        state.wardenTab = 'attributes';
+        saveState();
+        return navigate('warden-detail');
+      }
       if (action === 'open-add-warden') {
         const choices = db.wardens.filter(function (warden) { return !state.account.ownedWardens[warden.id]; });
         const answer = globalThis.prompt('Введите ID смотрителя:\n' + choices.slice(0, 30).map(function (warden) { return warden.id + ' — ' + tName('warden', warden.name); }).join('\n'));
@@ -2271,6 +2289,7 @@ function bindSpaEvents(db, report, oracle) {
 }
 
 // Override the earlier tab renderer: the app now follows the multi-screen SPA flow.
+
 
 function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
