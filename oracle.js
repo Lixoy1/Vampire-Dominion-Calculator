@@ -202,16 +202,19 @@ function normalizePlan(input = {}, account) {
     const selected = record(raw);
     const scrolls = {};
     const scripts = {};
+    const expLevels = {};
     for (let position = 0; position < warden.talents.length; position++) {
       const baseLevel = Math.max(1, Math.min(maxLevel, Math.round(numeric(record(owned.talents)[position], 1))));
       const room = Math.max(0, maxLevel - baseLevel);
       const scrollCount = Math.max(0, Math.min(room, Math.round(numeric(record(selected.scrolls)[position]))));
       const scriptCount = Math.max(0, Math.min(room - scrollCount, Math.round(numeric(record(selected.scripts)[position]))));
+      const expCount = Math.max(0, Math.min(room - scrollCount - scriptCount, Math.round(numeric(record(selected.exp_levels)[position]))));
       if (scrollCount) scrolls[position] = scrollCount;
       if (scriptCount) scripts[position] = scriptCount;
+      if (expCount) expLevels[position] = expCount;
     }
-    if (Object.keys(scrolls).length || Object.keys(scripts).length) {
-      plan.talents[id] = { scrolls, scripts };
+    if (Object.keys(scrolls).length || Object.keys(scripts).length || Object.keys(expLevels).length) {
+      plan.talents[id] = { scrolls, scripts, exp_levels: expLevels };
     }
   }
 
@@ -423,8 +426,11 @@ function makeWarnings(account, plan) {
 function getTalentPlanUsage(plan, ownedWardens) {
   const byItem = {};
   const byWarden = {};
+  const expByWarden = {};
   let scrollLevels = 0;
   let scriptLevels = 0;
+  let expLevels = 0;
+  let expSpentTotal = 0;
   let totalLevels = 0;
 
   for (const [wardenId, selectedRaw] of Object.entries(record(plan.talents))) {
@@ -433,12 +439,14 @@ function getTalentPlanUsage(plan, ownedWardens) {
     const selected = record(selectedRaw);
     const scrolls = record(selected.scrolls);
     const scripts = record(selected.scripts);
-    const wardenSummary = { scrollLevels: 0, scriptLevels: 0, itemCosts: {} };
+    const expSelection = record(selected.exp_levels);
+    const wardenSummary = { scrollLevels: 0, scriptLevels: 0, expLevels: 0, expSpent: 0, itemCosts: {} };
 
     for (let position = 0; position < warden.talents.length; position++) {
       const talent = warden.talents[position];
       const scrollCount = Math.max(0, Math.round(numeric(scrolls[position])));
       const scriptCount = Math.max(0, Math.round(numeric(scripts[position])));
+      const expCount = Math.max(0, Math.round(numeric(expSelection[position])));
       if (scrollCount && talent.scroll_item_id) {
         byItem[talent.scroll_item_id] = (byItem[talent.scroll_item_id] || 0) + scrollCount;
         wardenSummary.itemCosts[talent.scroll_item_id] = (wardenSummary.itemCosts[talent.scroll_item_id] || 0) + scrollCount;
@@ -450,20 +458,26 @@ function getTalentPlanUsage(plan, ownedWardens) {
       }
       wardenSummary.scrollLevels += scrollCount;
       wardenSummary.scriptLevels += scriptCount;
+      wardenSummary.expLevels += expCount;
+      wardenSummary.expSpent += expCount * Number(talent.stars || 0) * Engine.EXP_PER_TALENT_POINT;
     }
-    if (wardenSummary.scrollLevels || wardenSummary.scriptLevels) {
+    if (wardenSummary.scrollLevels || wardenSummary.scriptLevels || wardenSummary.expLevels) {
       byWarden[wardenId] = wardenSummary;
+      if (wardenSummary.expSpent) expByWarden[wardenId] = wardenSummary.expSpent;
       scrollLevels += wardenSummary.scrollLevels;
       scriptLevels += wardenSummary.scriptLevels;
-      totalLevels += wardenSummary.scrollLevels + wardenSummary.scriptLevels;
+      expLevels += wardenSummary.expLevels;
+      expSpentTotal += wardenSummary.expSpent;
+      totalLevels += wardenSummary.scrollLevels + wardenSummary.scriptLevels + wardenSummary.expLevels;
     }
   }
 
-  return { byItem, byWarden, scrollLevels, scriptLevels, totalLevels };
+  return { byItem, byWarden, expByWarden, expLevels, expSpentTotal, scrollLevels, scriptLevels, totalLevels };
 }
 
 function buildTalentDistributionBlock(account, plan, availableBag = account.bag) {
   const groups = { scrolls: new Map(), scripts: new Map() };
+  const ownExp = [];
   const usage = getTalentPlanUsage(plan, account.ownedWardens);
   const targetLevel = id => Math.max(account.ownedWardens[id]?.level || 1, numeric(plan.levels[id], account.ownedWardens[id]?.level || 1));
 
@@ -475,7 +489,9 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
     const selection = record(plan.talents[wardenId]);
     const selectedScrolls = record(selection.scrolls);
     const selectedScripts = record(selection.scripts);
+    const selectedExp = record(selection.exp_levels);
     const multiplier = Engine.calcWardenLevelMultiplier(targetLevel(wardenId));
+    const ownExpLines = [];
 
     for (let position = 0; position < warden.talents.length; position++) {
       const talent = warden.talents[position];
@@ -483,7 +499,8 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
       const baseLevel = Math.max(1, Math.min(cap, Math.round(numeric(record(owned.talents)[position], 1))));
       const scrollChosen = Math.max(0, Math.round(numeric(selectedScrolls[position])));
       const scriptChosen = Math.max(0, Math.round(numeric(selectedScripts[position])));
-      const finalLevel = Math.min(cap, baseLevel + scrollChosen + scriptChosen);
+      const expChosen = Math.max(0, Math.round(numeric(selectedExp[position])));
+      const finalLevel = Math.min(cap, baseLevel + scrollChosen + scriptChosen + expChosen);
       const common = {
         position,
         cap,
@@ -507,15 +524,25 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
         if (!group.wardens.has(Number(wardenId))) {
           group.wardens.set(Number(wardenId), { warden_id: Number(wardenId), talents: [] });
         }
-        group.wardens.get(Number(wardenId)).talents.push({
-          ...common,
-          chosen,
-          ...extra,
-        });
+        group.wardens.get(Number(wardenId)).talents.push({ ...common, chosen, ...extra });
       };
 
       addLine('scrolls', talent.scroll_item_id, scrollChosen, { next_cost: 1 });
       addLine('scripts', talent.script_item_id, scriptChosen, { tries: Math.max(1, Number(talent.stars) || 1) });
+      ownExpLines.push({
+        ...common,
+        chosen: expChosen,
+        next_cost: Math.max(1, Number(talent.stars) || 1),
+        max_chosen: Math.max(0, cap - baseLevel - scrollChosen - scriptChosen),
+      });
+    }
+
+    if (ownExpLines.length && nonNegative(owned.exp) > (usage.expByWarden[wardenId] || 0)) {
+      ownExp.push({
+        warden_id: Number(wardenId),
+        left: nonNegative(owned.exp) - (usage.expByWarden[wardenId] || 0),
+        talents: ownExpLines,
+      });
     }
   }
 
@@ -530,7 +557,7 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
       left: group.left,
       wardens: [...group.wardens.values()],
     })),
-    own_exp: [],
+    own_exp: ownExp,
   };
 }
 
@@ -557,7 +584,8 @@ function calculateTalentGain(account, plan) {
     );
     for (let position = 0; position < warden.talents.length; position++) {
       const levels = Math.max(0, numeric(record(selected.scrolls)[position]))
-        + Math.max(0, numeric(record(selected.scripts)[position]));
+        + Math.max(0, numeric(record(selected.scripts)[position]))
+        + Math.max(0, numeric(record(selected.exp_levels)[position]));
       gain += levels * warden.talents[position].stars * multiplier;
     }
   }
@@ -576,6 +604,9 @@ export function autoDistributeTalentPlan(input = {}) {
       plannedLevels: distribution.usage.totalLevels,
       scrollLevels: distribution.usage.scrollLevels,
       scriptLevels: distribution.usage.scriptLevels,
+      expLevels: distribution.usage.expLevels,
+      expSpentTotal: distribution.usage.expSpentTotal,
+      expByWarden: distribution.usage.expByWarden,
       items: distribution.usage.byItem,
     },
   };
@@ -594,6 +625,8 @@ export function calculateOracle(input = {}) {
   report.gain.totalWithSummonEstimate += talentGain;
   report.spent.talentScrolls = talentUsage.scrollLevels;
   report.spent.talentScripts = talentUsage.scriptLevels;
+  report.spent.talentExp = talentUsage.expByWarden;
+  report.spent.talentExpTotal = talentUsage.expSpentTotal;
   report.spent.talentItems = talentUsage.byItem;
   report.spent.skinCards = skinUsage.byItem;
   report.spent.skinFabric = skinUsage.byFabric;
@@ -835,6 +868,9 @@ export function calculateOracle(input = {}) {
       plannedLevels: talentUsage.totalLevels,
       scrollLevels: talentUsage.scrollLevels,
       scriptLevels: talentUsage.scriptLevels,
+      expLevels: talentUsage.expLevels,
+      expSpentTotal: talentUsage.expSpentTotal,
+      expByWarden: talentUsage.expByWarden,
       items: talentUsage.byItem,
       byWarden: talentUsage.byWarden,
     },
