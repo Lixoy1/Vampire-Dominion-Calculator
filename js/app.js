@@ -602,7 +602,7 @@ function renderDominanceTab(db, report) {
       <div class="card-head">
         <div>
           <div class="card-title">Сводный прирост Господства</div>
-          <div class="row-sub">Автоматический расчёт по всем 8 веткам прокачки</div>
+          <div class="row-sub">Прирост Господства и отдельные процентные модификаторы</div>
         </div>
         <div class="gain-pill">+${fmt(report.gain.total)}</div>
       </div>
@@ -624,6 +624,20 @@ function renderDominanceTab(db, report) {
           <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds)}</div>
         </div>
       </div>
+      ${report.modifiers ? `
+      <div class="card" style="margin:12px 0 0; padding:12px;">
+        <div class="card-title">✨ Модификаторы аур и Веяний</div>
+        <div class="row-sub">Отдельно от абсолютного прироста Господства — проценты не складываются с очками напрямую.</div>
+        <div class="grid-4" style="margin-top:10px;">
+          ${['strength','allure','intellect','spirit'].map((attr, index) => {
+            const labels = ['Сила','Харизма','Интеллект','Воля'];
+            const auras = report.modifiers.auras.totalByAttribute[attr] || 0;
+            const presence = report.modifiers.presences[attr] || 0;
+            return `<div><div class="row-sub">${labels[index]}</div><div class="row-name">Ауры ${auras.toFixed(1)}%</div><div class="row-sub">Веяния ${presence.toFixed(1)}%</div></div>`;
+          }).join('')}
+        </div>
+        <div class="row-sub" style="margin-top:8px;">Ауры: таланты ${Object.values(report.modifiers.auras.talent).reduce((a,b)=>a+b,0).toFixed(1)}% · книги ${Object.values(report.modifiers.auras.book).reduce((a,b)=>a+b,0).toFixed(1)}%</div>
+      </div>` : ''}
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn btn-gold" id="btn-quick-run">⚡ Распределить все ресурсы оптимально</button>
         <button class="btn btn-primary" id="btn-commit-plan">✅ Применить план и списать ресурсы</button>
