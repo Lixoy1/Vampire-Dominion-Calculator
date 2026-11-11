@@ -97,25 +97,22 @@ function normalizeAccount(input = {}) {
     conclave[attribute] = Math.max(0, Math.min(180, Math.round(numeric(record(account.conclave)[attribute]))));
   }
 
+  const guild = record(account.guildProgress ?? account.guild);
+
   return {
     ...account,
     blood: nonNegative(account.blood),
     conclaveExp: nonNegative(account.conclaveExp),
     courtyardExp: nonNegative(account.courtyardExp),
     courtyardLvl: Math.max(0, Math.min(210, Math.round(numeric(account.courtyardLvl)))),
-    guildProgress: {
-      exp: nonNegative(record(account.guildProgress || account.guild).exp),
-      level: Math.max(0, Math.min(999, Math.round(numeric(record(account.guildProgress || account.guild).level)))),
-      nextLevelExp: nonNegative(record(account.guildProgress || account.guild).nextLevelExp ?? record(account.guildProgress || account.guild).next_level_exp),
-    },
     conclave,
     ownedWardens,
     ownedLovers,
     bag,
     guildProgress: {
-      exp: nonNegative(record(account.guildProgress || account.guild).exp),
-      level: Math.max(0, Math.min(999, Math.round(numeric(record(account.guildProgress || account.guild).level)))),
-      nextLevelExp: nonNegative(record(account.guildProgress || account.guild).nextLevelExp ?? record(account.guild).next_level_exp),
+      exp: nonNegative(guild.exp),
+      level: Math.max(0, Math.min(999, Math.round(numeric(guild.level)))),
+      nextLevelExp: nonNegative(guild.nextLevelExp ?? guild.next_level_exp),
     },
     skins: record(account.skins),
     skinOwnership: record(account.skinOwnership),
@@ -514,20 +511,41 @@ export function autoDistributeAll(input = {}) {
   plan.levels = nextLevels;
   plan.promotes = nextPromotes;
 
-  const candidates = Engine.getSummonCandidates(
+  // Reserve summon resources through one shared bag ledger. A Lover can be
+  // auto-selected only when their Warden is already owned or included above.
+  const ownedWardenIds = new Set([
+    ...Object.keys(account.ownedWardens).map(Number),
+    ...plan.summons.wardens,
+  ]);
+  const summonBag = { ...tempBag };
+  const wardenCandidates = Engine.getSummonCandidates(
     db.wardens,
     db.lovers,
-    new Set(Object.keys(account.ownedWardens).map(Number)),
+    ownedWardenIds,
     new Set(Object.keys(account.ownedLovers).map(Number)),
-    tempBag
-  );
-  const summonBag = { ...tempBag };
-  plan.summons.wardens = [];
-  for (const candidate of candidates.wardens) {
+    summonBag
+  ).wardens;
+  plan.summons.lovers = [];
+  for (const candidate of wardenCandidates) {
     if (!candidate.canSummon || candidate.cost <= 0) continue;
     if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
+    ownedWardenIds.add(candidate.id);
+  }
+
+  const loverCandidates = Engine.getSummonCandidates(
+    db.wardens,
+    db.lovers,
+    ownedWardenIds,
+    new Set(Object.keys(account.ownedLovers).map(Number)),
+    summonBag
+  ).lovers;
+  for (const candidate of loverCandidates) {
+    if (!candidate.hasWarden || !candidate.canSummon || candidate.cost <= 0) continue;
+    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
+    plan.summons.lovers.push(candidate.id);
   }
 
   return { plan, warnings: makeWarnings(account, plan) };
