@@ -1080,3 +1080,7 @@ body { overflow-x: hidden; }
   .spa-toolbar-actions {gap:3px}
   .spa-toolbar-actions .icon-btn {min-width:28px;min-height:28px}
 }
+
+.quick-calc-launch-row {display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quick-calc-launch-row .btn {min-width:0;white-space:normal}
+[hidden] {display:none !important}
