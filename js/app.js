@@ -62,6 +62,43 @@ function createBlankPlan(account = createBlankAccountData()) {
   };
 }
 
+
+function createStarterAccountData() {
+  const account = createBlankAccountData();
+  account.blood = 1;
+  account.skinShopCount = 0;
+  account.skinShopExp = 0;
+
+  for (const warden of GAME_DB.wardens.slice(0, 4)) {
+    const talents = {};
+    warden.talents.forEach((talent, index) => { talents[talent.position ?? index] = 1; });
+    const auras = {};
+    for (const aura of warden.auras || []) auras[aura.id] = 1;
+    account.ownedWardens[warden.id] = {
+      level: 1,
+      promoteId: 2,
+      exp: 0,
+      books: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+      talents,
+      auras,
+    };
+  }
+
+  for (const [index, lover] of GAME_DB.lovers.slice(0, 2).entries()) {
+    account.ownedLovers[lover.id] = {
+      closeness: index === 0 ? 7 : 0,
+      intimacy: index === 0 ? 7 : 0,
+      affinity: index === 0 ? 10 : 0,
+      sex: lover.fixed_sex || (state?.settings?.loverSex ?? 'female'),
+      bonds: {},
+      presences: {},
+    };
+  }
+
+  account.bag = { 4151: 1, 4152: 1, 30005: 1 };
+  return account;
+}
+
 function createDefaultState() {
   const id = 'primary';
   const profile = {
@@ -70,12 +107,13 @@ function createDefaultState() {
     region: 'EU',
     avatarId: 10010,
   };
-  const account = createBlankAccountData();
+  const account = createStarterAccountData();
   const plan = createBlankPlan(account);
   return {
-    version: 5,
+    version: 6,
     lang: 'ru',
     preferLocalIcons: true,
+    screen: 'home',
     activeTab: 'dominance',
     bagFilter: 'all',
     searchQuery: '',
@@ -85,6 +123,30 @@ function createDefaultState() {
     plan,
     activeAccountId: id,
     accounts: [{ id, ...profile, account, plan }],
+    currentWardenId: 10020,
+    currentLoverId: GAME_DB.lovers[0]?.id ?? 20010,
+    wardenTab: 'attributes',
+    expandedAttr: null,
+    wardenListFilter: 'all',
+    wardenListSearch: '',
+    wardenListSort: 'name',
+    loverListSearch: '',
+    bagCategory: 'wardens',
+    bagView: 'grid',
+    bagShowAll: true,
+    skinTab: 'wardens',
+    skinFilter: 'all',
+    skinSearch: '',
+    wardenExpFilter: 'all',
+    wardenExpSearch: '',
+    calcPriority: 'dominance',
+    calcEnabledBranches: {
+      conclave: true, courtyard: true, summon: true, skins: true, books: true,
+      levels: true, auras: true, talents: true, bonds: true, presences: true,
+    },
+    lastCalcReport: null,
+    history: [],
+    future: [],
   };
 }
 
