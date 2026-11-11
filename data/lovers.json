@@ -1,0 +1,4343 @@
+[
+  {
+    "id": 20010,
+    "name": "MICHAEL",
+    "attributes": [
+      "intellect"
+    ],
+    "warden_id": 10010,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20010.male.de909c27.webp",
+    "icon_path_female": "lovers/20010.female.22f8269b.webp",
+    "warden": {
+      "id": 10010,
+      "name": "LORENZO",
+      "attributes": [
+        "intellect"
+      ],
+      "lover_id": 20010,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10010.ffef7b42.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 101,
+        "name": "BOND_101",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 102,
+        "name": "BOND_102",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 104,
+        "name": "BOND_104",
+        "attribute": "intellect",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 103,
+        "name": "BOND_103",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20013101,
+        "name": "MICHAEL_SKIN_1_MALE",
+        "lover_id": 20010,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20013101.42a22356.webp"
+      },
+      {
+        "id": 30013101,
+        "name": "MICHAEL_SKIN_1_FEMALE",
+        "lover_id": 20010,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30013101.80a560a0.webp"
+      }
+    ]
+  },
+  {
+    "id": 20020,
+    "name": "ELLIS",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10020,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20020.male.45cab273.webp",
+    "icon_path_female": "lovers/20020.female.a9e4e655.webp",
+    "warden": {
+      "id": 10020,
+      "name": "JOHN",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20020,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10020.9947808e.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 201,
+        "name": "BOND_201",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 202,
+        "name": "BOND_202",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 203,
+        "name": "BOND_203",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 204,
+        "name": "BOND_204",
+        "attribute": "spirit",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20023101,
+        "name": "ELLIS_SKIN_1_MALE",
+        "lover_id": 20020,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20023101.ca9fb54f.webp"
+      },
+      {
+        "id": 30023101,
+        "name": "ELLIS_SKIN_1_FEMALE",
+        "lover_id": 20020,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30023101.10bc56bc.webp"
+      }
+    ]
+  },
+  {
+    "id": 20030,
+    "name": "HARRY",
+    "attributes": [
+      "intellect"
+    ],
+    "warden_id": 10030,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20030.male.a7c27b7d.webp",
+    "icon_path_female": "lovers/20030.female.9829ebc2.webp",
+    "warden": {
+      "id": 10030,
+      "name": "NOSTRADAMUS",
+      "attributes": [
+        "intellect"
+      ],
+      "lover_id": 20030,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10030.f8be3c81.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 301,
+        "name": "BOND_301",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 302,
+        "name": "BOND_302",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 304,
+        "name": "BOND_304",
+        "attribute": "intellect",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 303,
+        "name": "BOND_303",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20033101,
+        "name": "HARRY_SKIN_1_MALE",
+        "lover_id": 20030,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20033101.eb5f9c8f.webp"
+      },
+      {
+        "id": 30033101,
+        "name": "HARRY_SKIN_1_FEMALE",
+        "lover_id": 20030,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30033101.ef073a49.webp"
+      }
+    ]
+  },
+  {
+    "id": 20040,
+    "name": "MITCHELL",
+    "attributes": [
+      "allure",
+      "spirit"
+    ],
+    "warden_id": 10040,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20040.male.5b17d78f.webp",
+    "icon_path_female": "lovers/20040.female.8131b2fa.webp",
+    "warden": {
+      "id": 10040,
+      "name": "ELSIE",
+      "attributes": [
+        "allure",
+        "spirit"
+      ],
+      "lover_id": 20040,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10040.bfc8dd77.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 401,
+        "name": "BOND_401",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 403,
+        "name": "BOND_403",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 404,
+        "name": "BOND_404",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 402,
+        "name": "BOND_402",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20043101,
+        "name": "MITCHELL_SKIN_1_MALE",
+        "lover_id": 20040,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20043101.e0b07920.webp"
+      },
+      {
+        "id": 30043101,
+        "name": "MITCHELL_SKIN_1_FEMALE",
+        "lover_id": 20040,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30043101.e32c18f5.webp"
+      }
+    ]
+  },
+  {
+    "id": 20050,
+    "name": "FRANCIS",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10050,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20050.male.c2c6f132.webp",
+    "icon_path_female": "lovers/20050.female.dcf71318.webp",
+    "warden": {
+      "id": 10050,
+      "name": "CHARLEMAGNE",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20050,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10050.9b82cb09.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 501,
+        "name": "BOND_501",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 502,
+        "name": "BOND_502",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 503,
+        "name": "BOND_503",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 504,
+        "name": "BOND_504",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20070,
+    "name": "RICHMOND",
+    "attributes": [
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10070,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20070.male.ed01ad83.webp",
+    "icon_path_female": "lovers/20070.female.5c0069fa.webp",
+    "warden": {
+      "id": 10070,
+      "name": "ERIK",
+      "attributes": [
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20070,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10070.080541af.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 703,
+        "name": "BOND_703",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 701,
+        "name": "BOND_701",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 702,
+        "name": "BOND_702",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 704,
+        "name": "BOND_704",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20080,
+    "name": "AJANI",
+    "attributes": [
+      "intellect",
+      "strength"
+    ],
+    "warden_id": 10080,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20080.male.b7c865c3.webp",
+    "icon_path_female": "lovers/20080.female.cbb08bd2.webp",
+    "warden": {
+      "id": 10080,
+      "name": "CANDACE",
+      "attributes": [
+        "intellect",
+        "strength"
+      ],
+      "lover_id": 20080,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10080.83c87846.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 803,
+        "name": "BOND_803",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 801,
+        "name": "BOND_801",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 804,
+        "name": "BOND_804",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 802,
+        "name": "BOND_802",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20083101,
+        "name": "AJANI_SKIN_2_MALE",
+        "lover_id": 20080,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20083101.0863ae6e.webp"
+      },
+      {
+        "id": 20084101,
+        "name": "AJANI_SKIN_1_MALE",
+        "lover_id": 20080,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20084101.1a46dc5f.webp"
+      },
+      {
+        "id": 30083101,
+        "name": "AJANI_SKIN_2_FEMALE",
+        "lover_id": 20080,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30083101.2d8213b4.webp"
+      },
+      {
+        "id": 30084101,
+        "name": "AJANI_SKIN_1_FEMALE",
+        "lover_id": 20080,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30084101.34468b58.webp"
+      }
+    ]
+  },
+  {
+    "id": 20100,
+    "name": "HUGO",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10100,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20100.male.d8356399.webp",
+    "icon_path_female": "lovers/20100.female.96147bdc.webp",
+    "warden": {
+      "id": 10100,
+      "name": "PIPER",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20100,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10100.caa939cc.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1001,
+        "name": "BOND_1001",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1002,
+        "name": "BOND_1002",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1003,
+        "name": "BOND_1003",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 1004,
+        "name": "BOND_1004",
+        "attribute": "spirit",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20103101,
+        "name": "HUGO_SKIN_1_MALE",
+        "lover_id": 20100,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20103101.f7dd4183.webp"
+      },
+      {
+        "id": 30103101,
+        "name": "HUGO_SKIN_1_FEMALE",
+        "lover_id": 20100,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30103101.42b46751.webp"
+      }
+    ]
+  },
+  {
+    "id": 20110,
+    "name": "JOHAN",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10110,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20110.male.816d8150.webp",
+    "icon_path_female": "lovers/20110.female.4dd5f9dd.webp",
+    "warden": {
+      "id": 10110,
+      "name": "HANS",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20110,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10110.6b78ddfe.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1101,
+        "name": "BOND_1101",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1102,
+        "name": "BOND_1102",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1103,
+        "name": "BOND_1103",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 1104,
+        "name": "BOND_1104",
+        "attribute": "spirit",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20113101,
+        "name": "JOHAN_SKIN_1_MALE",
+        "lover_id": 20110,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20113101.92c8d6aa.webp"
+      },
+      {
+        "id": 30113101,
+        "name": "JOHAN_SKIN_1_FEMALE",
+        "lover_id": 20110,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30113101.ac810908.webp"
+      }
+    ]
+  },
+  {
+    "id": 20120,
+    "name": "SCOTT",
+    "attributes": [
+      "intellect",
+      "strength"
+    ],
+    "warden_id": 10120,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20120.male.fc6f0d40.webp",
+    "icon_path_female": "lovers/20120.female.b6dc10c6.webp",
+    "warden": {
+      "id": 10120,
+      "name": "JOSEY",
+      "attributes": [
+        "intellect",
+        "strength"
+      ],
+      "lover_id": 20120,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10120.b56d6161.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1203,
+        "name": "BOND_1203",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 1201,
+        "name": "BOND_1201",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1204,
+        "name": "BOND_1204",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1202,
+        "name": "BOND_1202",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20150,
+    "name": "WARD",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10150,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20150.male.dd0931d5.webp",
+    "icon_path_female": "lovers/20150.female.dbc39ef8.webp",
+    "warden": {
+      "id": 10150,
+      "name": "CORNELIUS",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20150,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10150.175d6796.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1504,
+        "name": "BOND_1504",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 1501,
+        "name": "BOND_1501",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1502,
+        "name": "BOND_1502",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1503,
+        "name": "BOND_1503",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20153101,
+        "name": "WARD_SKIN_1_MALE",
+        "lover_id": 20150,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20153101.c5de771a.webp"
+      },
+      {
+        "id": 30153101,
+        "name": "WARD_SKIN_1_FEMALE",
+        "lover_id": 20150,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30153101.debcaa93.webp"
+      }
+    ]
+  },
+  {
+    "id": 20160,
+    "name": "GAWAIN",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10160,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20160.male.68c6d383.webp",
+    "icon_path_female": "lovers/20160.female.41a90b42.webp",
+    "warden": {
+      "id": 10160,
+      "name": "MORIEN",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20160,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10160.5c222b45.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1604,
+        "name": "BOND_1604",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 1601,
+        "name": "BOND_1601",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1602,
+        "name": "BOND_1602",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1603,
+        "name": "BOND_1603",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20163101,
+        "name": "GAWAIN_SKIN_1_MALE",
+        "lover_id": 20160,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20163101.9c403356.webp"
+      },
+      {
+        "id": 30163101,
+        "name": "GAWAIN_SKIN_1_FEMALE",
+        "lover_id": 20160,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30163101.4ff61e44.webp"
+      }
+    ]
+  },
+  {
+    "id": 20170,
+    "name": "ACE",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10170,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20170.male.27f77a32.webp",
+    "icon_path_female": "lovers/20170.female.38dd1771.webp",
+    "warden": {
+      "id": 10170,
+      "name": "ALASTAIR",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20170,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10170.367e470f.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1701,
+        "name": "BOND_1701",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1702,
+        "name": "BOND_1702",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1703,
+        "name": "BOND_1703",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 1704,
+        "name": "BOND_1704",
+        "attribute": "spirit",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20173101,
+        "name": "ACE_SKIN_1_MALE",
+        "lover_id": 20170,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20173101.920c411b.webp"
+      },
+      {
+        "id": 30173101,
+        "name": "ACE_SKIN_1_FEMALE",
+        "lover_id": 20170,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30173101.7a42b637.webp"
+      }
+    ]
+  },
+  {
+    "id": 20180,
+    "name": "RAGNOR",
+    "attributes": [
+      "allure"
+    ],
+    "warden_id": 10180,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20180.male.e4e83a27.webp",
+    "icon_path_female": "lovers/20180.female.14dd7aaf.webp",
+    "warden": {
+      "id": 10180,
+      "name": "ROLLO",
+      "attributes": [
+        "allure"
+      ],
+      "lover_id": 20180,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10180.5978222b.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1801,
+        "name": "BOND_1801",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 1804,
+        "name": "BOND_1804",
+        "attribute": "allure",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 1802,
+        "name": "BOND_1802",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1803,
+        "name": "BOND_1803",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20183101,
+        "name": "RAGNOR_SKIN_1_MALE",
+        "lover_id": 20180,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20183101.7a4751d4.webp"
+      },
+      {
+        "id": 30183101,
+        "name": "RAGNOR_SKIN_1_FEMALE",
+        "lover_id": 20180,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30183101.080cc4a1.webp"
+      }
+    ]
+  },
+  {
+    "id": 20190,
+    "name": "ARTHUR",
+    "attributes": [
+      "allure",
+      "spirit"
+    ],
+    "warden_id": 10190,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20190.male.0022d895.webp",
+    "icon_path_female": "lovers/20190.female.7fe47b73.webp",
+    "warden": {
+      "id": 10190,
+      "name": "ROBERT",
+      "attributes": [
+        "allure",
+        "spirit"
+      ],
+      "lover_id": 20190,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10190.516b2b30.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 1901,
+        "name": "BOND_1901",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 1903,
+        "name": "BOND_1903",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 1902,
+        "name": "BOND_1902",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 1904,
+        "name": "BOND_1904",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20193101,
+        "name": "ARTHUR_SKIN_1_MALE",
+        "lover_id": 20190,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20193101.9d9d93ef.webp"
+      },
+      {
+        "id": 30193101,
+        "name": "ARTHUR_SKIN_1_FEMALE",
+        "lover_id": 20190,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30193101.7d4c2fd6.webp"
+      }
+    ]
+  },
+  {
+    "id": 20200,
+    "name": "LUCA",
+    "attributes": [
+      "allure"
+    ],
+    "warden_id": 10200,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20200.male.963d4871.webp",
+    "icon_path_female": "lovers/20200.female.f1a11454.webp",
+    "warden": {
+      "id": 10200,
+      "name": "FRANCO",
+      "attributes": [
+        "allure"
+      ],
+      "lover_id": 20200,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10200.04799d11.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2001,
+        "name": "BOND_2001",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 2002,
+        "name": "BOND_2002",
+        "attribute": "allure",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2003,
+        "name": "BOND_2003",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2004,
+        "name": "BOND_2004",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20203101,
+        "name": "LUCA_SKIN_1_MALE",
+        "lover_id": 20200,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20203101.843bc701.webp"
+      },
+      {
+        "id": 30203101,
+        "name": "LUCA_SKIN_1_FEMALE",
+        "lover_id": 20200,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30203101.6be803f8.webp"
+      }
+    ]
+  },
+  {
+    "id": 20210,
+    "name": "GABRIEL",
+    "attributes": [
+      "allure",
+      "intellect"
+    ],
+    "warden_id": 10210,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20210.male.e065fb7f.webp",
+    "icon_path_female": "lovers/20210.female.7f497d6f.webp",
+    "warden": {
+      "id": 10210,
+      "name": "JULIE",
+      "attributes": [
+        "allure",
+        "intellect"
+      ],
+      "lover_id": 20210,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10210.83354d2a.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2101,
+        "name": "BOND_2101",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2103,
+        "name": "BOND_2103",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2104,
+        "name": "BOND_2104",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 2102,
+        "name": "BOND_2102",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20213101,
+        "name": "GABRIEL_SKIN_1_MALE",
+        "lover_id": 20210,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20213101.5b2b5ab8.webp"
+      },
+      {
+        "id": 30213101,
+        "name": "GABRIEL_SKIN_1_FEMALE",
+        "lover_id": 20210,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30213101.06833cee.webp"
+      }
+    ]
+  },
+  {
+    "id": 20230,
+    "name": "RAMSES",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10230,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20230.male.4f7572fb.webp",
+    "icon_path_female": "lovers/20230.female.b42adf4b.webp",
+    "warden": {
+      "id": 10230,
+      "name": "CLEO",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20230,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10230.02738179.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2301,
+        "name": "BOND_2301",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 2302,
+        "name": "BOND_2302",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2303,
+        "name": "BOND_2303",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 2304,
+        "name": "BOND_2304",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20234101,
+        "name": "RAMSES_SKIN_1_MALE",
+        "lover_id": 20230,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/20234101.4df626a8.webp"
+      },
+      {
+        "id": 30234101,
+        "name": "RAMSES_SKIN_1_FEMALE",
+        "lover_id": 20230,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/30234101.f0cf5590.webp"
+      }
+    ]
+  },
+  {
+    "id": 20250,
+    "name": "KAI",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10250,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20250.male.9fa81f8b.webp",
+    "icon_path_female": "lovers/20250.female.d2b19790.webp",
+    "warden": {
+      "id": 10250,
+      "name": "MARA",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20250,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10250.3d81c458.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2501,
+        "name": "BOND_2501",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2502,
+        "name": "BOND_2502",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 2503,
+        "name": "BOND_2503",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2504,
+        "name": "BOND_2504",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20260,
+    "name": "BYRON",
+    "attributes": [
+      "intellect",
+      "strength"
+    ],
+    "warden_id": 10260,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20260.male.f17b7cc0.webp",
+    "icon_path_female": "lovers/20260.female.f017bddb.webp",
+    "warden": {
+      "id": 10260,
+      "name": "POE",
+      "attributes": [
+        "intellect",
+        "strength"
+      ],
+      "lover_id": 20260,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10260.b58d20bf.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2603,
+        "name": "BOND_2603",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2601,
+        "name": "BOND_2601",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2604,
+        "name": "BOND_2604",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 2602,
+        "name": "BOND_2602",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20270,
+    "name": "ANTONIO",
+    "attributes": [
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10270,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20270.male.d48add90.webp",
+    "icon_path_female": "lovers/20270.female.6adb6faf.webp",
+    "warden": {
+      "id": 10270,
+      "name": "VICENTE",
+      "attributes": [
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20270,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10270.45260cd7.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2703,
+        "name": "BOND_2703",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2701,
+        "name": "BOND_2701",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2702,
+        "name": "BOND_2702",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 2704,
+        "name": "BOND_2704",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20273101,
+        "name": "ANTONIO_SKIN_1_MALE",
+        "lover_id": 20270,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20273101.aa10bd01.webp"
+      },
+      {
+        "id": 30273101,
+        "name": "ANTONIO_SKIN_1_FEMALE",
+        "lover_id": 20270,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30273101.774dea0d.webp"
+      }
+    ]
+  },
+  {
+    "id": 20280,
+    "name": "MARTIN",
+    "attributes": [
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10280,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20280.male.400702fb.webp",
+    "icon_path_female": "lovers/20280.female.f4eaf0b2.webp",
+    "warden": {
+      "id": 10280,
+      "name": "VICTOR",
+      "attributes": [
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20280,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10280.578c41ab.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 2803,
+        "name": "BOND_2803",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 2801,
+        "name": "BOND_2801",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 2802,
+        "name": "BOND_2802",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 2804,
+        "name": "BOND_2804",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20284101,
+        "name": "MARTIN_SKIN_1_MALE",
+        "lover_id": 20280,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/20284101.bf299fd0.webp"
+      },
+      {
+        "id": 30284101,
+        "name": "MARTIN_SKIN_1_FEMALE",
+        "lover_id": 20280,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/30284101.a435f0d1.webp"
+      }
+    ]
+  },
+  {
+    "id": 20300,
+    "name": "KAL",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10300,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20300.male.0d98bca4.webp",
+    "icon_path_female": "lovers/20300.female.38cf0fba.webp",
+    "warden": {
+      "id": 10300,
+      "name": "VANCE",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20300,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10300.99a05d94.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3001,
+        "name": "BOND_3001",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3002,
+        "name": "BOND_3002",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3003,
+        "name": "BOND_3003",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3004,
+        "name": "BOND_3004",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20310,
+    "name": "BAS",
+    "attributes": [
+      "intellect",
+      "strength"
+    ],
+    "warden_id": 10310,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20310.male.9c0141bf.webp",
+    "icon_path_female": "lovers/20310.female.a0c45608.webp",
+    "warden": {
+      "id": 10310,
+      "name": "MIKE",
+      "attributes": [
+        "intellect",
+        "strength"
+      ],
+      "lover_id": 20310,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10310.36613ae9.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3103,
+        "name": "BOND_3103",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3101,
+        "name": "BOND_3101",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3104,
+        "name": "BOND_3104",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3102,
+        "name": "BOND_3102",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20313101,
+        "name": "BAS_SKIN_1_MALE",
+        "lover_id": 20310,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20313101.7d4ed292.webp"
+      },
+      {
+        "id": 30313101,
+        "name": "BAS_SKIN_1_FEMALE",
+        "lover_id": 20310,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30313101.6372c748.webp"
+      }
+    ]
+  },
+  {
+    "id": 20320,
+    "name": "RAY",
+    "attributes": [
+      "allure"
+    ],
+    "warden_id": 10320,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20320.male.626f9e28.webp",
+    "icon_path_female": "lovers/20320.female.6e88e10a.webp",
+    "warden": {
+      "id": 10320,
+      "name": "FREDERICK",
+      "attributes": [
+        "allure"
+      ],
+      "lover_id": 20320,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10320.33489bd9.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3201,
+        "name": "BOND_3201",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3202,
+        "name": "BOND_3202",
+        "attribute": "allure",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3203,
+        "name": "BOND_3203",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3204,
+        "name": "BOND_3204",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20324101,
+        "name": "RAY_SKIN_1_MALE",
+        "lover_id": 20320,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20324101.fe587d2f.webp"
+      },
+      {
+        "id": 30324101,
+        "name": "RAY_SKIN_1_FEMALE",
+        "lover_id": 20320,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30324101.0e367862.webp"
+      }
+    ]
+  },
+  {
+    "id": 20330,
+    "name": "CHANDRA",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10330,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20330.male.20930a82.webp",
+    "icon_path_female": "lovers/20330.female.ead2c652.webp",
+    "warden": {
+      "id": 10330,
+      "name": "PAVAN",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20330,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10330.64fa9d6e.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3304,
+        "name": "BOND_3304",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3301,
+        "name": "BOND_3301",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3302,
+        "name": "BOND_3302",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3303,
+        "name": "BOND_3303",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20333101,
+        "name": "CHANDRA_SKIN_1_MALE",
+        "lover_id": 20330,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20333101.12084175.webp"
+      },
+      {
+        "id": 30333101,
+        "name": "CHANDRA_SKIN_1_FEMALE",
+        "lover_id": 20330,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30333101.bfac437f.webp"
+      }
+    ]
+  },
+  {
+    "id": 20340,
+    "name": "ENKI",
+    "attributes": [
+      "allure",
+      "intellect"
+    ],
+    "warden_id": 10340,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20340.male.6bb68b68.webp",
+    "icon_path_female": "lovers/20340.female.cc421246.webp",
+    "warden": {
+      "id": 10340,
+      "name": "GILGAMESH",
+      "attributes": [
+        "allure",
+        "intellect"
+      ],
+      "lover_id": 20340,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10340.e7c2ea1e.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3401,
+        "name": "BOND_3401",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3403,
+        "name": "BOND_3403",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3404,
+        "name": "BOND_3404",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3402,
+        "name": "BOND_3402",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20344101,
+        "name": "ENKI_SKIN_1_MALE",
+        "lover_id": 20340,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/20344101.06ec2189.webp"
+      },
+      {
+        "id": 30344101,
+        "name": "ENKI_SKIN_1_FEMALE",
+        "lover_id": 20340,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": true,
+        "icon_path": "skins/30344101.015529f7.webp"
+      }
+    ]
+  },
+  {
+    "id": 20350,
+    "name": "RAVEN",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10350,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20350.male.acc054e2.webp",
+    "icon_path_female": "lovers/20350.female.4aa0b09f.webp",
+    "warden": {
+      "id": 10350,
+      "name": "CARMILLA",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20350,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10350.f41d58d7.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3501,
+        "name": "BOND_3501",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3502,
+        "name": "BOND_3502",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 3503,
+        "name": "BOND_3503",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3504,
+        "name": "BOND_3504",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20353101,
+        "name": "RAVEN_SKIN_1_MALE",
+        "lover_id": 20350,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20353101.6e8a07ae.webp"
+      },
+      {
+        "id": 30353101,
+        "name": "RAVEN_SKIN_1_FEMALE",
+        "lover_id": 20350,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30353101.246f0915.webp"
+      }
+    ]
+  },
+  {
+    "id": 20360,
+    "name": "ALEXIS",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10360,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20360.male.da44c5fd.webp",
+    "icon_path_female": "lovers/20360.female.b73480d0.webp",
+    "warden": {
+      "id": 10360,
+      "name": "HARKER",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20360,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10360.30f1c5cf.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3604,
+        "name": "BOND_3604",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3601,
+        "name": "BOND_3601",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3602,
+        "name": "BOND_3602",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3603,
+        "name": "BOND_3603",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20363101,
+        "name": "ALEXIS_SKIN_2_MALE",
+        "lover_id": 20360,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/20363101.53858b25.webp"
+      },
+      {
+        "id": 20364101,
+        "name": "ALEXIS_SKIN_1_MALE",
+        "lover_id": 20360,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20364101.c8cc3dd8.webp"
+      },
+      {
+        "id": 30363101,
+        "name": "ALEXIS_SKIN_2_FEMALE",
+        "lover_id": 20360,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": true,
+        "icon_path": "skins/30363101.7640a6b4.webp"
+      },
+      {
+        "id": 30364101,
+        "name": "ALEXIS_SKIN_1_FEMALE",
+        "lover_id": 20360,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30364101.9f21bcec.webp"
+      }
+    ]
+  },
+  {
+    "id": 20380,
+    "name": "SUBUTAI",
+    "attributes": [
+      "allure",
+      "strength"
+    ],
+    "warden_id": 10380,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20380.male.c2b77679.webp",
+    "icon_path_female": "lovers/20380.female.ea0a435d.webp",
+    "warden": {
+      "id": 10380,
+      "name": "TEMUJIN",
+      "attributes": [
+        "allure",
+        "strength"
+      ],
+      "lover_id": 20380,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10380.ea737e21.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3803,
+        "name": "BOND_3803",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3804,
+        "name": "BOND_3804",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3801,
+        "name": "BOND_3801",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3802,
+        "name": "BOND_3802",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20383101,
+        "name": "SUBUTAI_SKIN_1_MALE",
+        "lover_id": 20380,
+        "sex": "male",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/20383101.70f6fdbf.webp"
+      },
+      {
+        "id": 30383101,
+        "name": "SUBUTAI_SKIN_1_FEMALE",
+        "lover_id": 20380,
+        "sex": "female",
+        "quality": "a",
+        "max_lvl": 10,
+        "store_exp": 50,
+        "purchasable": false,
+        "icon_path": "skins/30383101.0231c479.webp"
+      }
+    ]
+  },
+  {
+    "id": 20390,
+    "name": "IZAN",
+    "attributes": [
+      "intellect",
+      "strength"
+    ],
+    "warden_id": 10390,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20390.male.37a495ab.webp",
+    "icon_path_female": "lovers/20390.female.57937795.webp",
+    "warden": {
+      "id": 10390,
+      "name": "TOMAS",
+      "attributes": [
+        "intellect",
+        "strength"
+      ],
+      "lover_id": 20390,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10390.5056d5c4.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 3903,
+        "name": "BOND_3903",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 3901,
+        "name": "BOND_3901",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 3904,
+        "name": "BOND_3904",
+        "attribute": "intellect",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 3902,
+        "name": "BOND_3902",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": [
+      {
+        "id": 20394101,
+        "name": "IZAN_SKIN_1_MALE",
+        "lover_id": 20390,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20394101.72142a0e.webp"
+      },
+      {
+        "id": 30394101,
+        "name": "IZAN_SKIN_1_FEMALE",
+        "lover_id": 20390,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30394101.ac73b998.webp"
+      }
+    ]
+  },
+  {
+    "id": 20460,
+    "name": "REDD",
+    "attributes": [
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10460,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20460.male.89934083.webp",
+    "icon_path_female": "lovers/20460.female.1f018a4e.webp",
+    "warden": {
+      "id": 10460,
+      "name": "WILLIAM",
+      "attributes": [
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20460,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10460.2386a888.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 4603,
+        "name": "BOND_4603",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 4601,
+        "name": "BOND_4601",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 4602,
+        "name": "BOND_4602",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 4604,
+        "name": "BOND_4604",
+        "attribute": "spirit",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20480,
+    "name": "AXEL",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10480,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20480.male.52dd36dc.webp",
+    "icon_path_female": "lovers/20480.female.9eaabd24.webp",
+    "warden": {
+      "id": 10480,
+      "name": "DIANA",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20480,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10480.1676c3bc.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 4801,
+        "name": "BOND_4801",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 4802,
+        "name": "BOND_4802",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 4803,
+        "name": "BOND_4803",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 4804,
+        "name": "BOND_4804",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20490,
+    "name": "VALERIAN",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10490,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20490.male.4428c593.webp",
+    "icon_path_female": "lovers/20490.female.34d90fbc.webp",
+    "warden": {
+      "id": 10490,
+      "name": "DAMIAN",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20490,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10490.19329e28.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 4901,
+        "name": "BOND_4901",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 4902,
+        "name": "BOND_4902",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 4903,
+        "name": "BOND_4903",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 4904,
+        "name": "BOND_4904",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20500,
+    "name": "AZRAEL",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10500,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20500.male.974dde5b.webp",
+    "icon_path_female": "lovers/20500.female.13976391.webp",
+    "warden": {
+      "id": 10500,
+      "name": "THANATOS",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20500,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10500.33ab3839.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 5001,
+        "name": "BOND_5001",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 5002,
+        "name": "BOND_5002",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 5003,
+        "name": "BOND_5003",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 5004,
+        "name": "BOND_5004",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20510,
+    "name": "AGNEYI",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10510,
+    "collection_id": 10510,
+    "summon_item_id": 4413,
+    "summon_item_count": 100,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20510.male.5fb0a250.webp",
+    "icon_path_female": "lovers/20510.female.13b2d155.webp",
+    "warden": {
+      "id": 10510,
+      "name": "RUDRA",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20510,
+      "collection_id": 101,
+      "summon_item_id": 4402,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10510.13cae08c.webp"
+    },
+    "collection": {
+      "id": 10510,
+      "name": "WILD_HEART"
+    },
+    "summon_item": {
+      "id": 4413,
+      "name": "FLAMEKISSED_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4413.5cb209eb.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 5104,
+        "name": "BOND_5104",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 5101,
+        "name": "BOND_5101",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 5102,
+        "name": "BOND_5102",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 5103,
+        "name": "BOND_5103",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20511,
+        "name": "AGNEYI_UPGRADE",
+        "main_attribute": "strength",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 1,
+        "collection_id": null,
+        "upgrade_item_id": 4413,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4413,
+          "name": "FLAMEKISSED_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4413.5cb209eb.webp"
+        }
+      },
+      {
+        "id": 20510,
+        "name": "AGNEYI_COLLECTION",
+        "main_attribute": "strength",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10510,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10510,
+          "name": "WILD_HEART"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": [
+      {
+        "id": 30514101,
+        "name": "AGNEYI_SKIN_1_FEMALE",
+        "lover_id": 20510,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30514101.c7c9e61d.webp"
+      }
+    ]
+  },
+  {
+    "id": 20530,
+    "name": "HELA",
+    "attributes": [
+      "allure"
+    ],
+    "warden_id": 10530,
+    "collection_id": 10510,
+    "summon_item_id": 4414,
+    "summon_item_count": 100,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20530.male.549a8073.webp",
+    "icon_path_female": "lovers/20530.female.844ff61c.webp",
+    "warden": {
+      "id": 10530,
+      "name": "WODEN",
+      "attributes": [
+        "allure"
+      ],
+      "lover_id": 20530,
+      "collection_id": 101,
+      "summon_item_id": 4402,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10530.e51bbc5d.webp"
+    },
+    "collection": {
+      "id": 10510,
+      "name": "WILD_HEART"
+    },
+    "summon_item": {
+      "id": 4414,
+      "name": "HELHEIM_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4414.6ba22e89.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 5301,
+        "name": "BOND_5301",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 5304,
+        "name": "BOND_5304",
+        "attribute": "allure",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 5302,
+        "name": "BOND_5302",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 5303,
+        "name": "BOND_5303",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20531,
+        "name": "HELA_UPGRADE",
+        "main_attribute": "allure",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 3,
+        "collection_id": null,
+        "upgrade_item_id": 4414,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4414,
+          "name": "HELHEIM_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4414.6ba22e89.webp"
+        }
+      },
+      {
+        "id": 20530,
+        "name": "HELA_COLLECTION",
+        "main_attribute": "allure",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10510,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10510,
+          "name": "WILD_HEART"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": [
+      {
+        "id": 30534101,
+        "name": "HELA_SKIN_1_FEMALE",
+        "lover_id": 20530,
+        "sex": "female",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/30534101.8f96585f.webp"
+      }
+    ]
+  },
+  {
+    "id": 20540,
+    "name": "DIONYSUS",
+    "attributes": [
+      "intellect"
+    ],
+    "warden_id": 10540,
+    "collection_id": 10510,
+    "summon_item_id": 4415,
+    "summon_item_count": 100,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20540.male.7a6bfb8c.webp",
+    "icon_path_female": "lovers/20540.female.44b3fe62.webp",
+    "warden": {
+      "id": 10540,
+      "name": "ARTEMIS",
+      "attributes": [
+        "intellect"
+      ],
+      "lover_id": 20540,
+      "collection_id": 101,
+      "summon_item_id": 4402,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10540.6794b6e2.webp"
+    },
+    "collection": {
+      "id": 10510,
+      "name": "WILD_HEART"
+    },
+    "summon_item": {
+      "id": 4415,
+      "name": "AMBROSIA_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4415.f07e9f18.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 5401,
+        "name": "BOND_5401",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 5402,
+        "name": "BOND_5402",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 5404,
+        "name": "BOND_5404",
+        "attribute": "intellect",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 5403,
+        "name": "BOND_5403",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20541,
+        "name": "DIONYSUS_UPGRADE",
+        "main_attribute": "intellect",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 4,
+        "collection_id": null,
+        "upgrade_item_id": 4415,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4415,
+          "name": "AMBROSIA_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4415.f07e9f18.webp"
+        }
+      },
+      {
+        "id": 20540,
+        "name": "DIONYSUS_COLLECTION",
+        "main_attribute": "intellect",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10510,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10510,
+          "name": "WILD_HEART"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": [
+      {
+        "id": 20544101,
+        "name": "DIONYSUS_SKIN_1_MALE",
+        "lover_id": 20540,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20544101.2a723263.webp"
+      }
+    ]
+  },
+  {
+    "id": 20550,
+    "name": "CULANN",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10550,
+    "collection_id": 10510,
+    "summon_item_id": 4416,
+    "summon_item_count": 100,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20550.male.a4621f3f.webp",
+    "icon_path_female": "lovers/20550.female.7a31083e.webp",
+    "warden": {
+      "id": 10550,
+      "name": "FINN",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20550,
+      "collection_id": 101,
+      "summon_item_id": 4402,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10550.8ed769dc.webp"
+    },
+    "collection": {
+      "id": 10510,
+      "name": "WILD_HEART"
+    },
+    "summon_item": {
+      "id": 4416,
+      "name": "TRISKELE_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4416.cf71a85e.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 5501,
+        "name": "BOND_5501",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 5502,
+        "name": "BOND_5502",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 5503,
+        "name": "BOND_5503",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 5504,
+        "name": "BOND_5504",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [
+      {
+        "id": 20551,
+        "name": "CULANN_UPGRADE",
+        "main_attribute": "spirit",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 2,
+        "collection_id": null,
+        "upgrade_item_id": 4416,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4416,
+          "name": "TRISKELE_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4416.cf71a85e.webp"
+        }
+      },
+      {
+        "id": 20550,
+        "name": "CULANN_COLLECTION",
+        "main_attribute": "spirit",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10510,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10510,
+          "name": "WILD_HEART"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": [
+      {
+        "id": 20554101,
+        "name": "CULANN_SKIN_1_MALE",
+        "lover_id": 20550,
+        "sex": "male",
+        "quality": "s",
+        "max_lvl": 10,
+        "store_exp": 100,
+        "purchasable": false,
+        "icon_path": "skins/20554101.fe631c09.webp"
+      }
+    ]
+  },
+  {
+    "id": 20670,
+    "name": "NICK",
+    "attributes": [
+      "allure",
+      "strength"
+    ],
+    "warden_id": 10670,
+    "collection_id": null,
+    "summon_item_id": null,
+    "summon_item_count": null,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20670.male.8c14ef77.webp",
+    "icon_path_female": "lovers/20670.female.b8823362.webp",
+    "warden": {
+      "id": 10670,
+      "name": "AURELIA",
+      "attributes": [
+        "allure",
+        "strength"
+      ],
+      "lover_id": 20670,
+      "collection_id": null,
+      "summon_item_id": null,
+      "summon_item_count": null,
+      "icon_path": "wardens/10670.c96a733b.webp"
+    },
+    "collection": null,
+    "summon_item": null,
+    "scarlet_bonds": [
+      {
+        "id": 6703,
+        "name": "BOND_6703",
+        "attribute": "strength",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 6704,
+        "name": "BOND_6704",
+        "attribute": "allure",
+        "type": "two",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 6701,
+        "name": "BOND_6701",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 6702,
+        "name": "BOND_6702",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [],
+    "skins": []
+  },
+  {
+    "id": 20740,
+    "name": "DAHLIA",
+    "attributes": [
+      "strength"
+    ],
+    "warden_id": 10740,
+    "collection_id": 10740,
+    "summon_item_id": 4417,
+    "summon_item_count": 100,
+    "fixed_sex": "female",
+    "icon_path_male": null,
+    "icon_path_female": "lovers/20740.female.98dfb4ad.webp",
+    "warden": {
+      "id": 10740,
+      "name": "EDDIE",
+      "attributes": [
+        "strength"
+      ],
+      "lover_id": 20740,
+      "collection_id": 10740,
+      "summon_item_id": 4432,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10740.6d439ea9.webp"
+    },
+    "collection": {
+      "id": 10740,
+      "name": "NOCTURNE_CABARET"
+    },
+    "summon_item": {
+      "id": 4417,
+      "name": "FEMME_FATALE_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4417.5b23787e.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 7404,
+        "name": "BOND_7404",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 7401,
+        "name": "BOND_7401",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 7402,
+        "name": "BOND_7402",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 7403,
+        "name": "BOND_7403",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20741,
+        "name": "DAHLIA_UPGRADE",
+        "main_attribute": "strength",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 1,
+        "collection_id": null,
+        "upgrade_item_id": 4417,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4417,
+          "name": "FEMME_FATALE_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4417.5b23787e.webp"
+        }
+      },
+      {
+        "id": 20740,
+        "name": "DAHLIA_COLLECTION",
+        "main_attribute": "strength",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10740,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10740,
+          "name": "NOCTURNE_CABARET"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": []
+  },
+  {
+    "id": 20750,
+    "name": "RAFAEL",
+    "attributes": [
+      "allure"
+    ],
+    "warden_id": 10750,
+    "collection_id": 10740,
+    "summon_item_id": 4418,
+    "summon_item_count": 100,
+    "fixed_sex": "male",
+    "icon_path_male": "lovers/20750.male.5fab0e33.webp",
+    "icon_path_female": null,
+    "warden": {
+      "id": 10750,
+      "name": "SCARLET",
+      "attributes": [
+        "allure"
+      ],
+      "lover_id": 20750,
+      "collection_id": 10740,
+      "summon_item_id": 4432,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10750.a8a9083f.webp"
+    },
+    "collection": {
+      "id": 10740,
+      "name": "NOCTURNE_CABARET"
+    },
+    "summon_item": {
+      "id": 4418,
+      "name": "DEVILS_LUCK_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4418.cdcc1346.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 7501,
+        "name": "BOND_7501",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 7504,
+        "name": "BOND_7504",
+        "attribute": "allure",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 7502,
+        "name": "BOND_7502",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 7503,
+        "name": "BOND_7503",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20751,
+        "name": "RAFAEL_UPGRADE",
+        "main_attribute": "allure",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 3,
+        "collection_id": null,
+        "upgrade_item_id": 4418,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4418,
+          "name": "DEVILS_LUCK_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4418.cdcc1346.webp"
+        }
+      },
+      {
+        "id": 20750,
+        "name": "RAFAEL_COLLECTION",
+        "main_attribute": "allure",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10740,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10740,
+          "name": "NOCTURNE_CABARET"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": []
+  },
+  {
+    "id": 20760,
+    "name": "VERONICA",
+    "attributes": [
+      "intellect"
+    ],
+    "warden_id": 10760,
+    "collection_id": 10740,
+    "summon_item_id": 4419,
+    "summon_item_count": 100,
+    "fixed_sex": "female",
+    "icon_path_male": null,
+    "icon_path_female": "lovers/20760.female.e05326b8.webp",
+    "warden": {
+      "id": 10760,
+      "name": "SAM",
+      "attributes": [
+        "intellect"
+      ],
+      "lover_id": 20760,
+      "collection_id": 10740,
+      "summon_item_id": 4432,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10760.808ed7c8.webp"
+    },
+    "collection": {
+      "id": 10740,
+      "name": "NOCTURNE_CABARET"
+    },
+    "summon_item": {
+      "id": 4419,
+      "name": "HAUNTED_HEART_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4419.698a8327.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 7601,
+        "name": "BOND_7601",
+        "attribute": "strength",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 7602,
+        "name": "BOND_7602",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 7604,
+        "name": "BOND_7604",
+        "attribute": "intellect",
+        "type": "one",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 7603,
+        "name": "BOND_7603",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20761,
+        "name": "VERONICA_UPGRADE",
+        "main_attribute": "intellect",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 4,
+        "collection_id": null,
+        "upgrade_item_id": 4419,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4419,
+          "name": "HAUNTED_HEART_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4419.698a8327.webp"
+        }
+      },
+      {
+        "id": 20760,
+        "name": "VERONICA_COLLECTION",
+        "main_attribute": "intellect",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10740,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10740,
+          "name": "NOCTURNE_CABARET"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": []
+  },
+  {
+    "id": 20770,
+    "name": "MAYA",
+    "attributes": [
+      "spirit"
+    ],
+    "warden_id": 10770,
+    "collection_id": 10740,
+    "summon_item_id": 4420,
+    "summon_item_count": 100,
+    "fixed_sex": "female",
+    "icon_path_male": null,
+    "icon_path_female": "lovers/20770.female.ce0c5a58.webp",
+    "warden": {
+      "id": 10770,
+      "name": "GRENDEL",
+      "attributes": [
+        "spirit"
+      ],
+      "lover_id": 20770,
+      "collection_id": 10740,
+      "summon_item_id": 4432,
+      "summon_item_count": 10,
+      "icon_path": "wardens/10770.eb61763b.webp"
+    },
+    "collection": {
+      "id": 10740,
+      "name": "NOCTURNE_CABARET"
+    },
+    "summon_item": {
+      "id": 4420,
+      "name": "SOUL_SINGER_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4420.249e310e.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 7701,
+        "name": "BOND_7701",
+        "attribute": "strength",
+        "type": "one",
+        "is_advantage": false,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 7702,
+        "name": "BOND_7702",
+        "attribute": "allure",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 7703,
+        "name": "BOND_7703",
+        "attribute": "intellect",
+        "type": "default",
+        "is_advantage": false,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      },
+      {
+        "id": 7704,
+        "name": "BOND_7704",
+        "attribute": "spirit",
+        "type": "default",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      }
+    ],
+    "presences": [
+      {
+        "id": 20771,
+        "name": "MAYA_UPGRADE",
+        "main_attribute": "spirit",
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          2,
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 2,
+        "collection_id": null,
+        "upgrade_item_id": 4420,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4420,
+          "name": "SOUL_SINGER_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4420.249e310e.webp"
+        }
+      },
+      {
+        "id": 20770,
+        "name": "MAYA_COLLECTION",
+        "main_attribute": "spirit",
+        "presence_type": "collection",
+        "start_percent": 15,
+        "upgrade_percent_step": [
+          5
+        ],
+        "min_lvl": 1,
+        "max_lvl": 4,
+        "level_curve": null,
+        "collection_id": 10740,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10740,
+          "name": "NOCTURNE_CABARET"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": []
+  },
+  {
+    "id": 20780,
+    "name": "ASH",
+    "attributes": [
+      "allure",
+      "intellect",
+      "spirit",
+      "strength"
+    ],
+    "warden_id": 10780,
+    "collection_id": 10780,
+    "summon_item_id": 4452,
+    "summon_item_count": 400,
+    "fixed_sex": null,
+    "icon_path_male": "lovers/20780.male.c1de3bda.webp",
+    "icon_path_female": "lovers/20780.female.d412e672.webp",
+    "warden": {
+      "id": 10780,
+      "name": "NYX",
+      "attributes": [
+        "allure",
+        "intellect",
+        "spirit",
+        "strength"
+      ],
+      "lover_id": 20780,
+      "collection_id": null,
+      "summon_item_id": 4450,
+      "summon_item_count": 20,
+      "icon_path": "wardens/10780.43c9e77e.webp"
+    },
+    "collection": {
+      "id": 10780,
+      "name": "HEARTS_FIRE"
+    },
+    "summon_item": {
+      "id": 4452,
+      "name": "HEART_OF_WAR_TOKEN",
+      "category": "coins",
+      "tags": [
+        "for_lover"
+      ],
+      "icon_path": "items/4452.2c3ec4d5.webp"
+    },
+    "scarlet_bonds": [
+      {
+        "id": 7801,
+        "name": "BOND_7801",
+        "attribute": "strength",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 50,
+        "unlock_closeness_percent": 130
+      },
+      {
+        "id": 7802,
+        "name": "BOND_7802",
+        "attribute": "allure",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 30,
+        "unlock_closeness_percent": 160
+      },
+      {
+        "id": 7803,
+        "name": "BOND_7803",
+        "attribute": "intellect",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 10,
+        "unlock_closeness_percent": 200
+      },
+      {
+        "id": 7804,
+        "name": "BOND_7804",
+        "attribute": "spirit",
+        "type": "all",
+        "is_advantage": true,
+        "unlock_closeness": 70,
+        "unlock_closeness_percent": 100
+      }
+    ],
+    "presences": [
+      {
+        "id": 20781,
+        "name": "ASH_UPGRADE",
+        "main_attribute": null,
+        "presence_type": "updatable",
+        "start_percent": 0,
+        "upgrade_percent_step": [
+          8,
+          12
+        ],
+        "min_lvl": 0,
+        "max_lvl": 30,
+        "level_curve": 781,
+        "collection_id": null,
+        "upgrade_item_id": 4452,
+        "collection": null,
+        "upgrade_item": {
+          "id": 4452,
+          "name": "HEART_OF_WAR_TOKEN",
+          "category": "coins",
+          "tags": [
+            "for_lover"
+          ],
+          "icon_path": "items/4452.2c3ec4d5.webp"
+        }
+      },
+      {
+        "id": 20780,
+        "name": "ASH_COLLECTION",
+        "main_attribute": null,
+        "presence_type": "collection",
+        "start_percent": 25,
+        "upgrade_percent_step": [
+          0
+        ],
+        "min_lvl": 1,
+        "max_lvl": 1,
+        "level_curve": null,
+        "collection_id": 10780,
+        "upgrade_item_id": null,
+        "collection": {
+          "id": 10780,
+          "name": "HEARTS_FIRE"
+        },
+        "upgrade_item": null
+      }
+    ],
+    "skins": []
+  }
+]

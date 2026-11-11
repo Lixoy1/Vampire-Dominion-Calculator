@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { GAME_DB } from '../js/data.js';
-import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../js/engine.js';
+import { GAME_DB } from '../scripts/data.js';
+import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../scripts/engine.js';
 
 function EngineFabricCost(quality) { return EngineFabricCostMap[quality] ?? null; }
 import {
@@ -75,7 +75,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.meta.stateless, true);
   assert.equal(snapshot.meta.catalogProvenance.sourceId, 'dhampir-helper-api');
   assert.equal(snapshot.meta.catalogProvenance.gameServerVerified, false);
-  assert.equal(snapshot.meta.gameVerification.status, 'helper-api-confirmed');
+  assert.equal(snapshot.meta.gameVerification.status, 'not-game-verified');
   assert.ok(snapshot.report);
   assert.ok(snapshot.conclaveBranches.strength);
   assert.ok(snapshot.courtyardUpgrade);
@@ -106,8 +106,8 @@ function walkNumbers(value, path = 'root') {
 
   const capabilities = getOracleCapabilities();
   assert.equal(capabilities.gameApiConnected, false);
-  assert.equal(capabilities.catalogProvenance.trustLevel, 'user-confirmed');
-  assert.equal(capabilities.gameVerification.status, 'helper-api-confirmed');
+  assert.equal(capabilities.catalogProvenance.trustLevel, 'helper-api-observation');
+  assert.equal(capabilities.gameVerification.status, 'not-game-verified');
   assert.equal(capabilities.gameVerification.verifiedAgainstGame, false);
   assert.ok(capabilities.sections.includes('dominance'));
   assert.ok(capabilities.sections.includes('inventory'));
@@ -346,8 +346,8 @@ function walkNumbers(value, path = 'root') {
   assert.deepEqual(imported.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
   assert.equal(imported.provenance.sourceId, 'dhampir-helper-api');
   assert.equal(imported.provenance.gameServerVerified, false);
-  assert.equal(imported.provenance.trustLevel, 'user-confirmed');
-  assert.equal(imported.account.helperImport.trustLevel, 'user-confirmed');
+  assert.equal(imported.provenance.trustLevel, 'helper-api-observation');
+  assert.equal(imported.account.helperImport.trustLevel, 'helper-api-observation');
   assert.equal(imported.warnings.length, 0);
 }
 
@@ -684,7 +684,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(observations.presenceSteps[0].nextCost, 50);
 
   const oracle = calculateOracle({ account: imported.account, plan: makePlan() });
-  assert.equal(oracle.meta.helperApi.trustLevel, 'user-confirmed');
+  assert.equal(oracle.meta.helperApi.trustLevel, 'helper-api-observation');
   assert.equal(oracle.meta.helperApi.observedWardenSteps, 1);
   assert.equal(oracle.meta.helperApi.talentScriptRows, 1);
   assert.equal(oracle.meta.helperApi.auraPathRows, 1);

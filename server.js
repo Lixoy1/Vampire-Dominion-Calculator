@@ -28,6 +28,14 @@ const staticOptions = {
 app.use('/js', express.static(path.join(__dirname, 'js'), staticOptions));
 app.use('/css', express.static(path.join(__dirname, 'css'), staticOptions));
 app.use('/assets', express.static(path.join(__dirname, 'assets'), staticOptions));
+app.use('/scripts', express.static(path.join(__dirname, 'scripts'), staticOptions));
+app.use('/data', express.static(path.join(__dirname, 'data'), staticOptions));
+for (const art of ['1000021575.png', '1000024449.png', '1000024228.png', '1000019874.png']) {
+  app.get('/' + art, (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    res.sendFile(path.join(__dirname, art));
+  });
+}
 
 app.get('/', (_req, res) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

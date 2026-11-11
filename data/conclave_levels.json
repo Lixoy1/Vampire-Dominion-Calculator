@@ -1,0 +1,1082 @@
+[
+  {
+    "id": 1,
+    "attribute_bonus": 50,
+    "book_percent": "1.00",
+    "cost": 5307
+  },
+  {
+    "id": 2,
+    "attribute_bonus": 125,
+    "book_percent": "1.00",
+    "cost": 5425
+  },
+  {
+    "id": 3,
+    "attribute_bonus": 225,
+    "book_percent": "2.00",
+    "cost": 5542
+  },
+  {
+    "id": 4,
+    "attribute_bonus": 350,
+    "book_percent": "2.00",
+    "cost": 5660
+  },
+  {
+    "id": 5,
+    "attribute_bonus": 600,
+    "book_percent": "3.00",
+    "cost": 5778
+  },
+  {
+    "id": 6,
+    "attribute_bonus": 700,
+    "book_percent": "4.00",
+    "cost": 6014
+  },
+  {
+    "id": 7,
+    "attribute_bonus": 850,
+    "book_percent": "4.00",
+    "cost": 6132
+  },
+  {
+    "id": 8,
+    "attribute_bonus": 1050,
+    "book_percent": "5.00",
+    "cost": 6250
+  },
+  {
+    "id": 9,
+    "attribute_bonus": 1300,
+    "book_percent": "5.00",
+    "cost": 6368
+  },
+  {
+    "id": 10,
+    "attribute_bonus": 1800,
+    "book_percent": "6.00",
+    "cost": 6486
+  },
+  {
+    "id": 11,
+    "attribute_bonus": 1950,
+    "book_percent": "7.50",
+    "cost": 9331
+  },
+  {
+    "id": 12,
+    "attribute_bonus": 2175,
+    "book_percent": "7.50",
+    "cost": 9538
+  },
+  {
+    "id": 13,
+    "attribute_bonus": 2475,
+    "book_percent": "9.00",
+    "cost": 9745
+  },
+  {
+    "id": 14,
+    "attribute_bonus": 2850,
+    "book_percent": "9.00",
+    "cost": 9953
+  },
+  {
+    "id": 15,
+    "attribute_bonus": 3600,
+    "book_percent": "10.50",
+    "cost": 10160
+  },
+  {
+    "id": 16,
+    "attribute_bonus": 3800,
+    "book_percent": "12.00",
+    "cost": 10575
+  },
+  {
+    "id": 17,
+    "attribute_bonus": 4100,
+    "book_percent": "12.00",
+    "cost": 10782
+  },
+  {
+    "id": 18,
+    "attribute_bonus": 4500,
+    "book_percent": "13.50",
+    "cost": 10990
+  },
+  {
+    "id": 19,
+    "attribute_bonus": 5000,
+    "book_percent": "13.50",
+    "cost": 11197
+  },
+  {
+    "id": 20,
+    "attribute_bonus": 6000,
+    "book_percent": "15.00",
+    "cost": 11404
+  },
+  {
+    "id": 21,
+    "attribute_bonus": 6250,
+    "book_percent": "17.00",
+    "cost": 15552
+  },
+  {
+    "id": 22,
+    "attribute_bonus": 6625,
+    "book_percent": "17.00",
+    "cost": 15897
+  },
+  {
+    "id": 23,
+    "attribute_bonus": 7125,
+    "book_percent": "19.00",
+    "cost": 16243
+  },
+  {
+    "id": 24,
+    "attribute_bonus": 7750,
+    "book_percent": "19.00",
+    "cost": 16588
+  },
+  {
+    "id": 25,
+    "attribute_bonus": 9000,
+    "book_percent": "21.00",
+    "cost": 16934
+  },
+  {
+    "id": 26,
+    "attribute_bonus": 9300,
+    "book_percent": "23.00",
+    "cost": 17625
+  },
+  {
+    "id": 27,
+    "attribute_bonus": 9750,
+    "book_percent": "23.00",
+    "cost": 17971
+  },
+  {
+    "id": 28,
+    "attribute_bonus": 10350,
+    "book_percent": "25.00",
+    "cost": 18316
+  },
+  {
+    "id": 29,
+    "attribute_bonus": 11100,
+    "book_percent": "25.00",
+    "cost": 18662
+  },
+  {
+    "id": 30,
+    "attribute_bonus": 12600,
+    "book_percent": "27.00",
+    "cost": 19008
+  },
+  {
+    "id": 31,
+    "attribute_bonus": 12950,
+    "book_percent": "29.50",
+    "cost": 40435
+  },
+  {
+    "id": 32,
+    "attribute_bonus": 13475,
+    "book_percent": "29.50",
+    "cost": 41333
+  },
+  {
+    "id": 33,
+    "attribute_bonus": 14175,
+    "book_percent": "32.00",
+    "cost": 42232
+  },
+  {
+    "id": 34,
+    "attribute_bonus": 15050,
+    "book_percent": "32.00",
+    "cost": 43130
+  },
+  {
+    "id": 35,
+    "attribute_bonus": 16800,
+    "book_percent": "34.50",
+    "cost": 44029
+  },
+  {
+    "id": 36,
+    "attribute_bonus": 17200,
+    "book_percent": "37.00",
+    "cost": 45826
+  },
+  {
+    "id": 37,
+    "attribute_bonus": 17800,
+    "book_percent": "37.00",
+    "cost": 46725
+  },
+  {
+    "id": 38,
+    "attribute_bonus": 18600,
+    "book_percent": "39.50",
+    "cost": 47623
+  },
+  {
+    "id": 39,
+    "attribute_bonus": 19600,
+    "book_percent": "39.50",
+    "cost": 48522
+  },
+  {
+    "id": 40,
+    "attribute_bonus": 21600,
+    "book_percent": "42.00",
+    "cost": 49420
+  },
+  {
+    "id": 41,
+    "attribute_bonus": 22050,
+    "book_percent": "45.00",
+    "cost": 88646
+  },
+  {
+    "id": 42,
+    "attribute_bonus": 22725,
+    "book_percent": "45.00",
+    "cost": 90616
+  },
+  {
+    "id": 43,
+    "attribute_bonus": 23625,
+    "book_percent": "48.00",
+    "cost": 92586
+  },
+  {
+    "id": 44,
+    "attribute_bonus": 24750,
+    "book_percent": "48.00",
+    "cost": 94556
+  },
+  {
+    "id": 45,
+    "attribute_bonus": 27000,
+    "book_percent": "51.00",
+    "cost": 96526
+  },
+  {
+    "id": 46,
+    "attribute_bonus": 27500,
+    "book_percent": "54.00",
+    "cost": 100465
+  },
+  {
+    "id": 47,
+    "attribute_bonus": 28250,
+    "book_percent": "54.00",
+    "cost": 102435
+  },
+  {
+    "id": 48,
+    "attribute_bonus": 29250,
+    "book_percent": "57.00",
+    "cost": 104405
+  },
+  {
+    "id": 49,
+    "attribute_bonus": 30500,
+    "book_percent": "57.00",
+    "cost": 106375
+  },
+  {
+    "id": 50,
+    "attribute_bonus": 33000,
+    "book_percent": "60.00",
+    "cost": 108345
+  },
+  {
+    "id": 51,
+    "attribute_bonus": 33600,
+    "book_percent": "64.00",
+    "cost": 244944
+  },
+  {
+    "id": 52,
+    "attribute_bonus": 34500,
+    "book_percent": "64.00",
+    "cost": 250387
+  },
+  {
+    "id": 53,
+    "attribute_bonus": 35700,
+    "book_percent": "68.00",
+    "cost": 255830
+  },
+  {
+    "id": 54,
+    "attribute_bonus": 37200,
+    "book_percent": "68.00",
+    "cost": 261273
+  },
+  {
+    "id": 55,
+    "attribute_bonus": 40200,
+    "book_percent": "72.00",
+    "cost": 266716
+  },
+  {
+    "id": 56,
+    "attribute_bonus": 40900,
+    "book_percent": "76.00",
+    "cost": 277603
+  },
+  {
+    "id": 57,
+    "attribute_bonus": 41950,
+    "book_percent": "76.00",
+    "cost": 283046
+  },
+  {
+    "id": 58,
+    "attribute_bonus": 43350,
+    "book_percent": "80.00",
+    "cost": 288489
+  },
+  {
+    "id": 59,
+    "attribute_bonus": 45100,
+    "book_percent": "80.00",
+    "cost": 293932
+  },
+  {
+    "id": 60,
+    "attribute_bonus": 48600,
+    "book_percent": "84.00",
+    "cost": 299376
+  },
+  {
+    "id": 61,
+    "attribute_bonus": 49400,
+    "book_percent": "89.00",
+    "cost": 577368
+  },
+  {
+    "id": 62,
+    "attribute_bonus": 50600,
+    "book_percent": "89.00",
+    "cost": 590198
+  },
+  {
+    "id": 63,
+    "attribute_bonus": 52200,
+    "book_percent": "94.00",
+    "cost": 603028
+  },
+  {
+    "id": 64,
+    "attribute_bonus": 54200,
+    "book_percent": "94.00",
+    "cost": 615859
+  },
+  {
+    "id": 65,
+    "attribute_bonus": 58200,
+    "book_percent": "99.00",
+    "cost": 628689
+  },
+  {
+    "id": 66,
+    "attribute_bonus": 59100,
+    "book_percent": "104.00",
+    "cost": 654350
+  },
+  {
+    "id": 67,
+    "attribute_bonus": 60450,
+    "book_percent": "104.00",
+    "cost": 667180
+  },
+  {
+    "id": 68,
+    "attribute_bonus": 62250,
+    "book_percent": "109.00",
+    "cost": 680011
+  },
+  {
+    "id": 69,
+    "attribute_bonus": 64500,
+    "book_percent": "109.00",
+    "cost": 692841
+  },
+  {
+    "id": 70,
+    "attribute_bonus": 69000,
+    "book_percent": "114.00",
+    "cost": 705672
+  },
+  {
+    "id": 71,
+    "attribute_bonus": 70000,
+    "book_percent": "120.00",
+    "cost": 1866240
+  },
+  {
+    "id": 72,
+    "attribute_bonus": 71500,
+    "book_percent": "120.00",
+    "cost": 1907712
+  },
+  {
+    "id": 73,
+    "attribute_bonus": 73500,
+    "book_percent": "126.00",
+    "cost": 1949184
+  },
+  {
+    "id": 74,
+    "attribute_bonus": 76000,
+    "book_percent": "126.00",
+    "cost": 1990656
+  },
+  {
+    "id": 75,
+    "attribute_bonus": 81000,
+    "book_percent": "132.00",
+    "cost": 2032128
+  },
+  {
+    "id": 76,
+    "attribute_bonus": 82100,
+    "book_percent": "138.00",
+    "cost": 2115072
+  },
+  {
+    "id": 77,
+    "attribute_bonus": 83750,
+    "book_percent": "138.00",
+    "cost": 2156544
+  },
+  {
+    "id": 78,
+    "attribute_bonus": 85950,
+    "book_percent": "144.00",
+    "cost": 2198016
+  },
+  {
+    "id": 79,
+    "attribute_bonus": 88700,
+    "book_percent": "144.00",
+    "cost": 2239488
+  },
+  {
+    "id": 80,
+    "attribute_bonus": 94200,
+    "book_percent": "150.00",
+    "cost": 2280960
+  },
+  {
+    "id": 81,
+    "attribute_bonus": 95400,
+    "book_percent": "157.00",
+    "cost": 4665600
+  },
+  {
+    "id": 82,
+    "attribute_bonus": 97200,
+    "book_percent": "157.00",
+    "cost": 4769280
+  },
+  {
+    "id": 83,
+    "attribute_bonus": 99600,
+    "book_percent": "164.00",
+    "cost": 4872960
+  },
+  {
+    "id": 84,
+    "attribute_bonus": 102600,
+    "book_percent": "164.00",
+    "cost": 4976640
+  },
+  {
+    "id": 85,
+    "attribute_bonus": 108600,
+    "book_percent": "171.00",
+    "cost": 5080320
+  },
+  {
+    "id": 86,
+    "attribute_bonus": 109900,
+    "book_percent": "178.00",
+    "cost": 5287680
+  },
+  {
+    "id": 87,
+    "attribute_bonus": 111850,
+    "book_percent": "178.00",
+    "cost": 5391360
+  },
+  {
+    "id": 88,
+    "attribute_bonus": 114450,
+    "book_percent": "185.00",
+    "cost": 5495040
+  },
+  {
+    "id": 89,
+    "attribute_bonus": 117700,
+    "book_percent": "185.00",
+    "cost": 5598720
+  },
+  {
+    "id": 90,
+    "attribute_bonus": 124200,
+    "book_percent": "192.00",
+    "cost": 5702400
+  },
+  {
+    "id": 91,
+    "attribute_bonus": 125600,
+    "book_percent": "200.00",
+    "cost": 12597120
+  },
+  {
+    "id": 92,
+    "attribute_bonus": 127700,
+    "book_percent": "200.00",
+    "cost": 12877056
+  },
+  {
+    "id": 93,
+    "attribute_bonus": 130500,
+    "book_percent": "208.00",
+    "cost": 13156992
+  },
+  {
+    "id": 94,
+    "attribute_bonus": 134000,
+    "book_percent": "208.00",
+    "cost": 13436928
+  },
+  {
+    "id": 95,
+    "attribute_bonus": 141000,
+    "book_percent": "216.00",
+    "cost": 13716864
+  },
+  {
+    "id": 96,
+    "attribute_bonus": 142500,
+    "book_percent": "224.00",
+    "cost": 14276736
+  },
+  {
+    "id": 97,
+    "attribute_bonus": 144750,
+    "book_percent": "224.00",
+    "cost": 14556672
+  },
+  {
+    "id": 98,
+    "attribute_bonus": 147750,
+    "book_percent": "232.00",
+    "cost": 14836608
+  },
+  {
+    "id": 99,
+    "attribute_bonus": 151500,
+    "book_percent": "232.00",
+    "cost": 15116544
+  },
+  {
+    "id": 100,
+    "attribute_bonus": 159000,
+    "book_percent": "240.00",
+    "cost": 15396480
+  },
+  {
+    "id": 101,
+    "attribute_bonus": 160800,
+    "book_percent": "250.00",
+    "cost": 32659200
+  },
+  {
+    "id": 102,
+    "attribute_bonus": 163500,
+    "book_percent": "250.00",
+    "cost": 33384960
+  },
+  {
+    "id": 103,
+    "attribute_bonus": 167100,
+    "book_percent": "260.00",
+    "cost": 34110720
+  },
+  {
+    "id": 104,
+    "attribute_bonus": 171600,
+    "book_percent": "260.00",
+    "cost": 34836480
+  },
+  {
+    "id": 105,
+    "attribute_bonus": 180600,
+    "book_percent": "270.00",
+    "cost": 35562240
+  },
+  {
+    "id": 106,
+    "attribute_bonus": 182700,
+    "book_percent": "280.00",
+    "cost": 37013760
+  },
+  {
+    "id": 107,
+    "attribute_bonus": 185850,
+    "book_percent": "280.00",
+    "cost": 37739520
+  },
+  {
+    "id": 108,
+    "attribute_bonus": 190050,
+    "book_percent": "290.00",
+    "cost": 38465280
+  },
+  {
+    "id": 109,
+    "attribute_bonus": 195300,
+    "book_percent": "290.00",
+    "cost": 39191040
+  },
+  {
+    "id": 110,
+    "attribute_bonus": 205800,
+    "book_percent": "300.00",
+    "cost": 39916800
+  },
+  {
+    "id": 111,
+    "attribute_bonus": 208200,
+    "book_percent": "312.00",
+    "cost": 53071200
+  },
+  {
+    "id": 112,
+    "attribute_bonus": 211800,
+    "book_percent": "312.00",
+    "cost": 54250560
+  },
+  {
+    "id": 113,
+    "attribute_bonus": 216600,
+    "book_percent": "324.00",
+    "cost": 55429920
+  },
+  {
+    "id": 114,
+    "attribute_bonus": 222600,
+    "book_percent": "324.00",
+    "cost": 56609280
+  },
+  {
+    "id": 115,
+    "attribute_bonus": 234600,
+    "book_percent": "336.00",
+    "cost": 57788640
+  },
+  {
+    "id": 116,
+    "attribute_bonus": 237300,
+    "book_percent": "348.00",
+    "cost": 60147360
+  },
+  {
+    "id": 117,
+    "attribute_bonus": 241350,
+    "book_percent": "348.00",
+    "cost": 61326720
+  },
+  {
+    "id": 118,
+    "attribute_bonus": 246750,
+    "book_percent": "360.00",
+    "cost": 62506080
+  },
+  {
+    "id": 119,
+    "attribute_bonus": 253500,
+    "book_percent": "360.00",
+    "cost": 63685440
+  },
+  {
+    "id": 120,
+    "attribute_bonus": 267000,
+    "book_percent": "372.00",
+    "cost": 64864800
+  },
+  {
+    "id": 121,
+    "attribute_bonus": 270000,
+    "book_percent": "386.00",
+    "cost": 95256000
+  },
+  {
+    "id": 122,
+    "attribute_bonus": 274500,
+    "book_percent": "386.00",
+    "cost": 97372800
+  },
+  {
+    "id": 123,
+    "attribute_bonus": 280500,
+    "book_percent": "400.00",
+    "cost": 99489600
+  },
+  {
+    "id": 124,
+    "attribute_bonus": 288000,
+    "book_percent": "400.00",
+    "cost": 101606400
+  },
+  {
+    "id": 125,
+    "attribute_bonus": 303000,
+    "book_percent": "414.00",
+    "cost": 103723200
+  },
+  {
+    "id": 126,
+    "attribute_bonus": 306300,
+    "book_percent": "428.00",
+    "cost": 107956800
+  },
+  {
+    "id": 127,
+    "attribute_bonus": 311250,
+    "book_percent": "428.00",
+    "cost": 110073600
+  },
+  {
+    "id": 128,
+    "attribute_bonus": 317850,
+    "book_percent": "442.00",
+    "cost": 112190400
+  },
+  {
+    "id": 129,
+    "attribute_bonus": 326100,
+    "book_percent": "442.00",
+    "cost": 114307200
+  },
+  {
+    "id": 130,
+    "attribute_bonus": 342600,
+    "book_percent": "456.00",
+    "cost": 116424000
+  },
+  {
+    "id": 131,
+    "attribute_bonus": 346200,
+    "book_percent": "472.00",
+    "cost": 145800000
+  },
+  {
+    "id": 132,
+    "attribute_bonus": 351600,
+    "book_percent": "472.00",
+    "cost": 149040000
+  },
+  {
+    "id": 133,
+    "attribute_bonus": 358800,
+    "book_percent": "488.00",
+    "cost": 152280000
+  },
+  {
+    "id": 134,
+    "attribute_bonus": 367800,
+    "book_percent": "488.00",
+    "cost": 155520000
+  },
+  {
+    "id": 135,
+    "attribute_bonus": 385800,
+    "book_percent": "504.00",
+    "cost": 158760000
+  },
+  {
+    "id": 136,
+    "attribute_bonus": 389700,
+    "book_percent": "520.00",
+    "cost": 165240000
+  },
+  {
+    "id": 137,
+    "attribute_bonus": 395550,
+    "book_percent": "520.00",
+    "cost": 168480000
+  },
+  {
+    "id": 138,
+    "attribute_bonus": 403350,
+    "book_percent": "536.00",
+    "cost": 171720000
+  },
+  {
+    "id": 139,
+    "attribute_bonus": 413100,
+    "book_percent": "536.00",
+    "cost": 174960000
+  },
+  {
+    "id": 140,
+    "attribute_bonus": 432600,
+    "book_percent": "552.00",
+    "cost": 178200000
+  },
+  {
+    "id": 141,
+    "attribute_bonus": 436800,
+    "book_percent": "570.00",
+    "cost": 202176000
+  },
+  {
+    "id": 142,
+    "attribute_bonus": 443100,
+    "book_percent": "570.00",
+    "cost": 206668800
+  },
+  {
+    "id": 143,
+    "attribute_bonus": 451500,
+    "book_percent": "588.00",
+    "cost": 211161600
+  },
+  {
+    "id": 144,
+    "attribute_bonus": 462000,
+    "book_percent": "588.00",
+    "cost": 215654400
+  },
+  {
+    "id": 145,
+    "attribute_bonus": 483000,
+    "book_percent": "606.00",
+    "cost": 220147200
+  },
+  {
+    "id": 146,
+    "attribute_bonus": 487500,
+    "book_percent": "624.00",
+    "cost": 229132800
+  },
+  {
+    "id": 147,
+    "attribute_bonus": 494250,
+    "book_percent": "624.00",
+    "cost": 233625600
+  },
+  {
+    "id": 148,
+    "attribute_bonus": 503250,
+    "book_percent": "642.00",
+    "cost": 238118400
+  },
+  {
+    "id": 149,
+    "attribute_bonus": 514500,
+    "book_percent": "642.00",
+    "cost": 242611200
+  },
+  {
+    "id": 150,
+    "attribute_bonus": 537000,
+    "book_percent": "660.00",
+    "cost": 247104000
+  },
+  {
+    "id": 151,
+    "attribute_bonus": 542000,
+    "book_percent": "680.00",
+    "cost": 279936000
+  },
+  {
+    "id": 152,
+    "attribute_bonus": 549500,
+    "book_percent": "680.00",
+    "cost": 286156800
+  },
+  {
+    "id": 153,
+    "attribute_bonus": 559500,
+    "book_percent": "700.00",
+    "cost": 292377600
+  },
+  {
+    "id": 154,
+    "attribute_bonus": 572000,
+    "book_percent": "700.00",
+    "cost": 298598400
+  },
+  {
+    "id": 155,
+    "attribute_bonus": 597000,
+    "book_percent": "720.00",
+    "cost": 304819200
+  },
+  {
+    "id": 156,
+    "attribute_bonus": 602500,
+    "book_percent": "740.00",
+    "cost": 317260800
+  },
+  {
+    "id": 157,
+    "attribute_bonus": 610750,
+    "book_percent": "740.00",
+    "cost": 323481600
+  },
+  {
+    "id": 158,
+    "attribute_bonus": 621750,
+    "book_percent": "760.00",
+    "cost": 329702400
+  },
+  {
+    "id": 159,
+    "attribute_bonus": 635500,
+    "book_percent": "760.00",
+    "cost": 335923200
+  },
+  {
+    "id": 160,
+    "attribute_bonus": 663000,
+    "book_percent": "780.00",
+    "cost": 342144000
+  },
+  {
+    "id": 161,
+    "attribute_bonus": 669000,
+    "book_percent": "802.00",
+    "cost": 388800000
+  },
+  {
+    "id": 162,
+    "attribute_bonus": 678000,
+    "book_percent": "802.00",
+    "cost": 397440000
+  },
+  {
+    "id": 163,
+    "attribute_bonus": 690000,
+    "book_percent": "824.00",
+    "cost": 406080000
+  },
+  {
+    "id": 164,
+    "attribute_bonus": 705000,
+    "book_percent": "824.00",
+    "cost": 414720000
+  },
+  {
+    "id": 165,
+    "attribute_bonus": 735000,
+    "book_percent": "846.00",
+    "cost": 423360000
+  },
+  {
+    "id": 166,
+    "attribute_bonus": 741500,
+    "book_percent": "868.00",
+    "cost": 440640000
+  },
+  {
+    "id": 167,
+    "attribute_bonus": 751250,
+    "book_percent": "868.00",
+    "cost": 449280000
+  },
+  {
+    "id": 168,
+    "attribute_bonus": 764250,
+    "book_percent": "890.00",
+    "cost": 457920000
+  },
+  {
+    "id": 169,
+    "attribute_bonus": 780500,
+    "book_percent": "890.00",
+    "cost": 466560000
+  },
+  {
+    "id": 170,
+    "attribute_bonus": 813000,
+    "book_percent": "912.00",
+    "cost": 475200000
+  },
+  {
+    "id": 171,
+    "attribute_bonus": 820000,
+    "book_percent": "936.00",
+    "cost": 513216000
+  },
+  {
+    "id": 172,
+    "attribute_bonus": 830500,
+    "book_percent": "936.00",
+    "cost": 524620800
+  },
+  {
+    "id": 173,
+    "attribute_bonus": 844500,
+    "book_percent": "960.00",
+    "cost": 536025600
+  },
+  {
+    "id": 174,
+    "attribute_bonus": 862000,
+    "book_percent": "960.00",
+    "cost": 547430400
+  },
+  {
+    "id": 175,
+    "attribute_bonus": 897000,
+    "book_percent": "984.00",
+    "cost": 558835200
+  },
+  {
+    "id": 176,
+    "attribute_bonus": 904500,
+    "book_percent": "1008.00",
+    "cost": 581644800
+  },
+  {
+    "id": 177,
+    "attribute_bonus": 915750,
+    "book_percent": "1008.00",
+    "cost": 593049600
+  },
+  {
+    "id": 178,
+    "attribute_bonus": 930750,
+    "book_percent": "1032.00",
+    "cost": 604454400
+  },
+  {
+    "id": 179,
+    "attribute_bonus": 949500,
+    "book_percent": "1032.00",
+    "cost": 615859200
+  },
+  {
+    "id": 180,
+    "attribute_bonus": 987000,
+    "book_percent": "1056.00",
+    "cost": 627264000
+  }
+]
