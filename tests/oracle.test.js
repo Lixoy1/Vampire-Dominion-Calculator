@@ -69,6 +69,9 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.meta.inputSource, 'player-entered');
   assert.equal(snapshot.meta.gameConnected, false);
   assert.equal(snapshot.meta.stateless, true);
+  assert.equal(snapshot.meta.catalogProvenance.sourceId, 'dhampir-helper-api');
+  assert.equal(snapshot.meta.catalogProvenance.gameServerVerified, false);
+  assert.equal(snapshot.meta.gameVerification.status, 'not-verified');
   assert.ok(snapshot.report);
   assert.ok(snapshot.conclaveBranches.strength);
   assert.ok(snapshot.courtyardUpgrade);
@@ -99,6 +102,8 @@ function walkNumbers(value, path = 'root') {
 
   const capabilities = getOracleCapabilities();
   assert.equal(capabilities.gameApiConnected, false);
+  assert.equal(capabilities.catalogProvenance.trustLevel, 'reference-unverified');
+  assert.equal(capabilities.gameVerification.verifiedAgainstGame, false);
   assert.ok(capabilities.sections.includes('dominance'));
   assert.ok(capabilities.sections.includes('inventory'));
 }
