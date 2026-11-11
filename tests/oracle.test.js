@@ -387,7 +387,7 @@ function walkNumbers(value, path = 'root') {
 
 
 {
-  const auraWarden = GAME_DB.wardens.find(item => (item.auras || []).length);
+  const auraWarden = GAME_DB.wardens.find(item => (item.auras || []).some(aura => aura.bonus_type === 'both'));
   const presenceLover = GAME_DB.lovers.find(item => (item.presences || []).length);
   assert.ok(auraWarden && presenceLover, 'catalogue contains aura and presence templates');
   const account = {
@@ -414,8 +414,10 @@ function walkNumbers(value, path = 'root') {
   const expectedAuraBook = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
   for (const aura of auraWarden.auras) {
     const percent = result.wardens[auraWarden.id].auras[aura.id].percent;
-    const bucket = aura.bonus_type === 'book' ? expectedAuraBook : expectedAuraTalent;
-    for (const attr of aura.attributes || []) bucket[attr] += percent;
+    const buckets = aura.bonus_type === 'both'
+      ? [expectedAuraTalent, expectedAuraBook]
+      : [aura.bonus_type === 'book' ? expectedAuraBook : expectedAuraTalent];
+    for (const bucket of buckets) for (const attr of aura.attributes || []) bucket[attr] += percent;
   }
   for (const attr of ['strength', 'allure', 'intellect', 'spirit']) {
     assert.equal(result.report.modifiers.auras.talent[attr], expectedAuraTalent[attr]);
