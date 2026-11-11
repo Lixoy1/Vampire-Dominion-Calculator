@@ -8,8 +8,23 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.0.0';
+export const ORACLE_VERSION = '1.1.0';
 export const ORACLE_SCHEMA_VERSION = 1;
+
+const CATALOG_PROVENANCE = Object.freeze({
+  sourceId: 'dhampir-helper-api',
+  sourceLabel: 'API бота «Помощник Дампира»',
+  sourceType: 'third-party-bot-api',
+  trustLevel: 'reference-unverified',
+  gameServerVerified: false,
+  note: 'Справочные каталоги и ограничения получены из API стороннего бота. Они не являются подтверждёнными ответами Game of Vampires.',
+});
+
+const GAME_VERIFICATION = Object.freeze({
+  status: 'not-verified',
+  verifiedAgainstGame: false,
+  note: 'Контрольные значения непосредственно из игрового клиента пока не внесены.',
+});
 
 const ATTRIBUTES = Engine.ATTRIBUTES;
 const db = {
@@ -367,6 +382,8 @@ export function calculateOracle(input = {}) {
       schemaVersion: ORACLE_SCHEMA_VERSION,
       engineVersion: '5.0.0',
       dataVersion: 'GAME_DB_v5.0.0',
+      catalogProvenance: CATALOG_PROVENANCE,
+      gameVerification: GAME_VERIFICATION,
       computedAt: new Date().toISOString(),
       inputSource: 'player-entered',
       gameConnected: false,
@@ -756,6 +773,8 @@ export function getOracleCapabilities() {
     schemaVersion: ORACLE_SCHEMA_VERSION,
     engineVersion: '5.0.0',
     dataVersion: 'GAME_DB_v5.0.0',
+    catalogProvenance: CATALOG_PROVENANCE,
+    gameVerification: GAME_VERIFICATION,
     gameApiConnected: false,
     inputMode: 'manual-player-entry',
     stateless: true,
