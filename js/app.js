@@ -929,6 +929,7 @@ function renderSummonTab(db, oracle) {
 }
 
 function renderBagTab(db, report, oracle) {
+  const events = oracle.eventCalculators || {};
   const catNames = {
     all: 'Все (237)',
     coins: 'Печати и Жетоны',
@@ -948,6 +949,14 @@ function renderBagTab(db, report, oracle) {
   );
 
   return `
+    <section class="card card-gold">
+      <div class="card-head"><div class="card-title">🧮 Близость, Влечение и Опыт гильдии</div></div>
+      <div class="grid-3 event-calculators">
+        <div class="event-metric"><div class="row-sub">Близость</div><strong>${fmt(events.intimacy?.expected || 0)}</strong><small>Мин. ${fmt(events.intimacy?.minimum || 0)} · Макс. ${fmt(events.intimacy?.maximum || 0)}</small></div>
+        <div class="event-metric"><div class="row-sub">Влечение</div><strong>${fmt(events.attraction?.expected || 0)}</strong><small>Мин. ${fmt(events.attraction?.minimum || 0)} · Макс. ${fmt(events.attraction?.maximum || 0)}</small></div>
+        <div class="event-metric"><div class="row-sub">Опыт гильдии</div><strong>${fmt(events.guildExp?.expected || 0)}</strong><small>Учтено вложений за 3 дня · ${fmt(events.guildExp?.items?.length || 0)} типов предметов</small></div>
+      </div>
+    </section>
     <section class="card">
       <div class="card-head">
         <div class="card-title">🎒 Инвентарь Сумки <span id="bag-result-count">(${filteredItems.length} предм.)</span></div>
