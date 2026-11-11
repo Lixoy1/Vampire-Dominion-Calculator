@@ -32,6 +32,7 @@ function createBlankPlan(account = createBlankAccountData()) {
     courtyardToLvl: account.courtyardLvl,
     levels: {},
     promotes: {},
+    talents: {},
     bonds: {},
     skins: {},
     summons: { wardens: [], lovers: [] },
@@ -92,6 +93,10 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
     levels: { ...(incoming?.levels || {}) },
     promotes: { ...(incoming?.promotes || {}) },
     bonds: { ...(incoming?.bonds || {}) },
+    talents: Object.fromEntries(Object.entries(incoming?.talents || {}).map(([id, value]) => [id, {
+      scrolls: { ...(value?.scrolls || {}) },
+      scripts: { ...(value?.scripts || {}) },
+    }])),
     skins: { ...(incoming?.skins || {}) },
     summons: {
       ...base.summons,
@@ -397,6 +402,27 @@ function getLoverIconPath(lover, owned = null) {
 }
 
 // Автораспределение выполняется только серверным Oracle. Ошибки не подменяются локальными расчётами.
+async function runAutoTalentDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-talents', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План талантов готов.\\n' +
+      'Уровней: ' + (summary.plannedLevels || 0) + '\\n' +
+      'Свитки: ' + (summary.scrollLevels || 0) + '\\n' +
+      'Рукописи: ' + (summary.scriptLevels || 0)
+    );
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить свитки и рукописи.');
+  }
+}
+
 async function runFullAutoDistribute() {
   try {
     const result = await requestOracle('/api/oracle/auto-distribute', {
@@ -781,9 +807,11 @@ function renderTalentsTab(db, oracle) {
       <div class="card-head">
         <div>
           <div class="card-title">📜 Таланты, Рукописи и Опыт смотрителей</div>
-          <div class="row-sub">200 опыта = 1 очко таланта · Расчёт Subset Sum DP для прорывов</div>
+          <div class="row-sub">200 опыта = 1 очко таланта · планирование свитков и рукописей по приросту Господства</div>
         </div>
+        <button class="btn btn-primary btn-sm" id="btn-auto-talents">⚡ Распределить таланты</button>
       </div>
+      ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels}</div>` : ''}
       ${db.wardens.map(w => {
         const isOwned = !!state.account.ownedWardens[w.id];
         const owned = state.account.ownedWardens[w.id];
@@ -1188,6 +1216,7 @@ function bindEvents(db) {
   });
 
   document.getElementById('btn-auto-all')?.addEventListener('click', runFullAutoDistribute);
+  document.getElementById('btn-auto-talents')?.addEventListener('click', runAutoTalentDistribution);
   document.getElementById('btn-quick-run')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-commit-plan')?.addEventListener('click', commitPlanToAccount);
 
@@ -1196,6 +1225,7 @@ function bindEvents(db) {
       conclave: { ...state.account.conclave },
       courtyardToLvl: state.account.courtyardLvl,
       levels: {},
+      talents: {},
       bonds: {},
       skins: {},
       summons: { wardens: [], lovers: [] },
