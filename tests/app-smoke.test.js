@@ -54,6 +54,7 @@ for (const expected of expectedTabs) {
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
 }
+assert.ok(root.innerHTML.includes('Цель'), 'presence upgrade targets are exposed in the UI');
 assert.ok(root.innerHTML.includes('Модификаторы аур и Веяний'), 'dominance dashboard displays aura and presence modifiers');
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
 const importedHelperProfile = appModule.normalizeState({
