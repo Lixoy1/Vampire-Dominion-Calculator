@@ -513,10 +513,9 @@ export function autoDistributeAll(input = {}) {
 
   // Reserve summon resources through one shared bag ledger. A Lover can be
   // auto-selected only when their Warden is already owned or included above.
-  const ownedWardenIds = new Set([
-    ...Object.keys(account.ownedWardens).map(Number),
-    ...plan.summons.wardens,
-  ]);
+  plan.summons.wardens = [];
+  plan.summons.lovers = [];
+  const ownedWardenIds = new Set(Object.keys(account.ownedWardens).map(Number));
   const summonBag = { ...tempBag };
   const wardenCandidates = Engine.getSummonCandidates(
     db.wardens,
