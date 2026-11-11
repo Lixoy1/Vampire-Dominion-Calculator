@@ -21,6 +21,7 @@ function createBlankAccountData() {
     ownedLovers: {},
     skins: {},
     bag: {},
+    guildProgress: { exp: 0, level: 0, nextLevelExp: 0 },
   };
 }
 
@@ -72,6 +73,11 @@ function normalizeAccountData(incoming = {}) {
     ownedLovers: { ...(incoming?.ownedLovers || {}) },
     skins: { ...(incoming?.skins || {}) },
     bag: { ...(incoming?.bag || {}) },
+    guildProgress: {
+      exp: Math.max(0, Number(incoming?.guildProgress?.exp ?? incoming?.guild?.exp) || 0),
+      level: Math.max(0, Number(incoming?.guildProgress?.level ?? incoming?.guild?.level) || 0),
+      nextLevelExp: Math.max(0, Number(incoming?.guildProgress?.nextLevelExp ?? incoming?.guild?.next_level_exp ?? incoming?.guild?.nextLevelExp) || 0),
+    },
   };
 }
 
@@ -951,6 +957,12 @@ function renderBagTab(db, report, oracle) {
   return `
     <section class="card card-gold">
       <div class="card-head"><div class="card-title">🧮 Близость, Влечение и Опыт гильдии</div></div>
+      <div class="guild-progress-grid">
+        <label>Уровень гильдии<input class="input guild-progress-input" type="number" min="0" data-guild-field="level" value="${state.account.guildProgress?.level || 0}"></label>
+        <label>Текущий опыт<input class="input guild-progress-input" type="number" min="0" data-guild-field="exp" value="${state.account.guildProgress?.exp || 0}"></label>
+        <label>Опыт следующего уровня<input class="input guild-progress-input" type="number" min="0" data-guild-field="nextLevelExp" value="${state.account.guildProgress?.nextLevelExp || 0}"></label>
+      </div>
+      <div class="row-sub guild-progress-remaining">До следующего уровня: ${fmt(Math.max(0, (state.account.guildProgress?.nextLevelExp || 0) - (state.account.guildProgress?.exp || 0)))}</div>
       <div class="grid-3 event-calculators">
         <div class="event-metric"><div class="row-sub">Близость</div><strong>${fmt(events.intimacy?.expected || 0)}</strong><small>Мин. ${fmt(events.intimacy?.minimum || 0)} · Макс. ${fmt(events.intimacy?.maximum || 0)}</small></div>
         <div class="event-metric"><div class="row-sub">Влечение</div><strong>${fmt(events.attraction?.expected || 0)}</strong><small>Мин. ${fmt(events.attraction?.minimum || 0)} · Макс. ${fmt(events.attraction?.maximum || 0)}</small></div>
@@ -1134,6 +1146,17 @@ function bindEvents(db) {
       saveState();
       render();
     }).catch(error => alert(error.message || 'Oracle не смог распределить Конклав.'));
+  });
+
+  document.querySelectorAll('.guild-progress-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const field = inp.dataset.guildField;
+      if (!['exp', 'level', 'nextLevelExp'].includes(field)) return;
+      state.account.guildProgress ||= { exp: 0, level: 0, nextLevelExp: 0 };
+      state.account.guildProgress[field] = Math.max(0, Number(inp.value) || 0);
+      saveState();
+      render();
+    });
   });
 
   document.querySelectorAll('.res-input').forEach(inp => {
