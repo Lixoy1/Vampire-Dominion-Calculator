@@ -402,7 +402,7 @@ function walkNumbers(value, path = 'root') {
   for (const presence of presenceLover.presences) {
     account.ownedLovers[presenceLover.id].presences[presence.id] = Math.min(presence.max_lvl || 1, Math.max(presence.min_lvl || 0, 2));
   }
-  const result = calculateOracle({ account, plan: makePlan() });
+  const result = calculateOracle({ account, plan: { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: {}, summons: { wardens: [], lovers: [] } } });
   assert.ok(result.report.modifiers, 'combined report exposes separate modifiers');
   const expectedAuraTalent = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
   const expectedAuraBook = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
