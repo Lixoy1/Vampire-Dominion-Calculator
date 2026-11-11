@@ -122,3 +122,8 @@ The account's current skin level is separate from the planned target (`plan.skin
 ## Aura and presence reporting
 
 The calculation response exposes `report.modifiers` with per-attribute aura percentages split into `talent` and `book` buckets, plus per-attribute presence percentages. The values use the existing engine formulas (`calcAuraPercent` and `calcPresencePercents`) and the imported presence curve table. These are modifier percentages, not absolute dominance points: they are intentionally excluded from `report.gain.total` until the game's exact stacking/rounding rules can be checked against a game-side reference result. The UI presents them separately in the dominance dashboard.
+
+
+## Presence upgrade transaction
+
+The plan accepts absolute target levels at `plan.presences[loverId][presenceId]` for owned, updatable presences only. The server clamps targets to the catalogue range and derives token cost from the matching `lover_presence_levels` rows for each newly reached level, charging the presence template's `upgrade_item_id`. Preview exposes `report.presenceUpgrade.byItem` and `byPresence`; planned presence percentages are reflected in the modifier breakdown. Commit validates token inventory before applying target levels and deducting tokens. Collection presences remain account state and cannot be upgraded through this path.
