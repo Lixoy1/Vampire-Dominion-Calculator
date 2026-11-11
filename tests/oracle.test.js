@@ -589,6 +589,16 @@ function walkNumbers(value, path = 'root') {
   assert.equal(committed.ok, true);
   assert.ok(committed.account.ownedLovers[bondLover.id].affinity < 1000);
   assert.equal(account.ownedLovers[bondLover.id].affinity, 1000, 'bond commit leaves original profile untouched');
+
+  const allAuto = autoDistributeAll({
+    account,
+    plan: {
+      ...makePlan(),
+      conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+      courtyardToLvl: 0,
+    },
+  });
+  assert.ok(allAuto.summary.bonds.addedLevels > 0, 'Auto All includes Scarlet Bond allocation');
 }
 
 console.log('PASS unified server Oracle tests');
