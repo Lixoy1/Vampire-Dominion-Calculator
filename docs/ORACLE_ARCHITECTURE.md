@@ -127,3 +127,10 @@ The calculation response exposes `report.modifiers` with per-attribute aura perc
 ## Presence upgrade transaction
 
 The plan accepts absolute target levels at `plan.presences[loverId][presenceId]` for owned, updatable presences only. The server clamps targets to the catalogue range and derives token cost from the matching `lover_presence_levels` rows for each newly reached level, charging the presence template's `upgrade_item_id`. Preview exposes `report.presenceUpgrade.byItem` and `byPresence`; planned presence percentages are reflected in the modifier breakdown. Commit validates token inventory before applying target levels and deducting tokens. Collection presences remain account state and cannot be upgraded through this path.
+
+
+## Presence auto-distribution
+
+`POST /api/oracle/auto-presences` plans upgrades for owned, updatable presences using the per-level costs in `lover_presence_levels`. The optimizer reserves any already-planned presence costs first, then spends remaining matching tokens on the next affordable level with the greatest summed percentage-point increase per token. The full `/api/oracle/auto-distribute` path runs this same step after Warden, talent and summon reservations. It returns `summary.addedLevels`, `summary.addedPercentPoints` and per-item reservations.
+
+This is a percentage-modifier allocation heuristic, not a dominance-point optimizer. Percent modifiers remain excluded from `report.gain.total` because exact in-game stacking and rounding have not been verified. Aura auto-upgrades are not included: current aura catalogue rows identify the upgrade item and percentage step, but do not provide an authoritative per-level item cost table.
