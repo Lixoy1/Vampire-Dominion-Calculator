@@ -420,6 +420,11 @@ function makeWarnings(account, plan) {
     code: 'APPROXIMATE_BLOOD_COST',
     message: 'Стоимость уровней в Крови использует аппроксимированную кривую из текущего движка. Проверь её по игровым значениям перед применением.',
   });
+  const skinUsage = getSkinPlanUsage(plan, account);
+  if (Object.keys(skinUsage.unavailable).length) warnings.push({
+    code: 'SKIN_REQUIRES_CARDS',
+    message: 'Для части выбранных обликов не хватает карточек: ткань для них не подходит. Проверьте раздел обликов перед применением.',
+  });
   if (hasBondPlan) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
     message: 'Стоимость уровней Кровных уз использует расчётную формулу, а не подтверждённую выгрузку игрового сервера.',
@@ -1070,8 +1075,18 @@ export function autoDistributeAll(input = {}) {
   plan.levels = nextLevels;
   plan.promotes = nextPromotes;
 
-  // Plan scrolls and scripts against the bag remaining after Warden
-  // breakthrough reservations. The optimiser preserves any existing choices.
+  // Existing manual skin targets reserve their own cards and fabric before
+  // talent/summon/presence auto-allocation touches the shared bag ledger.
+  const plannedSkinUsage = getSkinPlanUsage(plan, account);
+  for (const [itemId, count] of Object.entries(plannedSkinUsage.byItem)) {
+    tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
+  }
+  for (const [itemId, count] of Object.entries(plannedSkinUsage.byFabric)) {
+    tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
+  }
+
+  // Plan scrolls, scripts and personal EXP against resources remaining after
+  // Warden breakthrough and existing skin reservations.
   const talentDistribution = runTalentAutoDistribution(account, plan, tempBag);
   plan.talents = talentDistribution.plan.talents;
   for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
@@ -1093,7 +1108,7 @@ export function autoDistributeAll(input = {}) {
   ).wardens;
   plan.summons.lovers = [];
   for (const candidate of wardenCandidates) {
-    if (!candidate.canSummon || candidate.cost <= 0) continue;
+    if (!candidate.canSummon) continue;
     if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
@@ -1108,7 +1123,7 @@ export function autoDistributeAll(input = {}) {
     summonBag
   ).lovers;
   for (const candidate of loverCandidates) {
-    if (!candidate.hasWarden || !candidate.canSummon || candidate.cost <= 0) continue;
+    if (!candidate.hasWarden || !candidate.canSummon) continue;
     if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
