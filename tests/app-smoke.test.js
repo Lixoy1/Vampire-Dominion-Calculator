@@ -3,6 +3,7 @@ import { calculateOracle } from '../oracle.js';
 import assert from 'node:assert/strict';
 
 let navButtons = [];
+let mainButtons = [];
 const root = {
   _html: '',
   get innerHTML() { return this._html; },
@@ -10,6 +11,11 @@ const root = {
     this._html = value;
     navButtons = [...value.matchAll(/data-tab="([^"]+)"/g)].map(match => ({
       dataset: { tab: match[1] },
+      handlers: {},
+      addEventListener(event, handler) { this.handlers[event] = handler; },
+    }));
+    mainButtons = [...value.matchAll(/data-main="([^"]+)"/g)].map(match => ({
+      dataset: { main: match[1] },
       handlers: {},
       addEventListener(event, handler) { this.handlers[event] = handler; },
     }));
@@ -38,7 +44,11 @@ globalThis.confirm = () => false;
 globalThis.document = {
   addEventListener(event, handler) { if (event === 'DOMContentLoaded') readyHandler = handler; },
   getElementById(id) { return id === 'app' ? root : null; },
-  querySelectorAll(selector) { return selector === '[data-tab]' ? navButtons : []; },
+  querySelectorAll(selector) {
+    if (selector === '[data-tab]') return navButtons;
+    if (selector === '[data-main]') return mainButtons;
+    return [];
+  },
 };
 
 const appModule = await import('../js/app.js');
@@ -46,9 +56,25 @@ assert.equal(typeof readyHandler, 'function', 'app registers DOMContentLoaded');
 await readyHandler();
 
 const expectedTabs = ['dominance', 'conclave', 'levels', 'talents', 'auras', 'bonds', 'skins', 'summon', 'bag'];
+const mainForTab = {
+  dominance: 'home',
+  conclave: 'calculations',
+  levels: 'resources',
+  talents: 'calculations',
+  auras: 'calculations',
+  bonds: 'calculations',
+  skins: 'calculations',
+  summon: 'resources',
+  bag: 'resources',
+};
 for (const expected of expectedTabs) {
+  const main = document.querySelectorAll('[data-main]').find(item => item.dataset.main === mainForTab[expected]);
+  assert.ok(main, `primary navigation ${mainForTab[expected]} is rendered`);
+  assert.equal(typeof main.handlers.click, 'function', `primary navigation ${mainForTab[expected]} has a click handler`);
+  main.handlers.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
   const tab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === expected);
-  assert.ok(tab, `tab ${expected} is rendered`);
+  assert.ok(tab, `tab ${expected} is rendered in its group`);
   assert.equal(typeof tab.handlers.click, 'function', `tab ${expected} has a click handler`);
   tab.handlers.click();
   await new Promise(resolve => setTimeout(resolve, 0));
@@ -66,6 +92,12 @@ await clickTab('dominance');
 assert.ok(root.innerHTML.includes('Модификаторы аур и Веяний'), 'dominance dashboard displays aura and presence modifiers');
 await clickTab('bag');
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
+const settings = document.querySelectorAll('[data-main]').find(item => item.dataset.main === 'settings');
+assert.ok(settings, 'settings primary navigation is rendered');
+settings.handlers.click();
+await new Promise(resolve => setTimeout(resolve, 0));
+assert.ok(root.innerHTML.includes('Настройки профиля'), 'settings screen is rendered');
+assert.ok(root.innerHTML.includes('btn-export') && root.innerHTML.includes('btn-import-helper'), 'settings screen exposes profile and Helper JSON import actions');
 const importedHelperProfile = appModule.normalizeState({
   profile: { name: 'API import', region: 'EU', server: '328' },
   wardens: [
