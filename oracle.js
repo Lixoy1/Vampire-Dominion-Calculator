@@ -924,52 +924,53 @@ export function autoDistributeBondPlan(input = {}) {
     if (!lover?.scarlet_bonds?.length) continue;
     const states = clone(record(plan.bonds[loverId]));
     const wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account, plan);
-    let currentResult = Engine.calcLoverBonds(
+    const currentResult = Engine.calcLoverBonds(
       lover, owned.affinity || 0, states, wardenBaseAttrs, owned.closeness || 0
     );
+    let remaining = Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity);
     let localAddedLevels = 0;
     let localAddedAffinity = 0;
     let localGain = 0;
 
-    for (let guard = 0; guard < 4 * 1200; guard++) {
-      const remaining = Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity);
+    for (let guard = 0; guard < 4 * 600; guard++) {
       if (remaining <= 0) break;
       let best = null;
-
       for (const bond of lover.scarlet_bonds) {
         const state = record(states[bond.attribute]);
-        const flatLevel = Math.max(0, numeric(state.targetLevel, numeric(state.level)));
+        const flatLevel = Math.max(numeric(state.level), numeric(state.targetLevel, numeric(state.level)));
         if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
-          const trialStates = { ...states, [bond.attribute]: { ...state, targetLevel: flatLevel + 1 } };
-          const trial = Engine.calcLoverBonds(lover, owned.affinity || 0, trialStates, wardenBaseAttrs, owned.closeness || 0);
-          const cost = trial.spentAffinity - currentResult.spentAffinity;
-          const gain = trial.totalGain - currentResult.totalGain;
-          if (cost > 0 && cost <= remaining && gain > 0) {
+          const cost = Engine.calcBondLevelCost(flatLevel + 1);
+          const gain = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
+          if (cost > 0 && cost <= remaining) {
             const efficiency = gain / cost;
-            if (!best || efficiency > best.efficiency) best = {
-              attribute: bond.attribute, kind: 'flat', level: flatLevel + 1, trialStates, trial, cost, gain, efficiency,
-            };
+            if (!best || efficiency > best.efficiency) {
+              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1 };
+            }
           }
         }
 
-        const percentLevel = Math.max(0, numeric(state.targetPercentLevel, numeric(state.percentLevel)));
-        if (owned.closeness >= bond.unlock_closeness_percent && percentLevel < 600) {
-          const trialStates = { ...states, [bond.attribute]: { ...state, targetPercentLevel: percentLevel + 1 } };
-          const trial = Engine.calcLoverBonds(lover, owned.affinity || 0, trialStates, wardenBaseAttrs, owned.closeness || 0);
-          const cost = trial.spentAffinity - currentResult.spentAffinity;
-          const gain = trial.totalGain - currentResult.totalGain;
+        const currentPercent = Math.max(0, numeric(state.percentLevel, numeric(state.pctLevel)));
+        const targetPercent = Math.max(currentPercent, numeric(state.targetPercentLevel, currentPercent));
+        if (owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
+          const cost = Engine.calcBondPercentCost(targetPercent + 1);
+          const step = bond.is_advantage ? 0.005 : 0.0025;
+          const previousGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent - currentPercent) * step);
+          const nextGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent + 1 - currentPercent) * step);
+          const gain = nextGain - previousGain;
           if (cost > 0 && cost <= remaining && gain > 0) {
             const efficiency = gain / cost;
-            if (!best || efficiency > best.efficiency) best = {
-              attribute: bond.attribute, kind: 'percent', level: percentLevel + 1, trialStates, trial, cost, gain, efficiency,
-            };
+            if (!best || efficiency > best.efficiency) {
+              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, nextLevel: targetPercent + 1 };
+            }
           }
         }
       }
-
       if (!best) break;
-      for (const bond of lover.scarlet_bonds) states[bond.attribute] = { ...record(best.trialStates[bond.attribute]) };
-      currentResult = best.trial;
+      const state = record(states[best.attribute]);
+      states[best.attribute] = best.kind === 'flat'
+        ? { ...state, targetLevel: best.nextLevel }
+        : { ...state, targetPercentLevel: best.nextLevel };
+      remaining -= best.cost;
       localAddedLevels++;
       localAddedAffinity += best.cost;
       localGain += best.gain;
@@ -980,9 +981,9 @@ export function autoDistributeBondPlan(input = {}) {
       plan.bonds[loverId] = states;
       byLover[loverId] = {
         addedLevels: localAddedLevels,
-        affinity: localAddedAffinity,
+        estimatedAffinity: localAddedAffinity,
         estimatedGain: Math.round(localGain),
-        remainingAffinity: Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity),
+        remainingAffinity: remaining,
       };
       addedLevels += localAddedLevels;
       addedAffinity += localAddedAffinity;
