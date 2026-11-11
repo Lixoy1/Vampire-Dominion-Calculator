@@ -747,7 +747,7 @@ export function calculateOracle(input = {}) {
       totalTalentExp: promotionExp + personalExp,
       talentPointsAvailable,
       maxTalentLevel: promotion?.max_talent_lvl ?? 40,
-      baseAttributes: getWardenBaseAttributes(warden.id, account),
+      baseAttributes: getWardenBaseAttributes(warden.id, account, plan),
       levelUpgrade,
       auras,
     };
@@ -804,10 +804,14 @@ export function calculateOracle(input = {}) {
     for (const aura of warden.auras || []) {
       const level = owned.auras?.[aura.id] ?? aura.min_lvl ?? 0;
       const percent = Engine.calcAuraPercent(aura, level);
-      const kind = aura.bonus_type === 'book' ? 'book' : 'talent';
+      const kinds = aura.bonus_type === 'both'
+        ? ['talent', 'book']
+        : [aura.bonus_type === 'book' ? 'book' : 'talent'];
       for (const attr of aura.attributes || []) {
         if (!ATTRIBUTES.includes(attr)) continue;
-        modifierBreakdown.auras[kind][attr] += percent;
+        for (const kind of kinds) modifierBreakdown.auras[kind][attr] += percent;
+        // Count the aura once in the combined total even when it affects both
+        // talent and book bonuses.
         modifierBreakdown.auras.totalByAttribute[attr] += percent;
       }
     }
