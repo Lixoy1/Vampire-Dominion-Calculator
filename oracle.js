@@ -236,23 +236,31 @@ function normalizePlan(input = {}, account) {
         targetPercentLevel: Math.max(currentPercentLevel, Math.min(600, Math.round(numeric(selected.targetPercentLevel, currentPercentLevel)))),
       };
     }
-    bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account);
+    bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account, plan);
     plan.bonds[id] = bondPlan;
   }
 
   return plan;
 }
 
-export function getWardenBaseAttributes(wardenId, accountInput) {
+export function getWardenBaseAttributes(wardenId, accountInput, planInput = {}) {
   const account = accountInput?.ownedWardens ? accountInput : normalizeAccount(accountInput);
   const warden = db.wardens.find(item => item.id === Number(wardenId));
   const owned = account.ownedWardens?.[wardenId];
   const result = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
   if (!warden || !owned) return result;
 
-  const multiplier = Engine.calcWardenLevelMultiplier(owned.level || 1);
+  const plan = record(planInput);
+  const targetWardenLevel = Math.max(owned.level || 1, numeric(record(plan.levels)[wardenId], owned.level || 1));
+  const multiplier = Engine.calcWardenLevelMultiplier(targetWardenLevel);
+  const selected = record(plan.talents?.[wardenId]);
+  const cap = db.promotes.find(item => item.id === Number(plan.promotes?.[wardenId] || owned.promoteId || 1))?.max_talent_lvl ?? 40;
   warden.talents.forEach((talent, index) => {
-    const level = Math.max(1, numeric(owned.talents?.[index], 1));
+    const base = Math.max(1, Math.min(cap, numeric(owned.talents?.[index], 1)));
+    const planned = Math.max(0, numeric(record(selected.scrolls)[index]))
+      + Math.max(0, numeric(record(selected.scripts)[index]))
+      + Math.max(0, numeric(record(selected.exp_levels)[index]));
+    const level = Math.min(cap, base + planned);
     result[talent.attribute] += level * talent.stars * multiplier;
   });
   return result;
@@ -902,6 +910,92 @@ export function autoDistributePresencePlan(input = {}) {
   return { plan: distribution.plan, summary: distribution.summary };
 }
 
+export function autoDistributeBondPlan(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const plan = normalizePlan(raw.plan, account);
+  let addedLevels = 0;
+  let addedAffinity = 0;
+  let estimatedGain = 0;
+  const byLover = {};
+
+  for (const [loverId, owned] of Object.entries(account.ownedLovers)) {
+    const lover = db.lovers.find(item => item.id === Number(loverId));
+    if (!lover?.scarlet_bonds?.length) continue;
+    const states = clone(record(plan.bonds[loverId]));
+    const wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account, plan);
+    let currentResult = Engine.calcLoverBonds(
+      lover, owned.affinity || 0, states, wardenBaseAttrs, owned.closeness || 0
+    );
+    let localAddedLevels = 0;
+    let localAddedAffinity = 0;
+    let localGain = 0;
+
+    for (let guard = 0; guard < 4 * 1200; guard++) {
+      const remaining = Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity);
+      if (remaining <= 0) break;
+      let best = null;
+
+      for (const bond of lover.scarlet_bonds) {
+        const state = record(states[bond.attribute]);
+        const flatLevel = Math.max(0, numeric(state.targetLevel, numeric(state.level)));
+        if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
+          const trialStates = { ...states, [bond.attribute]: { ...state, targetLevel: flatLevel + 1 } };
+          const trial = Engine.calcLoverBonds(lover, owned.affinity || 0, trialStates, wardenBaseAttrs, owned.closeness || 0);
+          const cost = trial.spentAffinity - currentResult.spentAffinity;
+          const gain = trial.totalGain - currentResult.totalGain;
+          if (cost > 0 && cost <= remaining && gain > 0) {
+            const efficiency = gain / cost;
+            if (!best || efficiency > best.efficiency) best = {
+              attribute: bond.attribute, kind: 'flat', level: flatLevel + 1, trialStates, trial, cost, gain, efficiency,
+            };
+          }
+        }
+
+        const percentLevel = Math.max(0, numeric(state.targetPercentLevel, numeric(state.percentLevel)));
+        if (owned.closeness >= bond.unlock_closeness_percent && percentLevel < 600) {
+          const trialStates = { ...states, [bond.attribute]: { ...state, targetPercentLevel: percentLevel + 1 } };
+          const trial = Engine.calcLoverBonds(lover, owned.affinity || 0, trialStates, wardenBaseAttrs, owned.closeness || 0);
+          const cost = trial.spentAffinity - currentResult.spentAffinity;
+          const gain = trial.totalGain - currentResult.totalGain;
+          if (cost > 0 && cost <= remaining && gain > 0) {
+            const efficiency = gain / cost;
+            if (!best || efficiency > best.efficiency) best = {
+              attribute: bond.attribute, kind: 'percent', level: percentLevel + 1, trialStates, trial, cost, gain, efficiency,
+            };
+          }
+        }
+      }
+
+      if (!best) break;
+      for (const bond of lover.scarlet_bonds) states[bond.attribute] = { ...record(best.trialStates[bond.attribute]) };
+      currentResult = best.trial;
+      localAddedLevels++;
+      localAddedAffinity += best.cost;
+      localGain += best.gain;
+    }
+
+    if (localAddedLevels) {
+      states.wardenBaseAttrs = wardenBaseAttrs;
+      plan.bonds[loverId] = states;
+      byLover[loverId] = {
+        addedLevels: localAddedLevels,
+        affinity: localAddedAffinity,
+        estimatedGain: Math.round(localGain),
+        remainingAffinity: Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity),
+      };
+      addedLevels += localAddedLevels;
+      addedAffinity += localAddedAffinity;
+      estimatedGain += localGain;
+    }
+  }
+
+  return {
+    plan: normalizePlan(plan, account),
+    summary: { addedLevels, estimatedAffinity: addedAffinity, estimatedGain: Math.round(estimatedGain), byLover },
+  };
+}
+
 export function autoDistributeAll(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
@@ -1021,10 +1115,19 @@ export function autoDistributeAll(input = {}) {
 
   const presenceDistribution = runPresenceAutoDistribution(account, plan, summonBag);
   plan.presences = presenceDistribution.plan.presences;
+  const bondDistribution = autoDistributeBondPlan({ account, plan });
+  Object.assign(plan, bondDistribution.plan);
   return {
     plan,
     warnings: makeWarnings(account, plan),
-    summary: { presences: presenceDistribution.summary },
+    summary: {
+      talents: {
+        expLevels: talentDistribution.usage.expLevels,
+        expSpentTotal: talentDistribution.usage.expSpentTotal,
+      },
+      presences: presenceDistribution.summary,
+      bonds: bondDistribution.summary,
+    },
   };
 }
 
