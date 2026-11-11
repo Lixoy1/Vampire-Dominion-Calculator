@@ -680,6 +680,9 @@ function getHelperApiImportSummary(account) {
     bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.length : 0,
     responseCount: Math.max(0, Math.round(numeric(observations.responseCount))),
     attributeBreakdown: observations.attributes ?? null,
+    bestPaths: record(observations.bestPaths),
+    skinStore: observations.skinStore ?? null,
+    trustPool: observations.trust ?? null,
     observedWardenDominance: record(imported.observedWardenDominance),
   };
 }
