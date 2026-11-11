@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.2.0';
+export const ORACLE_VERSION = '1.3.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
