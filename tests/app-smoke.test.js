@@ -87,6 +87,8 @@ assert.ok(appSource.includes('wizard-create'), 'new-account flow uses a guided m
 assert.ok(appSource.includes('btn-import-helper') && appSource.includes('/api/oracle/import-helper'), 'Helper API data can be imported from several JSON snapshots');
 assert.ok(appSource.includes('guild-input'), 'guild level and experience fields are editable');
 assert.ok(appSource.includes('/api/oracle/auto-presences'), 'presence allocation calls the server Oracle');
+assert.ok(appSource.includes('/api/oracle/auto-bonds'), 'bond allocation calls the server Oracle');
+assert.ok(appSource.includes('exp_levels'), 'talent EXP allocation survives client normalization');
 assert.ok(appSource.includes('presence-target'), 'presence target controls are supported by the profile state');
 assert.ok(appSource.includes('skin-target'), 'skin tab exposes planned target levels');
 assert.ok(appSource.includes('btn-auto-talents'), 'talent tab exposes server auto-distribution');
