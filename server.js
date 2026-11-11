@@ -3,6 +3,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { calculateOracle, autoDistributeAll, autoDistributeConclave, autoDistributeTalentPlan, autoDistributePresencePlan, autoDistributeBondPlan, commitOraclePlan, summonWarden, summonLover, importDhampirSnapshot, getOracleCapabilities } from './oracle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,7 +13,8 @@ const BOT_TOKEN = process.env.BOT_TOKEN;
 const APP_URL = (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || '').replace(/\/$/, '');
 
 app.disable('x-powered-by');
-app.use(express.json({ limit: '32kb' }));
+app.set('trust proxy', 1);
+app.use(express.json({ limit: '256kb' }));
 
 // Отдаём публичные файлы Mini App без длительного кеширования: Telegram WebView
 // иначе может продолжать показывать старый JS после нового деплоя.
@@ -32,8 +34,83 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, app: 'Vampire Dominion', botConfigured: Boolean(BOT_TOKEN) });
+  res.json({ ok: true, app: 'Vampire Dominion', botConfigured: Boolean(BOT_TOKEN), oracle: getOracleCapabilities() });
 });
+
+// Oracle API is stateless: it calculates only from values entered by the player.
+// It does not authenticate with, scrape, or call Game of Vampires.
+const oracleRateWindows = new Map();
+function oracleRateLimit(req, res, next) {
+  const now = Date.now();
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
+  const current = oracleRateWindows.get(key);
+  if (!current || now - current.startedAt >= 60_000) {
+    oracleRateWindows.set(key, { startedAt: now, count: 1 });
+    return next();
+  }
+  current.count += 1;
+  if (current.count > 120) {
+    res.setHeader('Retry-After', '60');
+    return res.status(429).json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Слишком много расчётов. Повтори запрос через минуту.' } });
+  }
+  return next();
+}
+
+function oracleInput(req) {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    const error = new Error('Ожидается JSON-объект с account и plan.');
+    error.status = 400;
+    throw error;
+  }
+  if (!req.body.account || typeof req.body.account !== 'object' || Array.isArray(req.body.account)) {
+    const error = new Error('В запросе отсутствуют данные аккаунта.');
+    error.status = 400;
+    throw error;
+  }
+  const serialized = JSON.stringify(req.body);
+  if (serialized.length > 240_000) {
+    const error = new Error('Профиль слишком большой для одного расчёта.');
+    error.status = 413;
+    throw error;
+  }
+  return req.body;
+}
+
+function oracleEndpoint(handler) {
+  return (req, res) => {
+    try {
+      const input = oracleInput(req);
+      const result = handler(input);
+      res.setHeader('Cache-Control', 'no-store');
+      return res.json({ ok: true, result });
+    } catch (error) {
+      const status = error.status || 500;
+      if (status >= 500) console.error('Oracle request failed:', error);
+      return res.status(status).json({
+        ok: false,
+        error: {
+          code: status >= 500 ? 'ORACLE_FAILURE' : 'INVALID_INPUT',
+          message: status >= 500 ? 'Oracle не смог выполнить расчёт. Данные профиля не изменены.' : error.message,
+        },
+      });
+    }
+  };
+}
+
+app.get('/api/oracle/meta', (_req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json({ ok: true, result: getOracleCapabilities() });
+});
+app.post('/api/oracle/calculate', oracleRateLimit, oracleEndpoint(calculateOracle));
+app.post('/api/oracle/auto-distribute', oracleRateLimit, oracleEndpoint(autoDistributeAll));
+app.post('/api/oracle/auto-conclave', oracleRateLimit, oracleEndpoint(autoDistributeConclave));
+app.post('/api/oracle/auto-talents', oracleRateLimit, oracleEndpoint(autoDistributeTalentPlan));
+app.post('/api/oracle/auto-presences', oracleRateLimit, oracleEndpoint(autoDistributePresencePlan));
+app.post('/api/oracle/auto-bonds', oracleRateLimit, oracleEndpoint(autoDistributeBondPlan));
+app.post('/api/oracle/commit-plan', oracleRateLimit, oracleEndpoint(commitOraclePlan));
+app.post('/api/oracle/summon', oracleRateLimit, oracleEndpoint(summonWarden));
+app.post('/api/oracle/summon-lover', oracleRateLimit, oracleEndpoint(summonLover));
+app.post('/api/oracle/import-helper', oracleRateLimit, oracleEndpoint(importDhampirSnapshot));
 
 // Проверка подлинности Telegram Mini App initData на сервере.
 // BOT_TOKEN никогда не отправляется в браузер.
