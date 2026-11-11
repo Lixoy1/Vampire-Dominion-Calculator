@@ -1137,3 +1137,45 @@ body { overflow-x: hidden; }
   .summon-banner {min-height:146px}
   .warden-art-card {min-height:104px}
 }
+
+
+/* Compact number keypad: suffix keys mirror the reference calculator layout. */
+.numpad-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.numpad-mode {
+  min-width:58px !important; min-height:36px !important; padding:0 12px;
+  border-radius:999px !important; color:var(--gold) !important;
+  background:rgba(214,176,109,.12) !important; border-color:rgba(214,176,109,.3) !important;
+}
+.numpad-display { margin:8px 0 5px; min-height:54px; }
+.numpad-direct-input {
+  width:100%; min-height:54px; margin:8px 0 5px; padding:10px 14px;
+  border:1px solid rgba(214,173,104,.3); border-radius:14px;
+  color:var(--text); background:rgba(0,0,0,.32);
+  font:700 24px inherit; font-variant-numeric:tabular-nums;
+}
+.numpad-direct-input[hidden] { display:none !important; }
+.numpad-resolved { min-height:24px; text-align:right; color:var(--gold); font-size:18px; font-weight:750; font-variant-numeric:tabular-nums; }
+.numpad-hint { margin:2px 0 12px; color:var(--muted); font-size:11px; text-align:right; }
+.numpad-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+.numpad-grid button { min-height:56px; font-size:18px; }
+.numpad-grid button[data-mult] {
+  color:var(--gold); border-color:rgba(214,176,109,.34);
+  background:linear-gradient(145deg,rgba(214,176,109,.14),rgba(201,42,66,.08));
+}
+.numpad-grid button[data-mult].active {
+  color:#1a0a0f; background:linear-gradient(135deg,#e0bf7d,#b98b49);
+  border-color:#f0d49a;
+}
+.numpad-actions { grid-template-columns:1fr 1fr; }
+.numpad-actions button { min-height:54px; }
+
+/* Give section art enough vertical room and keep its focal point centered. */
+.calculations-banner,
+.resources-banner,
+.partners-banner,
+.settings-banner,
+.summon-banner { background-position:center center !important; }
+@media(max-width:560px) {
+  .collection-banner { min-height:148px; background-position:center center; }
+  .summon-banner { min-height:154px; }
+}
