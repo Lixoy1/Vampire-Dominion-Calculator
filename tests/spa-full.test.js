@@ -35,6 +35,11 @@ const wardenStats = fn('computeWardenDetailedStats');
 assert.ok(wardenStats.includes('oracleSnapshot?.wardens'), 'Warden stats come from the server snapshot');
 assert.ok(!wardenStats.includes('calcAuraPercent('), 'Warden details do not calculate aura percentages locally');
 
+const wardenList = fn('renderWardensListScreen');
+assert.ok(wardenList.includes('Открыть полный каталог'), 'Warden screen exposes the full 68-item catalogue');
+assert.ok(wardenList.includes('база Oracle'), 'Warden card metric is explicitly labelled as an Oracle model baseline');
+assert.ok(fn('bindSpaEvents').includes("action === 'add-warden'"), 'full Warden catalogue add action is wired');
+
 const wardenDetail = fn('renderWardenDetailScreen');
 assert.ok(wardenDetail.includes('oracleWarden?.auras'), 'Warden aura values come from Oracle');
 assert.ok(wardenStats.includes('server?.baseAttributes'), 'Warden base attributes are read from Oracle');
