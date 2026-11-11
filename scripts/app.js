@@ -735,10 +735,11 @@ function renderWardenDetailScreen(db) {
   const previous = db.wardens.find(w => w.id === prevId);
   const next = db.wardens.find(w => w.id === nextId);
   return renderSubToolbar('wardens_list', 'Смотритель') +
-    '<div class="warden-hero-card"><img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="warden-avatar-lg" alt=""><div class="card-body"><div class="warden-title-serif">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(attr => '<span class="dot ' + attr + '"></span>').join(' ') + ' · ур. ' + Number(owned.level || 1) + '</div></div>' + loverLink + '</div>' +
+    '<div class="warden-hero-card warden-art-card"><img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="warden-avatar-lg" alt=""><div class="card-body"><div class="warden-title-serif">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(attr => '<span class="dot ' + attr + '"></span>').join(' ') + ' · ур. ' + Number(owned.level || 1) + '</div></div>' + loverLink + '</div>' +
     '<div class="pill-tabs">' + tabs.map(tab => '<button class="pill-tab ' + (state.wardenTab === tab[0] ? 'active' : '') + '" data-action="set-warden-tab" data-tab="' + tab[0] + '">' + tab[1] + '</button>').join('') + '</div>' +
     body + '<div class="warden-pager-bar"><button class="pager-btn" data-action="open-warden" data-id="' + prevId + '">‹ ' + tName('warden', previous?.name || '') + '</button><button class="pager-btn" data-action="open-warden-picker">' + (index + 1) + ' из ' + ownedIds.length + ' ⌃</button><button class="pager-btn" data-action="open-warden" data-id="' + nextId + '">' + tName('warden', next?.name || '') + ' ›</button></div>';
 }
+
 
 function renderLoverDetailScreen(db) {
   const id = Number(state.currentLoverId);
@@ -824,10 +825,18 @@ function renderIntimacyCalcScreen(report, oracle) {
     '<button class="btn btn-primary" data-action="nav" data-screen="bag">Открыть Сумку</button>';
 }
 
+function renderSummonScreen(db, oracle) {
+  const candidates = oracle?.summonCandidates || { wardens: [], lovers: [] };
+  return renderSubToolbar('resources', 'Призыв') +
+    '<div class="collection-banner summon-banner"><div><b>ЗОВ КРОВИ</b><span>Призывай смотрителей и возлюбленных</span></div></div>' +
+    renderSummonTab(db, { ...oracle, summonCandidates: candidates });
+}
+
 function renderSpaScreen(db, report, oracle) {
   switch (state.screen || 'home') {
     case 'home': return renderHomeScreen();
     case 'resources': return renderResourcesScreen();
+    case 'summon': return renderSummonScreen(db, oracle);
     case 'wardens_list': return renderWardensListScreen(db);
     case 'warden-detail': return renderWardenDetailScreen(db);
     case 'lovers': return renderLoversScreen(db);
@@ -1007,6 +1016,7 @@ function renderHomeScreen() {
   '</section>';
 }
 
+
 function renderResourcesScreen() {
   const account = state.account;
   const wCount = Object.keys(account.ownedWardens || {}).length;
@@ -1021,7 +1031,8 @@ function renderResourcesScreen() {
       '<div class="resource-chip"><span>🏛 Очки Конклава</span><b>' + fmt(account.conclaveExp || 0) + '</b><input class="input" type="number" min="0" data-resource-field="conclaveExp" value="' + Number(account.conclaveExp || 0) + '"></div>' +
       '<div class="resource-chip"><span>🌿 Очки Сада</span><b>' + fmt(account.courtyardExp || 0) + '</b><input class="input" type="number" min="0" data-resource-field="courtyardExp" value="' + Number(account.courtyardExp || 0) + '"></div>' +
     '</div>' +
-    '<div class="card-stack">' +
+    '<div class="collection-banner resources-banner"><div><b>СОКРОВИЩНИЦА</b><span>Ресурсы и коллекция цитадели</span></div></div>' + '<div class="card-stack">' +
+      '<div class="nav-card" data-action="nav" data-screen="summon"><div class="card-icon-box">🩸</div><div class="card-body"><div class="card-title">Призыв</div><div class="card-subtitle">Доступные смотрители и возлюбленные</div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="wardens_list"><div class="card-icon-box">🛡</div><div class="card-body"><div class="card-title">Смотрители</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * wCount / GAME_DB.wardens.length) + '%"></div></div><span>' + wCount + '/' + GAME_DB.wardens.length + '</span></div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="lovers"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Партнёры</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * lCount / GAME_DB.lovers.length) + '%"></div></div><span>' + lCount + '/' + GAME_DB.lovers.length + '</span></div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="bag"><div class="card-icon-box">👜</div><div class="card-body"><div class="card-title">Сумка</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + (100 * bagCount / GAME_DB.items.length) + '%"></div></div><span>' + bagCount + '/' + GAME_DB.items.length + '</span></div></div><div class="card-right">›</div></div>' +
@@ -1030,6 +1041,7 @@ function renderResourcesScreen() {
       '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Быстрый ввод опыта талантов для всей коллекции</div></div><div class="card-right">›</div></div>' +
     '</div>';
 }
+
 
 function renderWardensListScreen(db) {
   const ownedIds = Object.keys(state.account.ownedWardens || {}).map(Number);
@@ -1069,7 +1081,7 @@ function renderLoversScreen(db) {
   let list = ownedIds.map(function (id) { return db.lovers.find(function (lover) { return lover.id === id; }); }).filter(Boolean);
   const query = String(state.loverListSearch || '').trim().toLocaleLowerCase();
   if (query) list = list.filter(function (lover) { return tName('lover', lover.name).toLocaleLowerCase().includes(query); });
-  return renderSubToolbar('resources', 'Партнёры') +
+  return renderSubToolbar('resources', 'Партнёры') + '<div class="collection-banner partners-banner"><div><b>КРОВНЫЕ УЗЫ</b><span>Партнёры · близость · доверие</span></div></div>' +
     '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="lover" placeholder="Поиск партнёра..." value="' + escHtml(state.loverListSearch || '') + '"></div></div>' +
     '<div class="card-stack">' + list.map(function (lover) {
       const owned = state.account.ownedLovers[lover.id];
@@ -1080,6 +1092,7 @@ function renderLoversScreen(db) {
       return '<button class="catalog-pick" data-action="add-lover" data-id="' + lover.id + '">' + tName('lover', lover.name) + '</button>';
     }).join('') + '</div></details>';
 }
+
 
 function itemBelongsToCategory(item, category) {
   if (category === 'all') return true;
@@ -1153,13 +1166,14 @@ function renderWardenExpScreen(db) {
 }
 
 function renderCalculationsHubScreen() {
-  return renderSubToolbar('home', 'Расчёты') +
+  return renderSubToolbar('home', 'Расчёты') + '<div class="collection-banner calculations-banner"><div><b>АРХИВ РАСЧЁТОВ</b><span>Господство · оптимизация · прогноз</span></div></div>' +
     '<div class="calc-hub-card" data-action="nav" data-screen="calc_dominance"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Подсчёт Господства</div><div class="card-subtitle">10 направлений вложения ресурсов и проверка доступности</div></div><div class="card-right">›</div></div>' +
     '<div class="card-stack">' +
       '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты и опыт</div><div class="card-subtitle">Звёзды, потолки уровня, личный опыт и прорывы</div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="calc_intimacy"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Близость и влечение</div><div class="card-subtitle">Минимум, ожидание и максимум из предметов сумки</div></div><div class="card-right">›</div></div>' +
     '</div>';
 }
+
 
 function renderCoverageCard(report) {
   const labels = {
@@ -1196,7 +1210,7 @@ function renderServerSnapshotCard() {
 
 function renderSettingsScreen() {
   const selected = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
-  return renderSubToolbar('home', 'Настройки и профиль') +
+  return renderSubToolbar('home', 'Настройки и профиль') + '<div class="collection-banner settings-banner"><div><b>ЦИТАДЕЛЬ</b><span>Призыв · профиль · настройки</span></div></div>' +
     '<section class="attrs-box"><div class="card-title">Активный профиль</div><div class="settings-profile-row"><img src="' + getIconUrl(selected.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt=""><div class="card-body"><b>' + escHtml(state.profile.name) + '</b><div class="row-sub">' + escHtml(state.profile.server || 'сервер не указан') + '</div></div></div>' +
       '<label class="field-stack"><span>Никнейм</span><input class="input" type="text" data-spa-profile="name" value="' + escHtml(state.profile.name) + '"></label>' +
       '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
@@ -1206,6 +1220,7 @@ function renderSettingsScreen() {
       '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Импорт JSON сохраняет контрольный серверный снимок отдельно от ручного профиля.</div></section>' +
     renderServerSnapshotCard();
 }
+
 
 function syncBottomNav(activeMain) {
   document.querySelectorAll('#bottom-nav [data-target]').forEach(button => {
