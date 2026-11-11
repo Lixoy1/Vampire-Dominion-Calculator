@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.4.0';
+export const ORACLE_VERSION = '1.5.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
@@ -129,6 +129,7 @@ function normalizePlan(input = {}, account) {
     levels: {},
     promotes: {},
     bonds: {},
+    presences: {},
     skins: Object.fromEntries(Object.entries(record(source.skins)).filter(([id]) => {
       const skinId = Number(id);
       return db.wardens.some(item => (item.skins || []).some(skin => skin.id === skinId))
@@ -166,6 +167,25 @@ function normalizePlan(input = {}, account) {
 
   for (const [id, raw] of Object.entries(record(source.bonds))) {
     if (/^\d+$/.test(id)) plan.bonds[id] = clone(record(raw));
+  }
+
+  // Presence targets are absolute levels. Only updatable presences have
+  // a per-level curve and an upgrade item; collection presences are excluded.
+  for (const [loverId, raw] of Object.entries(record(source.presences))) {
+    const lover = db.lovers.find(item => item.id === Number(loverId));
+    const owned = account.ownedLovers[loverId];
+    if (!lover || !owned) continue;
+    const selected = record(raw);
+    const targets = {};
+    for (const presence of lover.presences || []) {
+      if (presence.presence_type !== 'updatable') continue;
+      const current = Math.max(presence.min_lvl || 0, Math.min(presence.max_lvl ?? 30,
+        Math.round(numeric(owned.presences?.[presence.id], presence.min_lvl || 0))));
+      const target = Math.max(current, Math.min(presence.max_lvl ?? 30,
+        Math.round(numeric(selected[presence.id], current))));
+      if (target > current) targets[presence.id] = target;
+    }
+    if (Object.keys(targets).length) plan.presences[loverId] = targets;
   }
 
   // Planned talent additions are increments, not absolute talent levels.
@@ -605,6 +625,31 @@ export function calculateOracle(input = {}) {
     }
   }
   report.modifiers = modifierBreakdown;
+  const presenceUpgrade = { byItem: {}, byPresence: {}, totalCost: 0 };
+  for (const [loverId, targets] of Object.entries(plan.presences || {})) {
+    const lover = db.lovers.find(item => item.id === Number(loverId));
+    const owned = account.ownedLovers[loverId];
+    if (!lover || !owned) continue;
+    for (const presence of lover.presences || []) {
+      const target = Number(targets[presence.id] || 0);
+      const current = Number(owned.presences?.[presence.id] ?? presence.min_lvl ?? 0);
+      if (presence.presence_type !== 'updatable' || target <= current) continue;
+      let cost = 0;
+      for (let level = current + 1; level <= target; level++) {
+        const row = db.presenceCurvesMap.get(`${presence.level_curve}:${level}`);
+        if (!row || !Number.isFinite(Number(row.cost))) continue;
+        cost += Number(row.cost);
+      }
+      const itemId = Number(presence.upgrade_item_id);
+      if (itemId && cost > 0) {
+        presenceUpgrade.byItem[itemId] = (presenceUpgrade.byItem[itemId] || 0) + cost;
+        presenceUpgrade.totalCost += cost;
+      }
+      presenceUpgrade.byPresence[presence.id] = { from: current, to: target, cost, itemId };
+    }
+  }
+  report.spent.presenceItems = presenceUpgrade.byItem;
+  report.presenceUpgrade = presenceUpgrade;
   const inventory = Engine.summarizeBag(db.items, account.bag);
   // Event and guild calculators use the same server-side inventory snapshot.
   // The three-day donation cap is part of the reference helper's calculation.
@@ -951,6 +996,21 @@ export function commitOraclePlan(input = {}) {
   }
   for (const [skinId, skin] of Object.entries(skinUsage.bySkin)) draft.skins[skinId] = skin.to;
   draft.skinStoreExp = nonNegative(draft.skinStoreExp) + skinUsage.storeExp;
+
+  const presenceUsage = snapshot.report.presenceUpgrade || { byItem: {}, byPresence: {} };
+  for (const [itemId, count] of Object.entries(presenceUsage.byItem)) {
+    const available = draft.bag[itemId] || 0;
+    if (available < count) {
+      return { ok: false, error: { code: 'INSUFFICIENT_PRESENCE_ITEMS', itemId: Number(itemId), required: count, available, message: 'Недостаточно жетонов Веяний для выбранного плана.' } };
+    }
+    draft.bag[itemId] = available - count;
+  }
+  for (const [loverId, targets] of Object.entries(plan.presences || {})) {
+    const owned = draft.ownedLovers[loverId];
+    if (!owned) continue;
+    owned.presences ||= {};
+    for (const [presenceId, target] of Object.entries(targets)) owned.presences[presenceId] = target;
+  }
 
   const summonIds = [...new Set(plan.summons.wardens.map(Number))];
   const loverSummonIds = [...new Set(plan.summons.lovers.map(Number))];
