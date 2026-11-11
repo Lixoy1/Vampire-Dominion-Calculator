@@ -564,12 +564,25 @@ export function commitOraclePlan(input = {}) {
     draft.bag
   );
   const summonIds = [...new Set(plan.summons.wardens.map(Number))];
+  const loverSummonIds = [...new Set(plan.summons.lovers.map(Number))];
   for (const id of summonIds) {
     const candidate = summonCandidates.wardens.find(item => item.id === id);
     if (!candidate || !candidate.canSummon) {
       return {
         ok: false,
-        error: { code: 'SUMMON_UNAVAILABLE', wardenId: id, message: `Призыв смотрителя ${candidate?.name || id} недоступен: проверь предметы в сумке.` },
+        error: { code: 'SUMMON_UNAVAILABLE', kind: 'warden', wardenId: id, message: `Призыв смотрителя ${candidate?.name || id} недоступен: проверь предметы в сумке.` },
+      };
+    }
+    if (candidate.itemId && candidate.cost > 0) {
+      draft.bag[candidate.itemId] = Math.max(0, (draft.bag[candidate.itemId] || 0) - candidate.cost);
+    }
+  }
+  for (const id of loverSummonIds) {
+    const candidate = summonCandidates.lovers.find(item => item.id === id);
+    if (!candidate || !candidate.canSummon) {
+      return {
+        ok: false,
+        error: { code: 'SUMMON_UNAVAILABLE', kind: 'lover', loverId: id, message: `Призыв возлюбленной ${candidate?.name || id} недоступен: проверь предметы в сумке.` },
       };
     }
     if (candidate.itemId && candidate.cost > 0) {
@@ -631,6 +644,16 @@ export function commitOraclePlan(input = {}) {
   for (const id of summonIds) {
     draft.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
   }
+  for (const id of loverSummonIds) {
+    const lover = db.lovers.find(item => item.id === id);
+    draft.ownedLovers[id] = {
+      affinity: 0,
+      closeness: 0,
+      sex: lover?.fixed_sex || 'female',
+      presences: {},
+      bonds: {},
+    };
+  }
 
   return {
     ok: true,
@@ -678,6 +701,52 @@ export function summonWarden(input = {}) {
     account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
   }
   account.ownedWardens[wardenId] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
+  return { ok: true, account, candidate };
+}
+
+export function summonLover(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const loverId = Math.round(numeric(raw.loverId));
+  const lover = db.lovers.find(item => item.id === loverId);
+  if (!lover) {
+    return { ok: false, error: { code: 'LOVER_NOT_FOUND', message: 'Возлюбленная не найдена в каталоге.' } };
+  }
+  if (account.ownedLovers[loverId]) {
+    return { ok: false, error: { code: 'LOVER_ALREADY_OWNED', message: 'Эта возлюбленная уже добавлена в профиль.' } };
+  }
+  const candidates = Engine.getSummonCandidates(
+    db.wardens,
+    db.lovers,
+    new Set(Object.keys(account.ownedWardens).map(Number)),
+    new Set(Object.keys(account.ownedLovers).map(Number)),
+    account.bag
+  );
+  const candidate = candidates.lovers.find(item => item.id === loverId);
+  if (!candidate?.canSummon) {
+    return {
+      ok: false,
+      error: {
+        code: 'SUMMON_UNAVAILABLE',
+        kind: 'lover',
+        loverId,
+        itemId: candidate?.itemId ?? null,
+        required: candidate?.cost ?? 0,
+        available: candidate?.have ?? 0,
+        message: 'Недостаточно предметов для призыва возлюбленной.',
+      },
+    };
+  }
+  if (candidate.itemId && candidate.cost > 0) {
+    account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
+  }
+  account.ownedLovers[loverId] = {
+    affinity: 0,
+    closeness: 0,
+    sex: lover.fixed_sex || 'female',
+    presences: {},
+    bonds: {},
+  };
   return { ok: true, account, candidate };
 }
 
