@@ -1981,6 +1981,7 @@ export function importDhampirSnapshot(input = {}) {
     const skins = record(object.skins);
     const talents = record(object.talents);
     const books = record(object.books);
+    const manuscripts = record(object.manuscripts);
     const courtyard = record(object.courtyard);
 
     // Compatibility with separate/flat Helper API endpoints.
