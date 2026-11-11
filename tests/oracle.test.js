@@ -8,6 +8,7 @@ import {
   calculateOracle,
   autoDistributeAll,
   autoDistributeConclave,
+  autoDistributeTalentPlan,
   commitOraclePlan,
   summonWarden,
   summonLover,
@@ -153,6 +154,43 @@ function walkNumbers(value, path = 'root') {
   for (const attribute of ['strength', 'allure', 'intellect', 'spirit']) {
     assert.ok(conclave.levels[attribute] >= account.conclave[attribute]);
   }
+}
+
+{
+  const account = makeAccount();
+  const w = GAME_DB.wardens.find(item => item.id === warden.id);
+  for (const talent of w.talents) {
+    account.bag[talent.scroll_item_id] = 500;
+    account.bag[talent.script_item_id] = 500;
+  }
+  const auto = autoDistributeTalentPlan({ account, plan: makePlan() });
+  assert.ok(auto.summary.plannedLevels > 0, 'talent optimiser allocates owned Warden talent levels');
+  assert.ok(auto.summary.scrollLevels > 0, 'scroll groups receive levels');
+  assert.ok(auto.summary.scriptLevels > 0, 'script groups receive levels');
+  assert.ok(auto.plan.talents[warden.id]);
+  const calculated = calculateOracle({ account, plan: auto.plan });
+  assert.ok(calculated.report.gain.talents > 0, 'talent dominance is included in the combined report');
+  assert.equal(calculated.talentPlan.plannedLevels, auto.summary.plannedLevels);
+}
+
+{
+  const account = makeAccount();
+  const firstTalent = warden.talents[0];
+  account.bag[firstTalent.scroll_item_id] = 1;
+  const plan = makePlan();
+  plan.talents = { [warden.id]: { scrolls: { 0: 1 }, scripts: {} } };
+  const committed = commitOraclePlan({ account, plan });
+  assert.equal(committed.ok, true);
+  assert.equal(committed.account.ownedWardens[warden.id].talents[0], 2);
+  assert.equal(committed.account.bag[firstTalent.scroll_item_id], 0);
+  assert.equal(account.ownedWardens[warden.id].talents[0] || 1, 1, 'commit does not mutate submitted account');
+
+  const insufficient = commitOraclePlan({
+    account: makeAccount(),
+    plan,
+  });
+  assert.equal(insufficient.ok, false);
+  assert.equal(insufficient.error.code, 'INSUFFICIENT_TALENT_ITEMS');
 }
 
 {
