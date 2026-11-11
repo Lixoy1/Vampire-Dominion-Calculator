@@ -3,7 +3,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { calculateOracle, autoDistributeAll, autoDistributeConclave, commitOraclePlan, summonWarden, getOracleCapabilities } from './oracle.js';
+import { calculateOracle, autoDistributeAll, autoDistributeConclave, commitOraclePlan, summonWarden, summonLover, getOracleCapabilities } from './oracle.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -106,6 +106,7 @@ app.post('/api/oracle/auto-distribute', oracleRateLimit, oracleEndpoint(autoDist
 app.post('/api/oracle/auto-conclave', oracleRateLimit, oracleEndpoint(autoDistributeConclave));
 app.post('/api/oracle/commit-plan', oracleRateLimit, oracleEndpoint(commitOraclePlan));
 app.post('/api/oracle/summon', oracleRateLimit, oracleEndpoint(summonWarden));
+app.post('/api/oracle/summon-lover', oracleRateLimit, oracleEndpoint(summonLover));
 
 // Проверка подлинности Telegram Mini App initData на сервере.
 // BOT_TOKEN никогда не отправляется в браузер.
