@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.5.0';
+export const ORACLE_VERSION = '1.6.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
@@ -283,6 +283,114 @@ function getSkinPlanUsage(plan, account) {
     storeExp += levels * nonNegative(skin.store_exp);
   }
   return { byItem, byFabric, bySkin, unavailable, storeExp };
+}
+
+function getPresenceUpgradeUsage(plan, account) {
+  const byItem = {};
+  const byPresence = {};
+  const missingRows = [];
+  let totalCost = 0;
+  for (const [loverId, targets] of Object.entries(record(plan.presences))) {
+    const lover = db.lovers.find(item => item.id === Number(loverId));
+    const owned = account.ownedLovers[loverId];
+    if (!lover || !owned) continue;
+    for (const presence of lover.presences || []) {
+      if (presence.presence_type !== 'updatable') continue;
+      const minimum = Math.max(0, Math.round(numeric(presence.min_lvl)));
+      const maximum = Math.max(minimum, Math.round(numeric(presence.max_lvl, 30)));
+      const current = Math.max(minimum, Math.min(maximum,
+        Math.round(numeric(owned.presences?.[presence.id], minimum))));
+      const target = Math.max(current, Math.min(maximum,
+        Math.round(numeric(targets[presence.id], current))));
+      if (target <= current) continue;
+      let cost = 0;
+      let complete = true;
+      for (let level = current + 1; level <= target; level++) {
+        const row = db.presenceCurvesMap.get(`${presence.level_curve}:${level}`);
+        const stepCost = Number(row?.cost);
+        if (!row || !Number.isFinite(stepCost) || stepCost < 0) {
+          missingRows.push({ loverId: Number(loverId), presenceId: presence.id, level });
+          complete = false;
+          break;
+        }
+        cost += stepCost;
+      }
+      const itemId = Math.round(numeric(presence.upgrade_item_id));
+      if (!itemId || !complete) continue;
+      byItem[itemId] = (byItem[itemId] || 0) + cost;
+      byPresence[presence.id] = { loverId: Number(loverId), from: current, to: target, cost, itemId };
+      totalCost += cost;
+    }
+  }
+  return { byItem, byPresence, missingRows, totalCost };
+}
+
+function runPresenceAutoDistribution(account, plan, availableBag = account.bag) {
+  const nextPlan = { ...plan, presences: clone(record(plan.presences)) };
+  const reserved = getPresenceUpgradeUsage(nextPlan, account);
+  const bag = { ...availableBag };
+  for (const [itemId, count] of Object.entries(reserved.byItem)) {
+    bag[itemId] = Math.max(0, nonNegative(bag[itemId]) - count);
+  }
+
+  const summaries = [];
+  let addedLevels = 0;
+  let addedPercentPoints = 0;
+  for (let guard = 0; guard < 300; guard++) {
+    let best = null;
+    for (const lover of db.lovers) {
+      const owned = account.ownedLovers[lover.id];
+      if (!owned) continue;
+      for (const presence of lover.presences || []) {
+        if (presence.presence_type !== 'updatable') continue;
+        const itemId = Math.round(numeric(presence.upgrade_item_id));
+        if (!itemId) continue;
+        const current = Math.max(presence.min_lvl || 0,
+          Math.round(numeric(owned.presences?.[presence.id], presence.min_lvl || 0)));
+        const planned = Math.max(current,
+          Math.round(numeric(nextPlan.presences[lover.id]?.[presence.id], current)));
+        const maximum = Math.max(current, Math.round(numeric(presence.max_lvl, 30)));
+        if (planned >= maximum) continue;
+        const nextLevel = planned + 1;
+        const row = db.presenceCurvesMap.get(`${presence.level_curve}:${nextLevel}`);
+        const cost = Number(row?.cost);
+        if (!row || !Number.isFinite(cost) || cost <= 0 || nonNegative(bag[itemId]) < cost) continue;
+        const before = Engine.calcPresencePercents(presence, planned, db.presenceCurvesMap);
+        const after = Engine.calcPresencePercents(presence, nextLevel, db.presenceCurvesMap);
+        const gain = ATTRIBUTES.reduce((sum, attr) => sum + Math.max(0, numeric(after[attr]) - numeric(before[attr])), 0);
+        if (gain <= 0) continue;
+        const efficiency = gain / cost;
+        if (!best || efficiency > best.efficiency ||
+            (efficiency === best.efficiency && presence.id < best.presence.id)) {
+          best = { lover, presence, itemId, cost, nextLevel, gain, efficiency };
+        }
+      }
+    }
+    if (!best) break;
+    nextPlan.presences[best.lover.id] ||= {};
+    nextPlan.presences[best.lover.id][best.presence.id] = best.nextLevel;
+    bag[best.itemId] -= best.cost;
+    addedLevels++;
+    addedPercentPoints += best.gain;
+    const existing = summaries.find(item => item.itemId === best.itemId);
+    if (existing) {
+      existing.count += best.cost;
+      existing.levels++;
+    } else {
+      summaries.push({ itemId: best.itemId, count: best.cost, levels: 1 });
+    }
+  }
+
+  return {
+    plan: normalizePlan(nextPlan, account),
+    summary: {
+      addedLevels,
+      addedPercentPoints: Number(addedPercentPoints.toFixed(2)),
+      items: summaries,
+      remainingByItem: Object.fromEntries(summaries.map(item => [item.itemId, bag[item.itemId] || 0])),
+      blockedByMissingCurveRows: reserved.missingRows,
+    },
+  };
 }
 
 function makeWarnings(account, plan) {
@@ -625,29 +733,7 @@ export function calculateOracle(input = {}) {
     }
   }
   report.modifiers = modifierBreakdown;
-  const presenceUpgrade = { byItem: {}, byPresence: {}, totalCost: 0 };
-  for (const [loverId, targets] of Object.entries(plan.presences || {})) {
-    const lover = db.lovers.find(item => item.id === Number(loverId));
-    const owned = account.ownedLovers[loverId];
-    if (!lover || !owned) continue;
-    for (const presence of lover.presences || []) {
-      const target = Number(targets[presence.id] || 0);
-      const current = Number(owned.presences?.[presence.id] ?? presence.min_lvl ?? 0);
-      if (presence.presence_type !== 'updatable' || target <= current) continue;
-      let cost = 0;
-      for (let level = current + 1; level <= target; level++) {
-        const row = db.presenceCurvesMap.get(`${presence.level_curve}:${level}`);
-        if (!row || !Number.isFinite(Number(row.cost))) continue;
-        cost += Number(row.cost);
-      }
-      const itemId = Number(presence.upgrade_item_id);
-      if (itemId && cost > 0) {
-        presenceUpgrade.byItem[itemId] = (presenceUpgrade.byItem[itemId] || 0) + cost;
-        presenceUpgrade.totalCost += cost;
-      }
-      presenceUpgrade.byPresence[presence.id] = { from: current, to: target, cost, itemId };
-    }
-  }
+  const presenceUpgrade = getPresenceUpgradeUsage(plan, account);
   report.spent.presenceItems = presenceUpgrade.byItem;
   report.presenceUpgrade = presenceUpgrade;
   const inventory = Engine.summarizeBag(db.items, account.bag);
@@ -772,6 +858,14 @@ export function autoDistributeConclave(input = {}) {
   );
 }
 
+export function autoDistributePresencePlan(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const plan = normalizePlan(raw.plan, account);
+  const distribution = runPresenceAutoDistribution(account, plan, account.bag);
+  return { plan: distribution.plan, summary: distribution.summary };
+}
+
 export function autoDistributeAll(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
@@ -889,7 +983,13 @@ export function autoDistributeAll(input = {}) {
     plan.summons.lovers.push(candidate.id);
   }
 
-  return { plan, warnings: makeWarnings(account, plan) };
+  const presenceDistribution = runPresenceAutoDistribution(account, plan, summonBag);
+  plan.presences = presenceDistribution.plan.presences;
+  return {
+    plan,
+    warnings: makeWarnings(account, plan),
+    summary: { presences: presenceDistribution.summary },
+  };
 }
 
 export function commitOraclePlan(input = {}) {
@@ -997,7 +1097,10 @@ export function commitOraclePlan(input = {}) {
   for (const [skinId, skin] of Object.entries(skinUsage.bySkin)) draft.skins[skinId] = skin.to;
   draft.skinStoreExp = nonNegative(draft.skinStoreExp) + skinUsage.storeExp;
 
-  const presenceUsage = snapshot.report.presenceUpgrade || { byItem: {}, byPresence: {} };
+  const presenceUsage = snapshot.report.presenceUpgrade || { byItem: {}, byPresence: {}, missingRows: [] };
+  if (presenceUsage.missingRows?.length) {
+    return { ok: false, error: { code: 'PRESENCE_CURVE_INCOMPLETE', missingRows: presenceUsage.missingRows, message: 'В таблице кривых Веяний отсутствуют цены для выбранных уровней. План не применён.' } };
+  }
   for (const [itemId, count] of Object.entries(presenceUsage.byItem)) {
     const available = draft.bag[itemId] || 0;
     if (available < count) {
