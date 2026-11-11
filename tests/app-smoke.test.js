@@ -54,9 +54,17 @@ for (const expected of expectedTabs) {
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
 }
-assert.ok(root.innerHTML.includes('Цель'), 'presence upgrade targets are exposed in the UI');
+const clickTab = async name => {
+  const tab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === name);
+  assert.ok(tab, `tab ${name} is available`);
+  tab.handlers.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+};
+await clickTab('auras');
 assert.ok(root.innerHTML.includes('Распределить жетоны'), 'presence tab exposes automatic distribution');
+await clickTab('dominance');
 assert.ok(root.innerHTML.includes('Модификаторы аур и Веяний'), 'dominance dashboard displays aura and presence modifiers');
+await clickTab('bag');
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
 const importedHelperProfile = appModule.normalizeState({
   profile: { name: 'API import', region: 'EU', server: '328' },
