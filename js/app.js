@@ -635,6 +635,7 @@ async function render() {
           <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
           <button class="btn btn-sm" id="btn-import">📂 Импорт</button>
           <button class="btn btn-sm" id="btn-import-helper">🧩 Импорт дампа</button>
+          <button class="btn btn-sm btn-danger" id="btn-reset-account">🧹 Очистить калькулятор</button>
         </div>
       </header>
 
@@ -1121,12 +1122,14 @@ function renderSkinsTab(db, oracle) {
       </div>
       ${allSkins.map(s => {
         const result = oracle.skins[s.id];
+        const apiSkinStep = (oracle.meta.helperApi?.skinSteps || []).find(step => Number(step.skinId) === Number(s.id));
         return `
         <div class="item-row">
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
           <div class="row-info">
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
             <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
+            ${apiSkinStep ? `<div class="api-exact-step">API следующий шаг: ${apiSkinStep.nextKind || 'ресурс'} · ${fmt(apiSkinStep.nextCost)} · +${fmt(apiSkinStep.nextGain)}</div>` : ''}
           </div>
           <div class="row-controls skin-controls">
             <label class="mini-field">Сейчас<input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Текущий уровень облика" /></label>
@@ -1350,6 +1353,14 @@ function bindEvents(db) {
   document.getElementById('profile-avatar-select')?.addEventListener('change', event => { state.profile.avatarId = Number(event.target.value); saveState(); render(); });
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
+  document.getElementById('btn-reset-account')?.addEventListener('click', () => {
+    const ok = globalThis.confirm?.('Полностью очистить текущий аккаунт? Будут удалены смотрители, партнёры, уровни, ресурсы, предметы и план прокачки. Экспортируй профиль заранее, если хочешь сохранить копию.') ?? false;
+    if (!ok) return;
+    state.account = createBlankAccountData();
+    state.plan = createBlankPlan(state.account);
+    saveState();
+    render();
+  });
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
   document.querySelectorAll('[data-tab]').forEach(btn => {
