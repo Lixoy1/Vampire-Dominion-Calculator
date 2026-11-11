@@ -1,0 +1,110 @@
+[
+  {
+    "id": 1,
+    "name": "NEOPHYTE",
+    "min_warden_lvl": 1,
+    "max_warden_lvl": 100,
+    "max_talent_lvl": 40,
+    "price": 0,
+    "talent_exp_bonus": 0,
+    "item_ids": []
+  },
+  {
+    "id": 2,
+    "name": "DUSK",
+    "min_warden_lvl": 100,
+    "max_warden_lvl": 150,
+    "max_talent_lvl": 80,
+    "price": 1,
+    "talent_exp_bonus": 200,
+    "item_ids": [
+      4154,
+      4155,
+      4156
+    ]
+  },
+  {
+    "id": 3,
+    "name": "NIGHTFALL",
+    "min_warden_lvl": 150,
+    "max_warden_lvl": 200,
+    "max_talent_lvl": 120,
+    "price": 3,
+    "talent_exp_bonus": 400,
+    "item_ids": [
+      4157,
+      4158,
+      4159
+    ]
+  },
+  {
+    "id": 4,
+    "name": "MIDNIGHT",
+    "min_warden_lvl": 200,
+    "max_warden_lvl": 250,
+    "max_talent_lvl": 160,
+    "price": 9,
+    "talent_exp_bonus": 600,
+    "item_ids": [
+      4160,
+      4161,
+      4162
+    ]
+  },
+  {
+    "id": 5,
+    "name": "TWILIGHT",
+    "min_warden_lvl": 250,
+    "max_warden_lvl": 300,
+    "max_talent_lvl": 200,
+    "price": 36,
+    "talent_exp_bonus": 800,
+    "item_ids": [
+      4163,
+      4164,
+      4165
+    ]
+  },
+  {
+    "id": 6,
+    "name": "FALLEN_STAR",
+    "min_warden_lvl": 300,
+    "max_warden_lvl": 350,
+    "max_talent_lvl": 240,
+    "price": 180,
+    "talent_exp_bonus": 1000,
+    "item_ids": [
+      4166,
+      4167,
+      4168
+    ]
+  },
+  {
+    "id": 7,
+    "name": "BLOOD_MOON",
+    "min_warden_lvl": 350,
+    "max_warden_lvl": 400,
+    "max_talent_lvl": 280,
+    "price": 1080,
+    "talent_exp_bonus": 1600,
+    "item_ids": [
+      4169,
+      4170,
+      4171
+    ]
+  },
+  {
+    "id": 8,
+    "name": "DARK_SUN",
+    "min_warden_lvl": 400,
+    "max_warden_lvl": 450,
+    "max_talent_lvl": 320,
+    "price": 6480,
+    "talent_exp_bonus": 2400,
+    "item_ids": [
+      4172,
+      4173,
+      4174
+    ]
+  }
+]
