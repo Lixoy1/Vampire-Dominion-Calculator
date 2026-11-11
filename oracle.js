@@ -5,8 +5,8 @@
  * Render server. The calculator deliberately does not connect to Game of
  * Vampires: players enter their own observed in-game values.
  */
-import { GAME_DB } from './js/data.js';
-import * as Engine from './js/engine.js';
+import { GAME_DB } from './scripts/data.js';
+import * as Engine from './scripts/engine.js';
 
 export const ORACLE_VERSION = '1.8.0';
 export const ORACLE_SCHEMA_VERSION = 1;
@@ -15,15 +15,15 @@ const CATALOG_PROVENANCE = Object.freeze({
   sourceId: 'dhampir-helper-api',
   sourceLabel: 'API бота «Помощник Дампира»',
   sourceType: 'third-party-bot-api',
-  trustLevel: 'user-confirmed',
+  trustLevel: 'helper-api-observation',
   gameServerVerified: false,
-  note: 'Пользователь подтвердил ответы и каталоги API «Помощника Дампира» как контрольный источник для совместимости Oracle с ботом.',
+  note: 'Снимки стороннего API-помощника используются как контрольные наблюдения для совместимости. Они не подтверждают формулы официальной игры.',
 });
 
 const GAME_VERIFICATION = Object.freeze({
-  status: 'helper-api-confirmed',
+  status: 'not-game-verified',
   verifiedAgainstGame: false,
-  note: 'Контрольным источником проекта являются выгрузки API «Помощника Дампира». Подключение к официальному API Game of Vampires не выполняется.',
+  note: 'Используются наблюдения из API «Помощника Дампира». Сверка с официальным сервером Game of Vampires не выполнялась; игровые формулы официально не подтверждены.',
 });
 
 const ATTRIBUTES = Engine.ATTRIBUTES;
@@ -2233,7 +2233,7 @@ export function importDhampirSnapshot(input = {}) {
   account.helperImport = {
     source: 'dhampir-helper-api',
     sourceLabel: 'API бота «Помощник Дампира»',
-    trustLevel: 'user-confirmed',
+    trustLevel: 'helper-api-observation',
     importedAt: new Date().toISOString(),
     observedWardenDominance,
     wardenFlags: sourceWardenFlags,
