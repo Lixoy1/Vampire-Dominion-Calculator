@@ -1,172 +1,54 @@
-# Server Oracle — архитектура и контракт
+# Архитектура Vampire Dominion
 
-## Цель
+## Назначение
 
-Калькулятор не подключается к Game of Vampires. Игрок вручную переносит в профиль фактические значения со своего игрового экрана. Единый Oracle на backend Render рассчитывает прогнозы по введённым значениям, базе каталога и текущей версии расчётного движка.
+Vampire Dominion — независимый проект энтузиастов и любителей игры «Наследие Вампиров». Это инструмент для ручного учёта профиля, расчётов и планирования развития аккаунта.
 
-Важно различать:
-- **Входные значения** — введены игроком и соответствуют тому, что он видит в игре на момент ввода.
-- **Расчётный результат** — рассчитан сервером проекта по текущим формулам и таблицам.
-- **Не подтверждённые формулы** — явно помечаются как приближённые/оценочные; не становятся «точными» только потому, что считаются на сервере.
+## Компоненты
 
-Oracle не утверждает, что его ответ является ответом Game of Vampires. Он гарантирует единое место выполнения наших расчётов, а не синхронизацию с игровым сервером.
+- `index.html` — оболочка Mini App, нижняя навигация, модальные окна и числовая клавиатура.
+- `scripts/app.js` — клиентская навигация, экраны, профили, формы и отображение расчётов.
+- `scripts/data.js` и `data/*.json` — встроенный каталог игровых сущностей и таблиц.
+- `scripts/engine.js` — математические функции и оптимизаторы.
+- `oracle.js` — серверный расчёт, нормализация профиля, проверка и применение планов.
+- `server.js` — Express, раздача SPA и HTTP-маршруты Oracle.
 
-## Происхождение данных и уровни доверия
+## Поток расчёта
 
-Каталог проекта содержит справочные данные, полученные из API стороннего бота «Помощник Дампира». Это источник A — полезный источник для наполнения каталога, но не официальный API Game of Vampires и не подтверждение того, что каждое поле совпадает с текущим состоянием игры.
+1. Игрок вводит значения аккаунта и целевые параметры.
+2. Клиент отправляет `account` и `plan` в `POST /api/oracle/calculate`.
+3. Oracle нормализует входные данные и рассчитывает отчёт.
+4. Клиент показывает результат, затраты и ограничения модели.
+5. Автораспределение формирует предварительный план без списания предметов.
+6. `POST /api/oracle/commit-plan` проверяет все ресурсы и только после успешной проверки возвращает обновлённый профиль.
 
-Oracle публикует это происхождение в `meta.catalogProvenance` и `GET /api/oracle/meta`:
-- `sourceId: dhampir-helper-api`;
-- `sourceType: third-party-bot-api`;
-- `trustLevel: reference-unverified`;
-- `gameServerVerified: false`.
+Профиль не хранится на сервере. Локальное сохранение выполняется на стороне браузера; JSON-экспорт предназначен для резервной копии и переноса профиля.
 
-Подтверждённые значения самой игры — источник B. Они появляются только после отдельной сверки игроком с игровым интерфейсом или получения достоверного игрового контрольного примера. Пока такие контрольные значения не внесены, Oracle возвращает `meta.gameVerification.status: not-verified`.
+## Числовой ввод
 
-Не смешиваем:
-1. справочные сведения стороннего бота;
-2. значения профиля, которые игрок вручную переписал из игры;
-3. формулы и результаты, рассчитанные нашим движком;
-4. значения, независимо подтверждённые в игре.
+Клавиатура поддерживает обычные цифры, десятичную точку и суффиксы:
+- K — (10^3)
+- M — (10^6)
+- B — (10^9)
+- T — (10^{12})
 
-Наличие данных в API стороннего бота не повышает статус расчётной формулы до точной. Для обновления каталога нужны полные исходные JSON-ответы, время получения, версия/регион источника (если доступны), проверка схемы, дубликатов и полноты. Частичный фрагмент JSON нельзя выдавать за полный каталог.
+Также доступен прямой ввод строк вроде `2.5M`. Перед записью значение проверяется по минимальному и максимальному пределу конкретного поля.
 
-## Поток данных
+## Таланты и опыт
 
-1. Игрок вводит кровь, очки Конклава и Сада, уровни смотрителей, таланты, опыт, Вдохновения, Веяния, близость, очки Доверия, уровни Кровных уз, уровни обликов и количество предметов.
-2. Клиент отправляет профиль и план в `POST /api/oracle/calculate`.
-3. Render нормализует входные данные, подставляет каталог проекта и запускает расчётный движок.
-4. Клиент отображает ответ Oracle. При ошибке запроса локальный fallback запрещён: интерфейс показывает ошибку и кнопку повтора.
-5. При применении плана Oracle повторно проверяет ресурсы и возвращает обновлённую копию профиля. Клиент сохраняет её локально.
+- Один звёздный пункт опыта оценивается в 200 EXP.
+- Стоимость повышения отдельного таланта зависит от его звёздности.
+- Бонусный опыт прорыва и личный опыт смотрителя показываются раздельно.
+- Свитки и рукописи учитываются по ID предметов из каталога и остаткам Сумки.
+- Оптимизатор сначала строит план. Ресурсы списываются только при применении плана.
 
-Профиль не хранится на backend. API stateless: каждый запрос содержит нужный профиль и план; после вычисления данные не сохраняются на сервере приложения.
+## Ограничения модели
 
-### Импорт снимков помощника
+Стоимость крови для уровней и стоимость Кровных уз в отдельных сценариях остаются расчётными оценками. Прирост от призыва показывается отдельно. Ауры и Веяния отображаются как процентные модификаторы и не прибавляются напрямую к абсолютному Господству без полной таблицы пересчёта.
 
-`POST /api/oracle/import-helper` принимает `{ account, snapshots }`, где `snapshots` — массив отдельных JSON-ответов/массивов записей из API «Помощника Дампира». Импортёр поддерживает строки смотрителей (`template_id`, `level`, `promote_id`, `talent_exp`, `filled`, `dominance`), Кровные узы (`template_id`, `level`, `percent_level`), облики (`kind`, `owner_id`, `template_id`, `level`), атрибуты Конклава, записи сумки с количеством и объект опыта/уровня Гильдии. Каждый ID сверяется с локальным каталогом; неизвестные/неподдерживаемые записи учитываются в `summary.skipped`.
+## Безопасность
 
-`filled` и `dominance` сохраняются в `account.helperImport` как значения стороннего источника, отдельно от игровых расчётов. Записи не становятся подтверждёнными данными Game of Vampires. Импорт не может восстановить пропущенные в дампе ресурсы, например Близость или Доверие; их нужно проверить и ввести вручную. Клиент может выбрать несколько отдельных JSON-файлов, после чего профиль отправляется на сервер для преобразования и возвращается без серверного хранения.
-
-
-## HTTP API
-
-Все ответы JSON. Успешный транспортный ответ имеет форму `{ ok: true, result: ... }`; ошибки — `{ ok: false, error: { code, message } }`.
-
-| Маршрут | Назначение |
-|---|---|
-| `GET /api/oracle/meta` | Версия Oracle/схемы, секции и ограничения точности |
-| `POST /api/oracle/calculate` | Сводный снимок всех расчётов по профилю и плану |
-| `POST /api/oracle/auto-conclave` | Автораспределение очков Конклава |
-| `POST /api/oracle/auto-distribute` | Единое автораспределение плана |
-| `POST /api/oracle/commit-plan` | Проверка ресурсов и атомарное применение плана к копии профиля |
-| `POST /api/oracle/summon` | Проверка доступности призыва смотрителя и списание предметов |
-| `POST /api/oracle/summon-lover` | Проверка доступности призыва возлюбленной и списание предметов |
-| `POST /api/oracle/import-helper` | Импорт нескольких JSON-снимков стороннего помощника в ручной профиль с проверкой ID каталога |
-
-API принимает только JSON-объект с `account`; при отсутствии профиля возвращается HTTP 400. Тело ограничено 256 KB, расчётные маршруты ограничены 120 запросами в минуту на IP и возвращают HTTP 429 при превышении. Ответы Oracle отправляются с `Cache-Control: no-store`.
-
-## Разделы ответа
-
-Снимок `calculate` включает:
-- `report` — общий прирост и расход ресурсов, включая отдельное поле оценки призыва;
-- `conclaveBranches` и `courtyardUpgrade`;
-- `wardens` — сводки талантов, опыт, базовые атрибуты, стоимость выбранного повышения и Вдохновения;
-- `lovers` — Кровные узы и Веяния;
-- `inventory` — серверная группировка предметов сумки и их количества;
-- `skins` — текущий уровень, лимит, качество, стоимость уровня в ткани и требование ткани до максимума;
-- `summonCandidates` — доступность призыва смотрителей и возлюбленных;
-- `warnings` — оговорки точности.
-
-Метаданные включают версии Oracle, схемы, движка и каталога, время расчёта, источник входа `player-entered`, происхождение каталога в `catalogProvenance`, отдельный статус `gameVerification`, `gameConnected: false` и `stateless: true`.
-
-## Единый источник расчёта
-
-Браузер больше не импортирует расчётные методы из `js/engine.js`. Он отправляет входные значения в Oracle, получает структурированный результат и использует его для отображения разделов. В браузере остаются обработчики пользовательского ввода, локальное сохранение/импорт/экспорт, поиск по каталогу и отрисовка интерфейса.
-
-`js/engine.js` остаётся расчётным модулем, но импортируется только серверным `oracle.js`. Это позволяет централизованно менять формулы и таблицы, не поддерживая две отдельные реализации — в браузере и на сервере.
-
-## Ограничения точности
-
-На текущем движке специально помечены:
-- стоимость уровней смотрителей в Крови — аппроксимация кривой прогрессии;
-- стоимость Кровных уз — формульная оценка;
-- прирост Господства от призыва — оценка, которая исключена из поля `report.gain.total` и показана отдельно в `report.gain.summon` / `report.gain.totalWithSummonEstimate`.
-
-Серверное исполнение не делает эти формулы точными. До публичного релиза требуются контрольные примеры: игрок фиксирует исходное состояние, вводит его в калькулятор, сравнивает прогноз стоимости/прироста с игровым результатом, а затем сохраняет вход, версию каталога, ожидаемый результат и фактический результат как регрессионный тест.
-
-## Безопасность и приватность
-
-- Не запрашиваются игровой пароль, игровой токен, session cookie или вход через Google/VK/Facebook.
-- Никакие запросы в Game of Vampires и её CDN не выполняются.
-- Telegram Bot Token используется только на backend для Telegram-бота и проверки Telegram Mini App initData; он не отправляется в браузер.
-- Профили передаются для расчёта только по запросу игрока и не записываются в базу Render.
-- Входная нормализация ограничивает диапазоны уровней и объёмы числовых ресурсов.
-
-## Проверки
-
-Локально и в GitHub Actions:
-- `npm run check` — синтаксис server, Oracle и клиентских файлов.
-- `npm test` — тесты расчётного движка, Oracle, HTTP API и smoke test девяти вкладок.
-- `npm run verify:icons` — локальные WebP-иконки.
-
-Проверка API запускает отдельный экземпляр Express на временном порту, вызывает health/meta/calculate и проверяет ошибочный вход без профиля.
-
-Публичный релиз возможен после зелёного CI, проверки реального Render deployment и сверки отмеченных приближённых формул по игровым контрольным данным.
-
-
-## Skin upgrade transaction
-
-The account's current skin level is separate from the planned target (`plan.skins[skinId]`). Oracle resolves each target against the catalogue and current account state, then computes card and fabric usage. A skin's own card item (same ID as the skin) is consumed before quality fabric: A = item 4421 / 50, S = 4422 / 100, SS = 4423 / 200 per level. Fabric is rejected for non-purchasable skins. The commit validates all required resources before mutating the cloned account, updates skin levels and adds the catalogue `store_exp` for each gained level. This changes shop experience, not the exact dominance total. Automatic skin ranking is intentionally withheld until trustworthy per-level `next_gain` data is available for every skin.
-
-
-## Aura and presence reporting
-
-The calculation response exposes `report.modifiers` with per-attribute aura percentages split into `talent` and `book` buckets, plus per-attribute presence percentages. The values use the existing engine formulas (`calcAuraPercent` and `calcPresencePercents`) and the imported presence curve table. These are modifier percentages, not absolute dominance points: they are intentionally excluded from `report.gain.total` until the game's exact stacking/rounding rules can be checked against a game-side reference result. The UI presents them separately in the dominance dashboard.
-
-
-## Presence upgrade transaction
-
-The plan accepts absolute target levels at `plan.presences[loverId][presenceId]` for owned, updatable presences only. The server clamps targets to the catalogue range and derives token cost from the matching `lover_presence_levels` rows for each newly reached level, charging the presence template's `upgrade_item_id`. Preview exposes `report.presenceUpgrade.byItem` and `byPresence`; planned presence percentages are reflected in the modifier breakdown. Commit validates token inventory before applying target levels and deducting tokens. Collection presences remain account state and cannot be upgraded through this path.
-
-
-## Presence auto-distribution
-
-`POST /api/oracle/auto-presences` plans upgrades for owned, updatable presences using the per-level costs in `lover_presence_levels`. The optimizer reserves any already-planned presence costs first, then spends remaining matching tokens on the next affordable level with the greatest summed percentage-point increase per token. The full `/api/oracle/auto-distribute` path runs this same step after Warden, talent and summon reservations. It returns `summary.addedLevels`, `summary.addedPercentPoints` and per-item reservations.
-
-This is a percentage-modifier allocation heuristic, not a dominance-point optimizer. Percent modifiers remain excluded from `report.gain.total` because exact in-game stacking and rounding have not been verified. Aura auto-upgrades are not included: current aura catalogue rows identify the upgrade item and percentage step, but do not provide an authoritative per-level item cost table.
-
-
-## Personal talent EXP allocation
-
-Talent plans may include `plan.talents[wardenId].exp_levels[position]` in addition to scroll and script increments. The allocator spends personal Warden EXP in 200-EXP star-point units, using bounded knapsack to find the largest spendable star-point total within each Warden's remaining level cap. Commit checks each Warden's remaining EXP, deducts it from that Warden, and applies the planned talent level increments. When a Warden level target is also present, the level-gain preview is recalculated against the post-plan talent levels and replaces the previous baseline contribution without double-counting. The calculation remains an engine model and is not independently game-server verified.
-
-## Scarlet Bond auto-allocation
-
-`POST /api/oracle/auto-bonds` allocates each owned Lover's remaining Affinity across unlocked flat and percentage branches using marginal estimated gain per Affinity. Branch caps and Closeness unlocks are respected; the preview reports estimated Affinity spend and gain. The existing Bond cost functions are approximate reference-engine formulas, so the result is explicitly marked as estimated. The all-in-one plan runs this after Warden levels and talent targets have been planned, so percentage bonuses use the planned Warden base attributes.
-
-## Shared inventory reservations
-
-The all-in-one planner now reserves manually selected skin cards and fabric after breakthrough materials and before talent, summon and presence allocation. It then carries one remaining-item ledger forward through those branches. Skin auto-ranking itself remains unavailable because the catalogue has no reliable per-level gain values for every skin; aura auto-upgrades remain unavailable because per-level item prices are not present in the supplied catalogue.
-
-
-
-## Helper API source of truth
-
-The calculation target is parity with the **API responses from «Помощник Дампира»** that the user extracted in developer mode and confirmed as correct. These responses are treated as the project's authoritative reference for reproducing the Helper calculator. No separate in-game screenshot is required to accept a Helper API value.
-
-The catalogue JSON tables bundled with the project are the source for entity IDs and progression rows: Wardens, Lovers, Items, Warden promotions, Conclave, Courtyard and Presence curves. The user profile can additionally import dynamic API responses. The importer unwraps common `data` / `result` / `response` / `payload` envelopes and reads:
-
-- Warden and Lover rows, including current levels, EXP, Closeness, Affinity, `filled` and source `dominance`;
-- `levels.wardens` next-step values (`next_cost`, `next_gain`, `next_kind`);
-- nested aura levels and `auras.items[].best_path.cost/gain`;
-- `talents.scripts`, `talents.scrolls`, `books.items`, and `manuscripts.tiers`;
-- Lover presence levels, Scarlet Bond levels, skin levels and their available `next_*` fields;
-- inventory, Conclave attributes and Guild progress.
-
-Exact API observations are retained under `account.helperImport.apiObservations`; source `dominance` values remain separate from computed gains and are never silently added to the formula. The Oracle exposes an import summary in `meta.helperApi` and the UI identifies the accepted Helper API source.
-
-### Formula fallbacks
-
-Where an API response provides a usable `next_cost/next_gain` or `best_path`, preserve those values as exact Helper observations and prefer them for the corresponding action once the target/resource mapping is known. Do not infer a resource type from `next_cost` alone: use `next_kind` or the response's owning resource. Where no matching API step/path is present, the current engine fallback remains explicitly marked as estimated; it must never overwrite an observed API value.
-
-The source is a Helper bot API, not a direct connection to the official Game of Vampires backend. That distinction describes the integration boundary, not a claim that the user's Helper API dumps are unreliable.
+- Пароль и токен игрового аккаунта не запрашиваются.
+- Telegram Bot Token хранится только в серверной переменной окружения.
+- Oracle stateless: профиль передаётся на расчёт и не сохраняется на backend.
+- Применение плана выполняется только после проверки доступных ресурсов.

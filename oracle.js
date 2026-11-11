@@ -11,19 +11,10 @@ import * as Engine from './scripts/engine.js';
 export const ORACLE_VERSION = '1.8.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
-const CATALOG_PROVENANCE = Object.freeze({
-  sourceId: 'dhampir-helper-api',
-  sourceLabel: 'API бота «Помощник Дампира»',
-  sourceType: 'third-party-bot-api',
-  trustLevel: 'helper-api-observation',
-  gameServerVerified: false,
-  note: 'Снимки стороннего API-помощника используются как контрольные наблюдения для совместимости. Они не подтверждают формулы официальной игры.',
-});
-
-const GAME_VERIFICATION = Object.freeze({
-  status: 'not-game-verified',
-  verifiedAgainstGame: false,
-  note: 'Используются наблюдения из API «Помощника Дампира». Сверка с официальным сервером Game of Vampires не выполнялась; игровые формулы официально не подтверждены.',
+const PROJECT_INFO = Object.freeze({
+  name: 'Vampire Dominion',
+  kind: 'community-project',
+  description: 'Независимый проект энтузиастов и любителей игры «Наследие Вампиров».',
 });
 
 const ATTRIBUTES = Engine.ATTRIBUTES;
@@ -418,7 +409,7 @@ function makeWarnings(account, plan) {
   });
   if (hasLevelPlan) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Для уровней без импортированного Helper API next_cost используется расчётная кривая. Введённые API next_cost/next_gain сохраняются как точные наблюдения и не подменяются этой оценкой.',
+    message: 'Для уровней без полной таблицы стоимости используется расчётная кривая; оценка отображается отдельно.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
@@ -427,7 +418,7 @@ function makeWarnings(account, plan) {
   });
   if (hasBondPlan) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
-    message: 'Для шагов Кровных уз без соответствующего Helper API next_cost применяется оценочная формула; импортированные API-наблюдения сохраняются отдельно.',
+    message: 'Стоимость Кровных уз рассчитывается по оценочной модели, если точная стоимость шага отсутствует в каталоге.',
   });
   if (plan.summons.wardens.length) warnings.push({
     code: 'ESTIMATED_SUMMON_GAIN',
@@ -658,41 +649,6 @@ export function autoDistributeTalentPlan(input = {}) {
   };
 }
 
-function getHelperApiImportSummary(account) {
-  const imported = record(account.helperImport);
-  const observations = record(imported.apiObservations);
-  const wardenSteps = record(observations.wardenSteps);
-  return {
-    source: imported.source || null,
-    sourceLabel: imported.sourceLabel || null,
-    trustLevel: imported.trustLevel || null,
-    importedAt: imported.importedAt || null,
-    observedWardens: Object.keys(record(imported.observedWardenDominance)).length,
-    observedWardenSteps: Object.keys(wardenSteps).length,
-    wardenSteps,
-    bondStepRows: Array.isArray(observations.bondSteps) ? observations.bondSteps.slice(0, 180) : [],
-    presenceStepRows: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.slice(0, 180) : [],
-    auraSteps: Array.isArray(observations.auraItems) ? observations.auraItems.filter(row => row && row.nextCost != null).slice(0, 180) : [],
-    skinStepRows: Array.isArray(observations.skinSteps) ? observations.skinSteps.slice(0, 180) : [],
-    talentSteps: Array.isArray(observations.talentSteps) ? observations.talentSteps.slice(0, 180) : [],
-    talentScriptRows: Array.isArray(observations.talentScripts) ? observations.talentScripts.length : 0,
-    auraPathRows: Array.isArray(observations.auraItems)
-      ? observations.auraItems.filter(row => Array.isArray(record(row).bestPath?.cost) || Array.isArray(record(row).bestPath?.gain)).length
-      : 0,
-    bookRows: Array.isArray(observations.bookItems) ? observations.bookItems.length : 0,
-    manuscriptTiers: Array.isArray(observations.manuscriptTiers) ? observations.manuscriptTiers.length : 0,
-    skinSteps: Array.isArray(observations.skinSteps) ? observations.skinSteps.length : 0,
-    presenceSteps: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.length : 0,
-    bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.length : 0,
-    responseCount: Math.max(0, Math.round(numeric(observations.responseCount))),
-    attributeBreakdown: observations.attributes ?? null,
-    bestPaths: record(observations.bestPaths),
-    skinStore: observations.skinStore ?? null,
-    trustPool: observations.trust ?? null,
-    observedWardenDominance: record(imported.observedWardenDominance),
-  };
-}
-
 export function calculateOracle(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
@@ -866,7 +822,7 @@ export function calculateOracle(input = {}) {
   report.presenceUpgrade = presenceUpgrade;
   const inventory = Engine.summarizeBag(db.items, account.bag);
   // Event and guild calculators use the same server-side inventory snapshot.
-  // The three-day donation cap is part of the reference helper's calculation.
+  // The three-day donation cap is modeled as a configured event limit.
   const eventCalculators = {
     intimacy: Engine.calcBagPoints(account.bag, INTIMACY_ITEM_IDS),
     attraction: Engine.calcBagPoints(account.bag, ATTRACTION_ITEM_IDS),
@@ -941,13 +897,11 @@ export function calculateOracle(input = {}) {
       schemaVersion: ORACLE_SCHEMA_VERSION,
       engineVersion: '5.0.0',
       dataVersion: 'GAME_DB_v5.0.0',
-      catalogProvenance: CATALOG_PROVENANCE,
-      gameVerification: GAME_VERIFICATION,
+      project: PROJECT_INFO,
       computedAt: new Date().toISOString(),
       inputSource: 'player-entered',
       gameConnected: false,
       stateless: true,
-      helperApi: getHelperApiImportSummary(account),
     },
     report,
     inventory,
@@ -1595,11 +1549,11 @@ export function summonLover(input = {}) {
 }
 
 /**
- * Imports the user's exact Helper API responses. The original API values are
+ * Imports a previously saved community data snapshot. Supplied values are
  * retained as observations so an absent next_cost/next_gain is never replaced
  * with a guessed value during import.
  */
-export function importDhampirSnapshot(input = {}) {
+export function importCommunitySnapshot(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
   const snapshots = Array.isArray(raw.snapshots)
@@ -1621,11 +1575,11 @@ export function importDhampirSnapshot(input = {}) {
     wardenSteps: 0, talentScripts: 0, auraPaths: 0, bookRows: 0, manuscriptTiers: 0,
   };
   const warnings = [];
-  const previousImport = record(account.helperImport);
+  const previousImport = record(account.communityImport);
   const observedWardenDominance = { ...record(previousImport.observedWardenDominance) };
   const sourceWardenFlags = { ...record(previousImport.wardenFlags) };
-  const previousObservations = record(previousImport.apiObservations);
-  const apiObservations = {
+  const previousObservations = record(previousImport.referenceObservations);
+  const referenceObservations = {
     wardenSteps: { ...record(previousObservations.wardenSteps) },
     talentScripts: Array.isArray(previousObservations.talentScripts) ? [...previousObservations.talentScripts] : [],
     talentScrolls: previousObservations.talentScrolls ?? null,
@@ -1717,7 +1671,7 @@ export function importDhampirSnapshot(input = {}) {
       if (!knownWardens.has(id)) { summary.skipped++; continue; }
       const step = exactStep(row);
       if (step.nextCost !== null || step.nextGain !== null) {
-        apiObservations.wardenSteps[id] = {
+        referenceObservations.wardenSteps[id] = {
           ...step,
           level: row.level ?? row.current_level ?? null,
           dominance: row.dominance ?? null,
@@ -1802,7 +1756,7 @@ export function importDhampirSnapshot(input = {}) {
       };
       const step = exactStep(row);
       if (step.nextCost !== null || step.nextGain !== null) {
-        apiObservations.bondSteps.push({ loverId: bondMeta.loverId, attribute: bondMeta.attribute, ...step });
+        referenceObservations.bondSteps.push({ loverId: bondMeta.loverId, attribute: bondMeta.attribute, ...step });
       }
       summary.bonds++;
     }
@@ -1831,7 +1785,7 @@ export function importDhampirSnapshot(input = {}) {
       }
       const step = exactStep(row);
       if (step.nextCost !== null || step.nextGain !== null) {
-        apiObservations.presenceSteps.push({ loverId, presenceId: presence.id, ...step });
+        referenceObservations.presenceSteps.push({ loverId, presenceId: presence.id, ...step });
       }
     }
   };
@@ -1850,7 +1804,7 @@ export function importDhampirSnapshot(input = {}) {
       const skin = owner?.skins?.find(item => item.id === id);
       const step = exactStep(row);
       if (step.nextCost !== null || step.nextGain !== null || row.next_kind !== undefined) {
-        apiObservations.skinSteps.push({ skinId: id, ownerType: kind, ownerId, ...step });
+        referenceObservations.skinSteps.push({ skinId: id, ownerType: kind, ownerId, ...step });
       }
       if (!skin) { summary.skipped++; continue; }
       account.skins[id] = level;
@@ -1892,7 +1846,7 @@ export function importDhampirSnapshot(input = {}) {
       const itemId = Math.round(numeric(item.item_id ?? item.id));
       const path = record(item.best_path ?? item.bestPath);
       if (itemId || Object.keys(path).length) {
-        apiObservations.auraItems.push({
+        referenceObservations.auraItems.push({
           itemId: itemId || null,
           count: item.count ?? null,
           bestPath: {
@@ -1929,7 +1883,7 @@ export function importDhampirSnapshot(input = {}) {
           }
           const step = exactStep(level);
           if (step.nextCost !== null || step.nextGain !== null) {
-            apiObservations.auraItems.push({
+            referenceObservations.auraItems.push({
               itemId: itemId || null, wardenId, auraId: (aura?.id ?? auraId) || null, ...step,
             });
           }
@@ -1966,8 +1920,8 @@ export function importDhampirSnapshot(input = {}) {
   const keepPath = (section, id, pathValue) => {
     const path = record(pathValue);
     if (!Object.keys(path).length) return;
-    if (id === undefined || id === null) apiObservations.bestPaths[section] = clone(path);
-    else apiObservations.bestPaths[section][String(id)] = clone(path);
+    if (id === undefined || id === null) referenceObservations.bestPaths[section] = clone(path);
+    else referenceObservations.bestPaths[section][String(id)] = clone(path);
   };
   const keepExactStep = (target, row, extra = {}) => {
     const step = exactStep(record(row));
@@ -1988,7 +1942,7 @@ export function importDhampirSnapshot(input = {}) {
     const manuscripts = record(object.manuscripts);
     const courtyard = record(object.courtyard);
 
-    // Compatibility with separate/flat Helper API endpoints.
+    // Compatibility with older saved profile snapshots.
     if (object.wardens !== undefined) setWardenRows(object.wardens);
     if (object.warden_list !== undefined) setWardenRows(object.warden_list);
     if (object.lovers !== undefined) setLoverRows(object.lovers);
@@ -1999,14 +1953,14 @@ export function importDhampirSnapshot(input = {}) {
     if (object.conclave_attributes !== undefined) setAttributeRows(object.conclave_attributes);
     if (object.conclaveLevels !== undefined) setAttributeRows(object.conclaveLevels);
 
-    if (object.total !== undefined) apiObservations.total = clone(object.total);
-    if (object.gain !== undefined) apiObservations.gain = clone(object.gain);
+    if (object.total !== undefined) referenceObservations.total = clone(object.total);
+    if (object.gain !== undefined) referenceObservations.gain = clone(object.gain);
     if (object.attributes !== undefined) {
       if (Array.isArray(object.attributes)) setAttributeRows(object.attributes);
-      apiObservations.attributes = clone(object.attributes);
+      referenceObservations.attributes = clone(object.attributes);
     }
 
-    // Global resources and current progression values from the Helper response.
+    // Global resources and current progression values from a saved snapshot.
     if (levels.blood !== undefined || levels.left !== undefined) {
       account.blood = nonNegative(levels.left ?? levels.blood);
     }
@@ -2022,7 +1976,7 @@ export function importDhampirSnapshot(input = {}) {
     }
     if (Array.isArray(conclave.attributes)) setAttributeRows(conclave.attributes);
     keepPath('conclave', null, conclave.best_path);
-    if (Object.keys(conclave).length) apiObservations.conclave = clone(conclave);
+    if (Object.keys(conclave).length) referenceObservations.conclave = clone(conclave);
 
     // The API returns Scarlet Bonds as a nested lover -> attribute -> level/percent structure.
     if (Array.isArray(bonds.lovers)) {
@@ -2044,16 +1998,16 @@ export function importDhampirSnapshot(input = {}) {
             level: Math.max(0, Math.min(600, Math.round(numeric(flat.level)))),
             percentLevel: Math.max(0, Math.min(600, Math.round(numeric(percent.level)))),
           };
-          keepExactStep(apiObservations.bondSteps, flat, { loverId, attribute, kind: 'level' });
-          keepExactStep(apiObservations.bondSteps, percent, { loverId, attribute, kind: 'percent' });
+          keepExactStep(referenceObservations.bondSteps, flat, { loverId, attribute, kind: 'level' });
+          keepExactStep(referenceObservations.bondSteps, percent, { loverId, attribute, kind: 'percent' });
           summary.bonds++;
         }
         owned.bonds = bondStates;
         keepPath('bonds', loverId, row.best_path);
       }
     }
-    if (bonds.trust !== undefined) apiObservations.trust = clone(bonds.trust);
-    if (bonds.idle !== undefined) apiObservations.idleBondLovers = clone(bonds.idle);
+    if (bonds.trust !== undefined) referenceObservations.trust = clone(bonds.trust);
+    if (bonds.idle !== undefined) referenceObservations.idleBondLovers = clone(bonds.idle);
 
     // Auras: retain original routes and map current levels by Warden/aura id.
     if (Array.isArray(auras.items)) {
@@ -2064,7 +2018,7 @@ export function importDhampirSnapshot(input = {}) {
       }
       setAuraItems(auras.items);
     }
-    if (auras.free !== undefined) apiObservations.freeAuras = clone(auras.free);
+    if (auras.free !== undefined) referenceObservations.freeAuras = clone(auras.free);
 
     // Presences are grouped by upgrade token, then by Lover and Presence.
     if (Array.isArray(presences.items)) {
@@ -2084,7 +2038,7 @@ export function importDhampirSnapshot(input = {}) {
         }
       }
     }
-    if (presences.free !== undefined) apiObservations.freePresences = clone(presences.free);
+    if (presences.free !== undefined) referenceObservations.freePresences = clone(presences.free);
 
     // Skins: fabric inventory and owned skin levels arrive inside skins.fabrics[].skins.
     if (Array.isArray(skins.fabrics)) {
@@ -2101,12 +2055,12 @@ export function importDhampirSnapshot(input = {}) {
       }
     } else if (Array.isArray(object.skins)) {
       setSkinRows(object.skins);
-      for (const row of object.skins) keepExactStep(apiObservations.skinSteps, row, {
+      for (const row of object.skins) keepExactStep(referenceObservations.skinSteps, row, {
         skinId: row.id ?? row.template_id ?? row.skin_id ?? null,
       });
     }
     if (skins.store !== undefined) {
-      apiObservations.skinStore = clone(skins.store);
+      referenceObservations.skinStore = clone(skins.store);
       if (skins.store.exp !== undefined) account.skinStoreExp = nonNegative(skins.store.exp);
     }
 
@@ -2114,7 +2068,7 @@ export function importDhampirSnapshot(input = {}) {
     const importTalentGroups = (groups, category) => {
       for (const item of rowsOf(groups)) {
         setItemCount(item);
-        pushBounded(category === 'scripts' ? apiObservations.talentScripts : apiObservations.talentScrollsRows, [item]);
+        pushBounded(category === 'scripts' ? referenceObservations.talentScripts : referenceObservations.talentScrollsRows, [item]);
         for (const wardenRowValue of rowsOf(item.wardens)) {
           const wardenRow = record(wardenRowValue);
           const wardenId = Math.round(numeric(wardenRow.warden_id ?? wardenRow.id));
@@ -2126,7 +2080,7 @@ export function importDhampirSnapshot(input = {}) {
               const position = Math.round(numeric(talent.position ?? talent.index, -1));
               if (position < 0 || position >= 50) continue;
               if (talent.level !== undefined) talentLevels[position] = Math.max(1, Math.round(numeric(talent.level, 1)));
-              keepExactStep(apiObservations.talentSteps, talent, {
+              keepExactStep(referenceObservations.talentSteps, talent, {
                 wardenId, position, category,
               });
             }
@@ -2140,7 +2094,7 @@ export function importDhampirSnapshot(input = {}) {
     if (talents.scrolls !== undefined) importTalentGroups(talents.scrolls, 'scrolls');
     if (talents.exp_items !== undefined) {
       for (const item of rowsOf(talents.exp_items)) setItemCount(item);
-      apiObservations.talentExpItems = clone(talents.exp_items);
+      referenceObservations.talentExpItems = clone(talents.exp_items);
     }
     if (Array.isArray(talents.own_exp)) {
       for (const row of talents.own_exp) {
@@ -2160,11 +2114,11 @@ export function importDhampirSnapshot(input = {}) {
     // Books and manuscripts retain their per-item values and any supplied inventory counts.
     if (books.items !== undefined) {
       for (const item of rowsOf(books.items)) setItemCount(item);
-      pushBounded(apiObservations.bookItems, books.items);
+      pushBounded(referenceObservations.bookItems, books.items);
       summary.bookRows += rowsOf(books.items).length;
     }
     if (manuscripts.tiers !== undefined) {
-      pushBounded(apiObservations.manuscriptTiers, manuscripts.tiers);
+      pushBounded(referenceObservations.manuscriptTiers, manuscripts.tiers);
       summary.manuscriptTiers += rowsOf(manuscripts.tiers).length;
     }
 
@@ -2181,11 +2135,11 @@ export function importDhampirSnapshot(input = {}) {
       account.courtyardExp = nonNegative(courtyard.left ?? courtyard.points);
     }
     keepPath('courtyard', null, courtyard.best_path);
-    if (object.intimacy !== undefined) apiObservations.intimacy = clone(object.intimacy);
-    if (object.attraction !== undefined) apiObservations.attraction = clone(object.attraction);
-    if (levels.best_path !== undefined) apiObservations.levelBestPath = clone(levels.best_path);
-    if (conclave.best_path !== undefined) apiObservations.conclaveBestPath = clone(conclave.best_path);
-    if (object.books !== undefined) apiObservations.books = clone(object.books);
+    if (object.intimacy !== undefined) referenceObservations.intimacy = clone(object.intimacy);
+    if (object.attraction !== undefined) referenceObservations.attraction = clone(object.attraction);
+    if (levels.best_path !== undefined) referenceObservations.levelBestPath = clone(levels.best_path);
+    if (conclave.best_path !== undefined) referenceObservations.conclaveBestPath = clone(conclave.best_path);
+    if (object.books !== undefined) referenceObservations.books = clone(object.books);
 
     const guild = record(object.guildProgress ?? object.guild_progress ?? object.guild);
     const candidate = Object.keys(guild).length ? guild : object;
@@ -2199,7 +2153,7 @@ export function importDhampirSnapshot(input = {}) {
       };
       summary.guildProgress = true;
     }
-    apiObservations.responseCount++;
+    referenceObservations.responseCount++;
   };
 
   for (const snapshot of snapshots) {
@@ -2220,7 +2174,7 @@ export function importDhampirSnapshot(input = {}) {
       } else if (rows.some(row => row.item_id !== undefined || row.quantity !== undefined || row.amount !== undefined)) {
         setInventoryRows(rows);
       } else if (rows.some(row => row.next_cost !== undefined || row.next_gain !== undefined)) {
-        pushBounded(apiObservations.talentScripts, rows);
+        pushBounded(referenceObservations.talentScripts, rows);
         summary.talentScripts += rows.length;
       } else {
         summary.skipped += rows.length;
@@ -2230,17 +2184,17 @@ export function importDhampirSnapshot(input = {}) {
     }
   }
 
-  account.helperImport = {
-    source: 'dhampir-helper-api',
-    sourceLabel: 'API бота «Помощник Дампира»',
-    trustLevel: 'helper-api-observation',
+  account.communityImport = {
+    source: 'community-reference-data',
+    sourceLabel: 'Справочные данные проекта',
+    trustLevel: 'community-reference',
     importedAt: new Date().toISOString(),
     observedWardenDominance,
     wardenFlags: sourceWardenFlags,
-    apiObservations,
+    referenceObservations,
   };
   if (summary.skipped) warnings.push('Пропущено записей, не совпавших со схемой или каталогом: ' + summary.skipped + '.');
-  return { account, summary, warnings, provenance: CATALOG_PROVENANCE };
+  return { account, summary, warnings, provenance: PROJECT_INFO };
 }
 
 export function getOracleCapabilities() {
@@ -2249,26 +2203,24 @@ export function getOracleCapabilities() {
     schemaVersion: ORACLE_SCHEMA_VERSION,
     engineVersion: '5.0.0',
     dataVersion: 'GAME_DB_v5.0.0',
-    catalogProvenance: CATALOG_PROVENANCE,
-    gameVerification: GAME_VERIFICATION,
+    project: PROJECT_INFO,
     gameApiConnected: false,
     inputMode: 'manual-player-entry',
     stateless: true,
     sections: [
       'dominance', 'conclave', 'courtyard', 'warden-levels', 'talents',
       'auras', 'presences', 'presence-auto-distribution', 'blood-bonds', 'bond-auto-distribution', 'talent-exp-allocation', 'skins', 'summons', 'inventory',
-      'intimacy', 'attraction', 'guild-exp', 'helper-snapshot-import',
+      'intimacy', 'attraction', 'guild-exp',
     ],
     formulaCaveats: [
       'Warden blood costs currently use an approximate progression curve.',
       'Blood-bond costs currently use formula estimates.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
-      'User-confirmed Helper API responses are the parity source; dynamic next_cost/next_gain and best_path values are retained as exact observations.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
-      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula when no matching Helper API step/path is supplied.',
-      'Aura best_path values from Helper API are retained; the fallback catalogue has no complete per-level aura cost table.',
-      'Skin next_kind/next_cost/next_gain observations are retained; automatic ranking still requires a complete mapping from API rows to owned skin cards.',
+      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula.',
+      'Aura upgrades are shown from the current catalogue; a complete per-level cost table is not available for every aura.',
+      'Automatic skin ranking remains disabled until a complete, reliable gain table is available.',
     ],
   };
 }

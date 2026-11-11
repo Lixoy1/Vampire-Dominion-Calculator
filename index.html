@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>Помощник Дампира — Vampire Dominion</title>
-  <meta name="description" content="Vampire Dominion — персональный калькулятор господства, смотрителей, партнёров, ресурсов и развития аккаунта." />
+  <title>Vampire Dominion — Наследие Вампиров</title>
+  <meta name="description" content="Независимый проект энтузиастов и любителей игры «Наследие Вампиров»: калькулятор, расчёты и планирование развития аккаунта." />
   <meta name="theme-color" content="#090507" />
   <link rel="icon" href="./assets/crest.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./assets/css/style.css" />
@@ -48,31 +48,35 @@
   <div id="numpad-overlay" class="numpad-overlay hidden">
     <section class="numpad-sheet" role="dialog" aria-modal="true" aria-labelledby="numpad-title">
       <div class="numpad-top">
-        <div class="numpad-label" id="numpad-title">Введите значение</div>
+        <div class="numpad-heading">
+          <div class="numpad-label" id="numpad-title">Введите значение</div>
+          <button type="button" class="numpad-mode" data-key="MODE" aria-label="Переключить способ ввода">123</button>
+        </div>
         <div class="numpad-display" id="numpad-display">0</div>
-      </div>
-      <div class="numpad-multipliers">
-        <button type="button" data-mult="K">K (×10³)</button>
-        <button type="button" data-mult="M">M (×10⁶)</button>
-        <button type="button" data-mult="B">B (×10⁹)</button>
-        <button type="button" data-mult="T">T (×10¹²)</button>
+        <input class="numpad-direct-input" id="numpad-direct-input" type="text" inputmode="text" autocomplete="off" placeholder="Например, 2.5M" hidden />
+        <div class="numpad-resolved" id="numpad-resolved">0</div>
+        <div class="numpad-hint">Можно вводить с буквой: 2.5M = 2 500 000</div>
       </div>
       <div class="numpad-grid">
-        <button type="button" data-key="1">1</button>
-        <button type="button" data-key="2">2</button>
-        <button type="button" data-key="3">3</button>
-        <button type="button" data-key="4">4</button>
-        <button type="button" data-key="5">5</button>
-        <button type="button" data-key="6">6</button>
         <button type="button" data-key="7">7</button>
         <button type="button" data-key="8">8</button>
         <button type="button" data-key="9">9</button>
+        <button type="button" data-mult="K">K</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-mult="M">M</button>
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-mult="B">B</button>
         <button type="button" data-key=".">.</button>
         <button type="button" data-key="0">0</button>
         <button type="button" data-key="BACK">⌫</button>
+        <button type="button" data-mult="T">T</button>
       </div>
       <div class="numpad-actions">
-        <button type="button" class="btn-secondary" data-key="CLEAR">Сброс</button>
+        <button type="button" class="btn-secondary" data-key="CANCEL">Отмена</button>
         <button type="button" class="btn-primary" data-key="DONE">Готово</button>
       </div>
     </section>

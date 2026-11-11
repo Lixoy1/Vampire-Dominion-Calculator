@@ -103,8 +103,8 @@ assert.ok(settings, 'settings primary navigation is rendered');
 settings.handlers.click();
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.ok(root.innerHTML.includes('Настройки профиля'), 'settings screen is rendered');
-assert.ok(root.innerHTML.includes('btn-export') && root.innerHTML.includes('btn-import-helper'), 'settings screen exposes profile and Helper JSON import actions');
-const importedHelperProfile = appModule.normalizeState({
+assert.ok(root.innerHTML.includes('btn-export') && root.innerHTML.includes('btn-import'), 'settings screen exposes profile export and import actions');
+const importedLegacyProfile = appModule.normalizeState({
   profile: { name: 'API import', region: 'EU', server: '328' },
   wardens: [
     { template_id: 10270, talent_exp: 0, level: 450, promote_id: 8, filled: true, dominance: '6701429.0000000000' },
@@ -113,16 +113,15 @@ const importedHelperProfile = appModule.normalizeState({
   skins: [{ kind: 'warden', owner_id: 10270, template_id: 10273101, level: 8 }],
   guild: { exp: 6800, level: 11, next_level_exp: 7000 },
 });
-assert.equal(importedHelperProfile.account.ownedWardens[10270].level, 450, 'helper warden level is imported');
-assert.equal(importedHelperProfile.account.ownedWardens[10270].promoteId, 8, 'helper promotion is imported');
-assert.equal(importedHelperProfile.account.ownedWardens[10270].observedDominance, 6701429, 'helper dominance is preserved as observed reference data');
-assert.equal(importedHelperProfile.account.skins[10273101], 8, 'helper skin level is imported');
-assert.deepEqual(importedHelperProfile.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 }, 'guild progress fields are normalized');
+assert.equal(importedLegacyProfile.account.ownedWardens[10270].level, 450, 'legacy warden level is imported');
+assert.equal(importedLegacyProfile.account.ownedWardens[10270].promoteId, 8, 'legacy promotion is imported');
+assert.equal(importedLegacyProfile.account.ownedWardens[10270].observedDominance, 6701429, 'legacy dominance is preserved as observed reference data');
+assert.equal(importedLegacyProfile.account.skins[10273101], 8, 'legacy skin level is imported');
+assert.deepEqual(importedLegacyProfile.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 }, 'guild progress fields are normalized');
 assert.ok(root.innerHTML.includes('assets/icons/'), 'local icon URLs are used');
 const appSource = (await import('node:fs')).readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 assert.ok(appSource.includes('data-np-unit'), 'touch numeric keypad supports K/M/B/T suffixes');
 assert.ok(appSource.includes('wizard-create'), 'new-account flow uses a guided manual profile wizard');
-assert.ok(appSource.includes('btn-import-helper') && appSource.includes('/api/oracle/import-helper'), 'Helper API data can be imported from several JSON snapshots');
 assert.ok(appSource.includes('guild-input'), 'guild level and experience fields are editable');
 assert.ok(appSource.includes('/api/oracle/auto-presences'), 'presence allocation calls the server Oracle');
 assert.ok(appSource.includes('/api/oracle/auto-bonds'), 'bond allocation calls the server Oracle');

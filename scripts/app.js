@@ -134,7 +134,7 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
   };
 }
 
-function adaptDhampirSnapshot(parsed = {}) {
+function adaptLegacyProfileSnapshot(parsed = {}) {
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const rows = Array.isArray(source.wardens) ? source.wardens : [];
   const skinRows = Array.isArray(source.skins) ? source.skins : [];
@@ -183,7 +183,7 @@ function adaptDhampirSnapshot(parsed = {}) {
 }
 
 export function normalizeState(parsed = {}) {
-  parsed = adaptDhampirSnapshot(parsed);
+  parsed = adaptLegacyProfileSnapshot(parsed);
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const base = createDefaultState();
   const lang = source.lang || source.settings?.lang || base.lang;
@@ -553,12 +553,10 @@ function closeAppModal() {
 }
 
 function explainGameConnection() {
-  const html = '<p>Калькулятор не подключается к игровому аккаунту и не запрашивает пароль.</p>' +
-    '<p>Внеси значения вручную или импортируй JSON из API «Помощника Дампира». Oracle рассчитает план на сервере.</p>' +
-    '<p><strong>Важно:</strong> данные стороннего помощника хранятся отдельно от подтверждённых игровых формул. Официальная игровая проверка не заявляется.</p>';
-  if (!openAppModal('Подключение к игре', html)) {
-    alert('Калькулятор не подключается к игровому аккаунту. Пароль не нужен. Внеси данные вручную или импортируй JSON из API-помощника.');
-  }
+  const html = '<p>Это независимый проект сообщества энтузиастов и любителей игры «Наследие Вампиров».</p>' +
+    '<p>Калькулятор не запрашивает пароль и не входит в игровой аккаунт. Значения профиля вводятся вручную.</p>' +
+    '<p>Все планы можно предварительно рассчитать, проверить и отменить до применения.</p>';
+  openAppModal('О проекте', html);
 }
 
 // Единая точка вызова Oracle. При ошибке сети серверный расчёт не подменяется локальным.
@@ -595,35 +593,6 @@ async function requestOracle(endpoint, payload) {
 }
 
 // Главный рендер вкладок: сначала серверный расчёт, затем отображение ответа Oracle.
-function renderHelperApiPaths(helperApi) {
-  const paths = helperApi?.bestPaths || {};
-  const rows = [];
-  const add = (label, value) => {
-    const path = value && typeof value === 'object' ? value : null;
-    const runs = Array.isArray(path?.runs) ? path.runs : [];
-    if (!runs.length) return;
-    const sequence = runs.slice(0, 16).map(run => {
-      const key = String(run?.key ?? '—').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-      const to = String(run?.to ?? '—').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-      return key + ' → ' + to;
-    }).join(' · ');
-    const safeLabel = String(label).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-    rows.push('<div class="helper-route-row"><strong>' + safeLabel + '</strong><span>' + sequence + '</span></div>');
-  };
-  add('Уровни смотрителей', paths.levels);
-  add('Конклав', paths.conclave);
-  add('Сад', paths.courtyard);
-  for (const [id, path] of Object.entries(paths.bonds || {})) add('Кровные узы · ' + id, path);
-  for (const [id, path] of Object.entries(paths.auras || {})) add('Вдохновение · ' + id, path);
-  for (const [id, path] of Object.entries(paths.presences || {})) add('Веяние · ' + id, path);
-  for (const [id, path] of Object.entries(paths.skins || {})) add('Облик · ' + id, path);
-  for (const [id, path] of Object.entries(paths.talents || {})) add('Таланты · ' + id, path);
-  if (!rows.length) return '';
-  return '<section class="helper-routes"><div class="row-name">Маршруты, полученные от API «Помощника Дампира»</div>' + rows.join('') +
-    '<div class="row-sub">Порядок шагов сохранён из исходного ответа, не пересчитывался локально.</div></section>';
-}
-
-
 function computeWardenDetailedStats(profile, wardenId) {
   const warden = GAME_DB.wardens.find(item => item.id === Number(wardenId));
   const owned = profile.ownedWardens && profile.ownedWardens[wardenId];
@@ -844,10 +813,10 @@ function renderSpaScreen(db, report, oracle) {
     case 'bag': return renderBagScreen(db);
     case 'skins': return renderSkinsScreen(db);
     case 'conclave': return renderConclaveScreen(db, report, oracle);
-    case 'warden_exp': return renderWardenExpScreen(db);
+    case 'warden_exp': return renderWardenExpScreen(db, oracle);
     case 'calculations': return renderCalculationsHubScreen();
     case 'calc_dominance': return renderDominanceCalcScreen(db, report);
-    case 'calc_talents': return renderSubToolbar('calculations', 'Таланты и опыт') + renderTalentsTab(db);
+    case 'calc_talents': return renderSubToolbar('calculations', 'Таланты и опыт') + renderTalentsTab(db, oracle);
     case 'calc_intimacy': return renderIntimacyCalcScreen(report, oracle);
     case 'settings': return renderSettingsScreen();
     default: return renderHomeScreen();
@@ -893,9 +862,9 @@ function openFormulaInfo() {
   const html = '<div class="formula-info-content">' +
     '<p><strong>Версия Oracle:</strong> ' + escHtml(oracle.meta?.oracleVersion || '—') + '</p>' +
     '<p><strong>Каталог:</strong> ' + escHtml(oracle.meta?.dataVersion || '—') + '</p>' +
-    '<p><strong>Источник наблюдений:</strong> API бота «Помощник Дампира». Это сторонние данные, не подтверждение от игрового сервера.</p>' +
+    '<p><strong>Проект:</strong> независимый калькулятор сообщества любителей игры «Наследие Вампиров».</p>' +
     '<div class="formula-status-list">' + rows + '</div>' +
-    '<p class="row-sub">' + escHtml(oracle.meta?.gameVerification?.note || 'Проверка расчётных формул официальным сервером игры не выполнялась.') + '</p>' +
+    '<p class="row-sub">Профиль и план остаются под контролем игрока. Перед применением можно проверить каждую статью расходов.</p>' +
     '<p class="row-sub">Суммы, отмеченные как модельные или оценочные, нельзя трактовать как точные игровые значения.</p>' +
   '</div>';
   openAppModal('Формулы и точность расчётов', html);
@@ -996,7 +965,7 @@ function renderHomeScreen() {
   const avatar = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
   return '<section class="home-screen">' +
     '<div class="home-hero">' +
-      '<div class="home-eyebrow">OPTIMIST · ПОМОЩНИК</div>' +
+      '<div class="home-eyebrow">OPTIMIST · ПРОЕКТ СООБЩЕСТВА</div>' +
       '<div class="home-brand-title">Наследие<br>Вампиров</div>' +
       '<div class="home-brand-sub">Vampire Dominion · Blood Moon Edition</div>' +
       '<img src="./assets/crest.svg" class="home-sticker" alt="Эмблема">' +
@@ -1149,27 +1118,43 @@ function renderSkinsScreen(db) {
 }
 
 function renderWardenExpScreen(db) {
-  const withExp = Object.values(state.account.ownedWardens || {}).filter(function (owned) { return Number(owned.exp || 0) > 0; }).length;
+  const ownedMap = state.account.ownedWardens || {};
+  const withExp = Object.values(ownedMap).filter(function (owned) { return Number(owned.exp || 0) > 0; }).length;
+  const totalExp = Object.values(ownedMap).reduce(function (sum, owned) { return sum + Math.max(0, Number(owned.exp || 0)); }, 0);
+  const totalPoints = Object.values(ownedMap).reduce(function (sum, owned) { return sum + Math.floor(Math.max(0, Number(owned.exp || 0)) / 200); }, 0);
   let list = db.wardens.slice();
-  if (state.wardenExpFilter === 'with_exp') list = list.filter(function (warden) { return Number(state.account.ownedWardens[warden.id] && state.account.ownedWardens[warden.id].exp || 0) > 0; });
+  if (state.wardenExpFilter === 'with_exp') {
+    list = list.filter(function (warden) { return Number(ownedMap[warden.id] && ownedMap[warden.id].exp || 0) > 0; });
+  }
   const query = String(state.wardenExpSearch || '').trim().toLocaleLowerCase();
   if (query) list = list.filter(function (warden) { return tName('warden', warden.name).toLocaleLowerCase().includes(query); });
-  const total = Object.values(state.account.ownedWardens || {}).reduce(function (sum, owned) { return sum + Number(owned.exp || 0); }, 0);
-  return renderSubToolbar('resources', 'Опыт смотрителей') +
-    '<section class="attrs-box"><div class="card-title">Суммарный опыт талантов</div><div class="dominance-number">' + fmt(total) + '</div><div class="row-sub">' + withExp + ' смотрителей с накопленным опытом</div></section>' +
-    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden-exp" placeholder="Поиск..." value="' + escHtml(query) + '"></div></div>' +
+  return renderSubToolbar('calculations', 'Опыт смотрителей') +
+    '<section class="attrs-box warden-exp-summary"><div class="card-head"><div><div class="card-title">Опыт талантов</div><div class="row-sub">200 EXP = 1 очко · расчёт отдельно для каждого смотрителя</div></div><span class="badge badge-gold">' + fmt(totalPoints) + ' очк.</span></div>' +
+    '<div class="grid-2"><div><div class="row-sub">Всего личного опыта</div><b>' + fmt(totalExp) + ' EXP</b></div><div><div class="row-sub">С опытом</div><b>' + withExp + ' / ' + db.wardens.length + '</b></div></div></section>' +
+    '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden-exp" placeholder="Поиск смотрителя..." value="' + escHtml(query) + '"></div></div>' +
     '<div class="pill-tabs"><button class="pill-tab ' + (state.wardenExpFilter !== 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="all">Все ' + db.wardens.length + '</button><button class="pill-tab ' + (state.wardenExpFilter === 'with_exp' ? 'active' : '') + '" data-action="warden-exp-filter" data-val="with_exp">С опытом ' + withExp + '</button></div>' +
-    '<div class="row-sub">Ввод опыта добавляет смотрителя в профиль, если его ещё нет.</div><div class="card-stack">' + list.map(function (warden) {
-      const owned = state.account.ownedWardens[warden.id];
-      return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:44px;height:44px" alt=""><div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + (owned ? 'В профиле' : 'Не призван') + '</div></div><input class="input stepper-input" type="number" min="0" data-spa-quick-exp="' + warden.id + '" value="' + Number(owned && owned.exp || 0) + '"></div>';
-    }).join('') + '</div>';
+    '<div class="row-sub warden-exp-note">Опыт не общий: он расходуется только на таланты того смотрителя, которому записан. Остаток меньше 200 EXP сохраняется у персонажа.</div>' +
+    '<div class="card-stack">' + list.map(function (warden) {
+      const owned = ownedMap[warden.id];
+      const exp = Math.max(0, Number(owned && owned.exp || 0));
+      const points = Math.floor(exp / 200);
+      const remainder = exp % 200;
+      return '<div class="nav-card warden-exp-row" style="cursor:default">' +
+        '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
+        '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div>' +
+        '<div class="card-subtitle">' + points + ' очков · остаток ' + fmt(remainder) + ' EXP' + (owned ? ' · в профиле' : ' · добавится при вводе опыта') + '</div></div>' +
+        '<input class="input stepper-input" type="number" min="0" step="1" aria-label="Опыт талантов: ' + escHtml(tName('warden', warden.name)) + '" data-spa-quick-exp="' + warden.id + '" value="' + exp + '">' +
+      '</div>';
+    }).join('') + '</div>' +
+    '<div class="talent-actions"><button class="btn" data-action="nav" data-screen="calc_talents">← К талантам</button><button class="btn" data-action="nav" data-screen="resources">Ресурсы</button></div>';
 }
 
 function renderCalculationsHubScreen() {
   return renderSubToolbar('home', 'Расчёты') + '<div class="collection-banner calculations-banner"><div><b>АРХИВ РАСЧЁТОВ</b><span>Господство · оптимизация · прогноз</span></div></div>' +
     '<div class="calc-hub-card" data-action="nav" data-screen="calc_dominance"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Подсчёт Господства</div><div class="card-subtitle">10 направлений вложения ресурсов и проверка доступности</div></div><div class="card-right">›</div></div>' +
     '<div class="card-stack">' +
-      '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты и опыт</div><div class="card-subtitle">Звёзды, потолки уровня, личный опыт и прорывы</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты</div><div class="card-subtitle">Свитки, рукописи, звёзды и оптимизация</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Личный опыт, очки талантов и остаток EXP</div></div><div class="card-right">›</div></div>'
       '<div class="nav-card" data-action="nav" data-screen="calc_intimacy"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Близость и влечение</div><div class="card-subtitle">Минимум, ожидание и максимум из предметов сумки</div></div><div class="card-right">›</div></div>' +
     '</div>';
 }
@@ -1197,15 +1182,13 @@ function renderDominanceCalcScreen(db, report) {
     renderDominanceTab(db, report) + renderCoverageCard(report);
 }
 
-function renderServerSnapshotCard() {
-  const helper = oracleSnapshot?.meta?.helperApi || {};
-  const imported = Boolean(helper.importedAt);
-  return '<section class="attrs-box"><div class="card-title">Данные и источники</div>' +
-    '<div class="item-row"><span>Версия Oracle</span><b>' + escHtml(oracleSnapshot?.meta?.oracleVersion || '—') + '</b></div>' +
+function renderProjectInfoCard() {
+  return '<section class="attrs-box project-info-card"><div class="card-title">О проекте</div>' +
+    '<p class="row-sub">Vampire Dominion — независимый проект энтузиастов и любителей игры «Наследие Вампиров».</p>' +
+    '<p class="row-sub">Инструменты для расчётов, планирования развития аккаунта и распределения ресурсов.</p>' +
+    '<div class="item-row"><span>Версия калькулятора</span><b>' + escHtml(oracleSnapshot?.meta?.oracleVersion || '—') + '</b></div>' +
     '<div class="item-row"><span>Версия каталога</span><b>' + escHtml(oracleSnapshot?.meta?.dataVersion || '—') + '</b></div>' +
-    '<div class="item-row"><span>Импорт API-помощника</span><b>' + (imported ? 'Есть наблюдения' : 'Не загружен') + '</b></div>' +
-    '<div class="row-sub">JSON API «Помощника Дампира» является сторонним источником наблюдений. Его значения не считаются проверенными формулами официальной игры.</div>' +
-    '<div class="row-sub">' + escHtml(oracleSnapshot?.meta?.gameVerification?.note || 'Официальная игровая проверка расчётов не выполнялась.') + '</div></section>';
+    '<div class="row-sub">Данные профиля сохраняются локально. Перед применением плана можно проверить затраты и отменить изменения.</div></section>';
 }
 
 function renderSettingsScreen() {
@@ -1216,9 +1199,9 @@ function renderSettingsScreen() {
       '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
       '<label class="field-stack"><span>Портрет профиля</span><select class="select" id="profile-avatar-select">' + GAME_DB.wardens.map(function (warden) { return '<option value="' + warden.id + '"' + (Number(state.profile.avatarId) === warden.id ? ' selected' : '') + '>' + tName('warden', warden.name) + '</option>'; }).join('') + '</select></label></section>' +
     '<section class="attrs-box"><div class="card-title">Профили</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) { return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>'; }).join('') + '</select>' +
-      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля</button><button class="btn" id="btn-import-helper">📥 Импорт JSON API помощника</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
-      '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Импорт JSON сохраняет контрольный серверный снимок отдельно от ручного профиля.</div></section>' +
-    renderServerSnapshotCard();
+      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
+      '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Экспортируй резервную копию перед переносом на другое устройство.</div></section>' +
+    renderProjectInfoCard();
 }
 
 
@@ -1259,18 +1242,7 @@ async function render() {
   oracleSnapshot = oracle;
   const db = getDbContext();
   const report = oracle.report;
-  const notice = oracle.meta?.helperApi?.importedAt
-    ? '<section class="card helper-api-card"><div class="card-title">Наблюдения API «Помощника Дампира»</div>' +
-      '<div class="row-sub">Снимок стороннего API сохранён отдельно. Он не подтверждает формулы официальной игры.</div>' +
-      '<div class="row-sub">Смотрители ' + Number(oracle.meta.helperApi.observedWardens || 0) +
-      ' · шаги ' + Number(oracle.meta.helperApi.observedWardenSteps || 0) +
-      ' · таланты ' + Number(oracle.meta.helperApi.talentScriptRows || 0) +
-      ' · пути аур ' + Number(oracle.meta.helperApi.auraPathRows || 0) +
-      ' · книги ' + Number(oracle.meta.helperApi.bookRows || 0) +
-      ' · Веяния ' + Number(oracle.meta.helperApi.presenceSteps || 0) +
-      ' · узы ' + Number(oracle.meta.helperApi.bondSteps || 0) +
-      ' · облики ' + Number(oracle.meta.helperApi.skinSteps || 0) + '</div></section>'
-    : '';
+  const notice = '';
   const warnings = oracle.warnings?.length
     ? '<section class="card oracle-warnings"><div class="card-title">Ограничения расчёта</div>' +
       oracle.warnings.map(item => '<div class="row-sub">⚠ ' + escHtml(item.message || item) + '</div>').join('') + '</section>'
@@ -1329,7 +1301,7 @@ function renderSettingsTab() {
         <button class="btn" id="btn-lang">🌐 ${state.lang.toUpperCase()}</button>
         <button class="btn" id="btn-export">💾 Экспорт профиля</button>
         <button class="btn" id="btn-import">📂 Импорт профиля</button>
-        <button class="btn" id="btn-import-helper">🧩 Импорт JSON «Помощника Дампира»</button>
+        
         <button class="btn" id="btn-game-connect-panel">🔗 Подключение к игре</button>
         <button class="btn btn-danger" id="btn-reset-account">🧹 Очистить калькулятор</button>
       </div>
@@ -1391,12 +1363,12 @@ function renderDominanceTab(db, report) {
       <div class="card-head">
         <div>
           <span class="card-title">🔗 Подключение игрового аккаунта</span>
-          <div class="row-sub">Автосинхронизация требует официального API или экспорта от разработчика. В эталонном проекте такой авторизации нет.</div>
+          <div class="row-sub">Прямой вход в игровой аккаунт не используется. Значения профиля вводятся вручную.</div>
         </div>
         <span class="badge">Локальный режим</span>
       </div>
       <button class="btn btn-sm" id="btn-game-connect-panel">Проверить способ подключения</button>
-      <div class="row-sub" style="margin-top:8px;">Не вводи пароль от игры в сторонний калькулятор. Импорт и экспорт JSON доступны в верхней панели.</div>
+      <div class="row-sub" style="margin-top:8px;">Не передавай пароль от игры. Для резервной копии используй экспорт и импорт профиля.</div>
     </section>
 
     <section class="card">
@@ -1532,9 +1504,6 @@ function renderLevelsTab(db, report, oracle) {
         const ow = state.account.ownedWardens[w.id];
         const tgt = Math.max(ow.level, state.plan.levels[w.id] ?? ow.level);
         const upg = oracle.wardens[w.id]?.levelUpgrade;
-        const apiStep = state.account.helperImport?.apiObservations?.wardenSteps?.[w.id];
-        const apiStepMatches = apiStep && Number(apiStep.level) === Number(ow.level)
-          && apiStep.nextCost != null && apiStep.nextGain != null;
         const prom = db.promotes.find(p => p.id === (ow.promoteId || 1));
         return `
           <div class="item-row">
@@ -1543,7 +1512,6 @@ function renderLevelsTab(db, report, oracle) {
               <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
               <div class="row-sub">
                 Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь по расчёту: ${fmt(upg.bloodSpent)}
-                ${apiStepMatches ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiStep.nextCost)} Крови · +${fmt(apiStep.nextGain)} Господства</span>` : ''}
                 ${!upg.canPromote ? `<span style="color:var(--warn)"> · Нужны предметы прорыва</span>` : ''}
               </div>
             </div>
@@ -1561,7 +1529,9 @@ function renderLevelsTab(db, report, oracle) {
   `;
 }
 
-function renderTalentsTab(db, oracle) {
+function renderTalentsTab(db, oracle = oracleSnapshot) {
+  oracle = oracle || {};
+  const wardenResults = oracle.wardens || {};
   return `
     <section class="card card-gold">
       <div class="card-head">
@@ -1572,10 +1542,36 @@ function renderTalentsTab(db, oracle) {
         <button class="btn btn-primary btn-sm" id="btn-auto-talents">⚡ Распределить таланты</button>
       </div>
       ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels} · личный опыт ${oracle.talentPlan.expLevels} (${fmt(oracle.talentPlan.expSpentTotal)} EXP)</div>` : ''}
+      <details class="talent-help-card" open>
+        <summary>Как считаются таланты и опыт</summary>
+        <div class="talent-help-section">
+          <div class="talent-help-item"><b>200 опыта — 1 очко</b><span>Опыт смотрителя переводится в очки талантов по 200 EXP за звёздный пункт.</span></div>
+          <div class="talent-help-item"><b>Свитки опыта</b><span>Накопленный опыт складывается в очки; остаток меньше 200 EXP остаётся у персонажа.</span></div>
+          <div class="talent-help-item"><b>Свитки таланта</b><span>Свитки соответствуют звёздности таланта. Для повышения выбирай предмет нужной звёздности.</span></div>
+          <div class="talent-help-item"><b>Рукописи</b><span>Рукописи срабатывают не всегда. Шанс успеха зависит от звёздности и показан в карточке таланта.</span></div>
+        </div>
+        <div class="talent-help-section">
+          <div class="talent-help-heading">Опыт смотрителей</div>
+          <div class="talent-help-item"><b>Только свои таланты</b><span>Личный опыт смотрителя расходуется только на таланты этого персонажа.</span></div>
+          <div class="talent-help-item"><b>200 опыта — 1 очко</b><span>Неважно, в какой талант направить очки: личный опыт считается по одной шкале.</span></div>
+          <div class="talent-help-item"><b>Сумка отдельно</b><span>Свитки и рукописи учитываются по остаткам в Сумке и не смешиваются с личным EXP.</span></div>
+          <div class="talent-help-item"><b>Откуда берутся очки</b><span>Из личного опыта талантов и бонусного опыта за прорывы смотрителя.</span></div>
+        </div>
+        <div class="talent-help-section">
+          <div class="talent-help-heading">Новые смотрители и отмена</div>
+          <div class="talent-help-item"><b>Только расчёт</b><span>Планирование не списывает ресурсы. Смотритель должен быть добавлен в профиль, чтобы его таланты попали в расчёт.</span></div>
+          <div class="talent-help-item"><b>Можно отменить</b><span>План можно сбросить до применения. Изменения профиля можно вернуть кнопками отмены и повтора.</span></div>
+        </div>
+      </details>
+      <div class="talent-actions talent-actions-three">
+        <button class="btn" data-action="nav" data-screen="warden_exp">⚡ Опыт смотрителей</button>
+        <button class="btn" id="btn-reset-plan">↶ Отменить план</button>
+        <button class="btn btn-gold" id="btn-commit-plan">✓ Применить изменения</button>
+      </div>
       ${db.wardens.map(w => {
         const isOwned = !!state.account.ownedWardens[w.id];
         const owned = state.account.ownedWardens[w.id];
-        const talentResult = oracle.wardens[w.id];
+        const talentResult = wardenResults[w.id] || {};
         const baseStars = talentResult.baseTalentStars;
         const bonusExp = talentResult.promotionExp;
         const personalExp = talentResult.personalExp;
@@ -1605,10 +1601,11 @@ function renderTalentsTab(db, oracle) {
               const expLevels = Number(selected.exp_levels?.[index]) || 0;
               const planned = scrolls + scripts + expLevels;
               const target = Math.min(maxTalentLvl, lvl + planned);
-              const apiTalentStep = (oracle.meta.helperApi?.talentSteps || []).find(step =>
-                Number(step.wardenId) === Number(w.id) && Number(step.position) === Number(index)
-              );
-              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★ ${apiTalentStep ? `<small class="api-exact-step">API следующий шаг: ${fmt(apiTalentStep.nextCost)} · +${fmt(apiTalentStep.nextGain)}</small>` : ''}</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" />${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} уровн. за опыт</small>` : ''}</label>`;
+              const scrollCount = Number(state.account.bag?.[talent.scroll_item_id]) || 0;
+              const scriptCount = Number(state.account.bag?.[talent.script_item_id]) || 0;
+              const scriptChance = Number(talent.script_chance) || 0;
+              const expCost = Number(talent.exp_cost) || 200 * Number(talent.stars || 1);
+              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" /><small class="row-sub">Свитки: ${fmt(scrollCount)} · Рукописи: ${fmt(scriptCount)} · шанс: ${scriptChance.toFixed(1)}% · ${fmt(expCost)} EXP за уровень</small>${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} уровн. за опыт</small>` : ''}</label>`;
             }).join('')}</div>
           </details>` : ''}
         `;
@@ -1635,10 +1632,7 @@ function renderAurasPresencesTab(db, oracle) {
               const curLvl = state.account.ownedWardens[w.id]?.auras?.[a.id] ?? (a.min_lvl || 0);
               const pct = oracle.wardens[w.id]?.auras?.[a.id]?.percent ?? 0;
               const owned = state.account.ownedWardens[w.id];
-              const apiAuraStep = (oracle.meta.helperApi?.auraSteps || []).find(step =>
-                Number(step.wardenId) === Number(w.id) && Number(step.auraId) === Number(a.id)
-              );
-              return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''}) ${apiAuraStep ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiAuraStep.nextCost)} предметов · +${fmt(apiAuraStep.nextGain)}</span>` : ''}
+              return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''})
                 ${owned ? `<input class="input mini-level aura-level" type="number" min="${a.min_lvl || 0}" max="${a.max_lvl || curLvl}" data-wid="${w.id}" data-aid="${a.id}" value="${curLvl}" aria-label="Уровень вдохновения" />` : '<span class="row-sub">· добавь смотрителя в профиль для редактирования</span>'}
               </div>`;
             }).join('')}
@@ -1663,10 +1657,7 @@ function renderAurasPresencesTab(db, oracle) {
               const owned = state.account.ownedLovers[l.id];
               const targetLvl = state.plan.presences?.[l.id]?.[p.id] ?? curLvl;
               const targetPercs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || percs;
-              const apiPresenceStep = (oracle.meta.helperApi?.presenceStepRows || []).find(step =>
-                Number(step.loverId) === Number(l.id) && Number(step.presenceId) === Number(p.id)
-              );
-              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}% ${apiPresenceStep ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiPresenceStep.nextCost)} жетонов · +${fmt(apiPresenceStep.nextGain)}</span>` : ''}
+              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}%
                 ${owned ? `<label class="mini-field">Сейчас<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Текущий уровень веяния" /></label>` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
                 ${owned && p.presence_type === 'updatable' ? `<label class="mini-field">Цель<input class="input mini-level presence-target" type="number" min="${curLvl}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${targetLvl}" aria-label="Целевой уровень веяния" /></label>` : ''}
               </div>`;
@@ -1720,9 +1711,6 @@ function renderBondsTab(db, oracle) {
                 ${(l.scarlet_bonds || []).map(b => {
                   const st = bondPlan[b.attribute];
                   const detail = result.details.find(x => x.attribute === b.attribute);
-                  const apiBondSteps = (oracle.meta.helperApi?.bondStepRows || []).filter(step =>
-                    Number(step.loverId) === Number(l.id) && step.attribute === b.attribute
-                  );
                   return `<div class="bond-row">
                     <div class="bond-head"><strong>${tName('attribute', b.attribute)}${b.is_advantage ? ' ★' : ''}</strong><span class="row-sub">${fmt(detail?.totalAttrGain || 0)} госп.</span></div>
                     <div class="grid-2 bond-inputs">
@@ -1730,7 +1718,6 @@ function renderBondsTab(db, oracle) {
                       <label><span class="row-sub">Процент ${detail?.unlockedPct ? '' : `· закрыто до близости ${b.unlock_closeness_percent}`}</span><input class="input bond-target" type="number" min="${st.percentLevel}" max="600" data-lid="${l.id}" data-attr="${b.attribute}" data-kind="percent" value="${st.targetPercentLevel}" ${detail?.unlockedPct ? '' : 'disabled'} /></label>
                     </div>
                     <div class="row-sub">Цена по расчёту: ${fmt((detail?.costFlat || 0) + (detail?.costPct || 0))} · Бонус: +${fmt(detail?.totalAttrGain || 0)}</div>
-                    ${apiBondSteps.length ? `<div class="api-exact-step">${apiBondSteps.map(step => (step.kind === 'percent' ? 'Процент' : 'Уровень') + ': API следующий шаг ' + (step.nextCost == null ? '—' : fmt(step.nextCost)) + ' Доверия · +' + (step.nextGain == null ? '—' : fmt(step.nextGain))).join(' · ')}</div>` : ''}
                   </div>`;
                 }).join('')}
               </div>
@@ -1757,14 +1744,12 @@ function renderSkinsTab(db, oracle) {
       </div>
       ${allSkins.map(s => {
         const result = oracle.skins[s.id];
-        const apiSkinStep = (oracle.meta.helperApi?.skinStepRows || []).find(step => Number(step.skinId) === Number(s.id));
         return `
         <div class="item-row">
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
           <div class="row-info">
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
             <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
-            ${apiSkinStep ? `<div class="api-exact-step">API следующий шаг: ${apiSkinStep.nextKind || 'ресурс'} · ${fmt(apiSkinStep.nextCost)} · +${fmt(apiSkinStep.nextGain)}</div>` : ''}
           </div>
           <div class="row-controls skin-controls">
             <label class="mini-field">Сейчас<input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Текущий уровень облика" /></label>
@@ -1891,10 +1876,11 @@ function openNumericPad(input) {
   const overlay = document.getElementById('numpad-overlay');
   const title = document.getElementById('numpad-title');
   const display = document.getElementById('numpad-display');
-  if (!overlay || !display) return;
+  const resolved = document.getElementById('numpad-resolved');
+  const directInput = document.getElementById('numpad-direct-input');
+  const keypad = overlay?.querySelector('.numpad-grid');
+  if (!overlay || !display || !resolved || !directInput || !keypad) return;
 
-  let digits = String(Math.max(0, Number(input.value) || 0));
-  let multiplier = 1;
   const multipliers = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
   const min = input.min !== '' && Number.isFinite(Number(input.min)) ? Number(input.min) : 0;
   const max = input.max !== '' && Number.isFinite(Number(input.max)) ? Number(input.max) : 1e15;
@@ -1903,18 +1889,58 @@ function openNumericPad(input) {
     || input.closest('.item-row')?.querySelector('.row-name')?.textContent
     || input.dataset.res || 'Введите значение';
 
+  function formatNumber(value) {
+    return Math.max(0, Number(value) || 0).toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+  }
+
+  function parseCompact(value) {
+    const match = String(value || '').trim().replace(/\s/g, '').replace(',', '.')
+      .match(/^(\d+(?:\.\d+)?)([KMBT])?$/i);
+    if (!match) return null;
+    const factor = multipliers[String(match[2] || '').toUpperCase()] || 1;
+    const result = Number(match[1]) * factor;
+    return Number.isFinite(result) ? result : null;
+  }
+
+  function compactInitial(value) {
+    const number = Math.max(0, Number(value) || 0);
+    const units = [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]];
+    for (const [suffix, factor] of units) {
+      if (number >= factor) {
+        const amount = Number((number / factor).toFixed(3)).toString();
+        return amount + suffix;
+      }
+    }
+    return String(number);
+  }
+
+  let raw = compactInitial(input.value);
+  let directMode = false;
   if (title) title.textContent = label;
   overlay.classList.remove('hidden');
 
-  const close = () => overlay.classList.add('hidden');
+  const close = () => {
+    overlay.classList.add('hidden');
+    directInput.blur();
+  };
+
   const update = () => {
-    const value = Math.min(max, Math.max(0, (Number(digits) || 0) * multiplier));
-    display.textContent = value.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+    const valueText = directMode ? directInput.value : raw;
+    const parsed = parseCompact(valueText);
+    display.textContent = valueText || '0';
+    resolved.textContent = parsed == null ? 'Проверь формат числа' : formatNumber(Math.min(max, Math.max(0, parsed)));
     overlay.querySelectorAll('[data-mult]').forEach(button => {
-      button.classList.toggle('active', multipliers[button.dataset.mult] === multiplier);
+      button.classList.toggle('active', new RegExp('[KMBT]$', 'i').test(valueText)
+        && valueText.slice(-1).toUpperCase() === button.dataset.mult);
     });
   };
+
+  directInput.value = raw;
+  directInput.hidden = true;
+  keypad.hidden = false;
   update();
+
+  directInput.oninput = () => update();
 
   overlay.onclick = event => {
     if (event.target === overlay) { close(); return; }
@@ -1922,23 +1948,52 @@ function openNumericPad(input) {
     if (!button) return;
     const key = button.dataset.key;
     const unit = button.dataset.mult;
-    if (unit && multipliers[unit]) {
-      multiplier = multipliers[unit];
-    } else if (key === 'DONE') {
-      const value = Math.min(max, Math.max(min, (Number(digits) || 0) * multiplier));
+
+    if (key === 'CANCEL') { close(); return; }
+    if (key === 'MODE') {
+      directMode = !directMode;
+      if (directMode) {
+        directInput.value = raw;
+        directInput.hidden = false;
+        display.hidden = true;
+        keypad.hidden = true;
+        directInput.focus();
+      } else {
+        raw = directInput.value.trim();
+        directInput.hidden = true;
+        display.hidden = false;
+        keypad.hidden = false;
+      }
+      update();
+      return;
+    }
+    if (key === 'DONE') {
+      const parsed = parseCompact(directMode ? directInput.value : raw);
+      if (parsed == null) {
+        resolved.textContent = 'Неверный формат. Например: 2.5M';
+        return;
+      }
+      const value = Math.min(max, Math.max(min, parsed));
       input.value = String(Math.round(value));
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       close();
       return;
-    } else if (key === 'CLEAR') {
-      digits = '0'; multiplier = 1;
+    }
+    if (directMode) return;
+
+    if (unit && multipliers[unit]) {
+      const suffix = new RegExp('[KMBT]$', 'i');
+      raw = suffix.test(raw) ? raw.replace(suffix, unit) : raw + unit;
     } else if (key === 'BACK') {
-      digits = digits.length > 1 ? digits.slice(0, -1) : '0';
-    } else if (key === '.' && !digits.includes('.')) {
-      digits += '.';
-    } else if (/^\\d$/.test(key || '')) {
-      digits = digits === '0' ? key : digits + key;
+      raw = raw.slice(0, -1) || '0';
+    } else if (key === '.') {
+      const numericPart = raw.replace(/[KMBT]$/i, '');
+      if (!numericPart.includes('.')) raw = numericPart + '.' + (raw.match(/[KMBT]$/i)?.[0] || '');
+    } else if (/^\d$/.test(key || '')) {
+      const suffix = raw.match(/[KMBT]$/i)?.[0] || '';
+      const numericPart = raw.replace(/[KMBT]$/i, '');
+      raw = (numericPart === '0' ? key : numericPart + key) + suffix;
     } else {
       return;
     }
@@ -2052,6 +2107,7 @@ function bindSpaEvents(db, report, oracle) {
       if (action === 'toggle-attr-detail') { state.expandedAttr = state.expandedAttr === button.dataset.attr ? null : button.dataset.attr; return render(); }
       if (action === 'toggle-warden-sort') { state.wardenListSort = state.wardenListSort === 'sum' ? 'name' : 'sum'; return render(); }
       if (action === 'warden-filter') { state.wardenListFilter = button.dataset.val; return render(); }
+      if (action === 'warden-exp-filter') { state.wardenExpFilter = button.dataset.val === 'with_exp' ? 'with_exp' : 'all'; return render(); }
       if (action === 'add-warden') {
         const warden = db.wardens.find(function (item) { return item.id === Number(button.dataset.id); });
         if (!warden || state.account.ownedWardens[warden.id]) return;
@@ -2248,9 +2304,12 @@ function bindSpaEvents(db, report, oracle) {
       const id = Number(input.dataset.spaQuickExp);
       const warden = db.wardens.find(function (item) { return item.id === id; });
       if (!warden) return;
+      const exp = Math.max(0, Number(input.value) || 0);
+      const existing = state.account.ownedWardens[id];
+      if (!existing && exp === 0) return;
       pushUndoSnapshot();
-      if (!state.account.ownedWardens[id]) state.account.ownedWardens[id] = createOwnedWarden(warden);
-      state.account.ownedWardens[id].exp = Math.max(0, Number(input.value) || 0);
+      if (!existing && exp > 0) state.account.ownedWardens[id] = createOwnedWarden(warden);
+      if (state.account.ownedWardens[id]) state.account.ownedWardens[id].exp = exp;
       saveState();
       render();
     });
@@ -2679,40 +2738,6 @@ function bindEvents(db) {
     });
   });
 
-  document.getElementById('btn-import-helper')?.addEventListener('click', () => {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'application/json,.json';
-    inp.multiple = true;
-    inp.onchange = async () => {
-      const files = [...(inp.files || [])];
-      if (!files.length) return;
-      try {
-        const snapshots = await Promise.all(files.map(async file => JSON.parse(await file.text())));
-        const imported = await requestOracle('/api/oracle/import-helper', { account: state.account, snapshots });
-        state.account = normalizeAccountData(imported.account);
-        state.plan = createBlankPlan(state.account);
-        saveState();
-        await render();
-        const sum = imported.summary || {};
-        const lines = [
-          'Смотрители: ' + (sum.wardens || 0),
-          'Кровные узы: ' + (sum.bonds || 0),
-          'Облики: ' + (sum.skins || 0),
-          'Предметы сумки: ' + (sum.inventory || 0),
-          'Атрибуты Конклава: ' + (sum.conclaveAttributes || 0),
-          'Опыт Гильдии: ' + (sum.guildProgress ? 'импортирован' : 'без изменений'),
-          'Шаги Warden next_cost/next_gain: ' + (sum.wardenSteps || 0),
-          'Таланты / пути аур / книги: ' + [sum.talentScripts || 0, sum.auraPaths || 0, sum.bookRows || 0].join(' / '),
-          'Манускрипты / Веяния / узы / облики: ' + [sum.manuscriptTiers || 0, sum.presences || 0, sum.bonds || 0, sum.skinSteps || 0].join(' / '),
-        ];
-        alert('Импорт ответов API «Помощника Дампира» завершён.\\n' + lines.join('\\n') + '\\n\\nНаблюдения API-помощника сохранены отдельно от официально подтверждённых игровых данных. Серверные next_cost/next_gain и best_path сохраняются без подмены оценочными формулами.');
-      } catch (error) {
-        alert(error.message || 'Не удалось прочитать JSON-дамп помощника.');
-      }
-    };
-    inp.click();
-  });
 
 }
 

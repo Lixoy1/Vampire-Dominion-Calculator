@@ -21,7 +21,7 @@ test('database tables have expected cardinality', () => {
   for (const [key, count] of Object.entries(expectedCounts)) assert.equal(GAME_DB[key]?.length, count, key);
 });
 
-test('Helper API presence curves include the complete 781 curve', () => {
+test('Compiled presence curves include the complete 781 curve', () => {
   const curve = GAME_DB.lover_presence_levels.filter(row => row.curve === 781);
   assert.equal(curve.length, 31);
   assert.deepEqual(

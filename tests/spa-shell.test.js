@@ -23,7 +23,7 @@ for (const target of ['home', 'resources', 'calculations', 'settings']) {
 for (const unit of ['K', 'M', 'B', 'T']) {
   assert.ok(html.includes(`data-mult="${unit}"`), `numeric keypad contains ${unit}`);
 }
-for (const key of ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'BACK', 'CLEAR', 'DONE']) {
+for (const key of ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', 'BACK', 'MODE', 'CANCEL', 'DONE']) {
   assert.ok(html.includes(`data-key="${key}"`), `numeric keypad contains key ${key}`);
 }
 
@@ -38,7 +38,7 @@ assert.ok(server.includes("express.static(path.join(__dirname, 'scripts')"), 'se
 assert.ok(server.includes("express.static(path.join(__dirname, 'data')"), 'server serves source JSON data');
 assert.ok(oracle.includes("from './scripts/data.js'"), 'Oracle reads the same catalog as the browser');
 assert.ok(oracle.includes("from './scripts/engine.js'"), 'Oracle uses the canonical calculation engine');
-assert.ok(oracle.includes("status: 'not-game-verified'"), 'Helper API observations are not presented as game-verified');
+assert.ok(oracle.includes("kind: 'community-project'"), 'Oracle identifies the independent community project');
 
 const expected = {
   wardens: 68,
@@ -75,4 +75,6 @@ for (const path of [
 for (const selector of ['.bottom-nav-bar', '.modal-overlay', '.numpad-overlay', '.calc-loader', '.crimson-spinner']) {
   assert.ok(css.includes(selector), `stylesheet styles ${selector}`);
 }
-console.log('PASS canonical SPA shell, data catalog, routes and Oracle provenance');
+assert.ok(html.includes('Vampire Dominion — Наследие Вампиров'), 'entry point uses the community project identity');
+assert.ok(app.includes('независимый калькулятор сообщества'), 'settings describe the independent community project');
+console.log('PASS canonical SPA shell, data catalog, routes and project identity');

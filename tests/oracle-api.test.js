@@ -143,27 +143,6 @@ try {
   assert.equal(loverSummon.ok, true);
   assert.ok(loverSummon.result.account.ownedLovers[sampleLover.id]);
 
-  const helperImportResponse = await post('/api/oracle/import-helper', {
-    account: {
-      blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
-      conclave: {}, ownedWardens: {}, ownedLovers: {}, bag: {}, skins: {},
-    },
-    snapshots: [
-      [{ template_id: 10270, talent_exp: 0, level: 450, promote_id: 8, filled: true, dominance: '6701429.0000000000' }],
-      [{ template_id: 2603, level: 0, percent_level: 0 }, { template_id: 2601, level: 0, percent_level: 0 }],
-      [{ kind: 'warden', owner_id: 10270, template_id: 10273101, level: 8 }],
-      { exp: 6800, level: 11, next_level_exp: 7000 },
-    ],
-  });
-  assert.equal(helperImportResponse.status, 200);
-  const helperImport = await helperImportResponse.json();
-  assert.equal(helperImport.ok, true);
-  assert.equal(helperImport.result.account.ownedWardens[10270].level, 450);
-  assert.equal(helperImport.result.account.ownedLovers[20260].bonds.strength.level, 0);
-  assert.equal(helperImport.result.account.skins[10273101], 8);
-  assert.deepEqual(helperImport.result.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
-  assert.equal(helperImport.result.account.helperImport.observedWardenDominance[10270], '6701429.0000000000');
-
   const talentWarden = GAME_DB.wardens.find(item => item.talents?.length);
   const talentAccount = {
     blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
