@@ -1630,6 +1630,18 @@ export function importDhampirSnapshot(input = {}) {
     intimacy: previousObservations.intimacy ?? null,
     attraction: previousObservations.attraction ?? null,
     responseCount: Math.max(0, Math.round(numeric(previousObservations.responseCount))),
+    bestPaths: {
+      levels: record(previousObservations.bestPaths).levels ?? null,
+      conclave: record(previousObservations.bestPaths).conclave ?? null,
+      bonds: record(previousObservations.bestPaths).bonds || {},
+      auras: record(previousObservations.bestPaths).auras || {},
+      presences: record(previousObservations.bestPaths).presences || {},
+      skins: record(previousObservations.bestPaths).skins || {},
+      talents: record(previousObservations.bestPaths).talents || {},
+      books: record(previousObservations.bestPaths).books ?? null,
+      courtyard: record(previousObservations.bestPaths).courtyard ?? null,
+    },
+    skinStore: previousObservations.skinStore ?? null,
   };
 
   const rowsOf = value => {
@@ -1817,7 +1829,7 @@ export function importDhampirSnapshot(input = {}) {
       const row = record(value);
       const id = Math.round(numeric(row.template_id ?? row.skin_id ?? row.id));
       const level = Math.max(0, Math.min(10, Math.round(numeric(row.level ?? row.current_level))));
-      const kindRaw = String(row.kind ?? row.owner_type ?? row.ownerType ?? '').toLowerCase();
+      const kindRaw = String(row.kind ?? row.owner ?? row.owner_type ?? row.ownerType ?? '').toLowerCase();
       const kind = kindRaw === 'warden' || kindRaw === 'lover'
         ? kindRaw
         : row.lover_id !== undefined ? 'lover' : row.warden_id !== undefined ? 'warden' : null;
@@ -1909,44 +1921,219 @@ export function importDhampirSnapshot(input = {}) {
     }
   };
 
+  const ensureWarden = id => {
+    const current = record(account.ownedWardens[id]);
+    account.ownedWardens[id] = {
+      level: 1, promoteId: 1, exp: 0, talents: {}, auras: {},
+      ...current,
+    };
+    return account.ownedWardens[id];
+  };
+  const ensureLover = id => {
+    const current = record(account.ownedLovers[id]);
+    account.ownedLovers[id] = {
+      affinity: 0, closeness: 0, sex: knownLovers.get(Number(id))?.fixed_sex || 'female',
+      presences: {}, bonds: {}, ...current,
+    };
+    return account.ownedLovers[id];
+  };
+  const setItemCount = rowValue => {
+    const row = record(rowValue);
+    const id = Math.round(numeric(row.item_id ?? row.template_id ?? row.id));
+    const count = row.count ?? row.quantity ?? row.amount;
+    if (!knownItems.has(id) || count === undefined) return false;
+    account.bag[id] = nonNegative(count);
+    summary.inventory++;
+    return true;
+  };
+  const keepPath = (section, id, pathValue) => {
+    const path = record(pathValue);
+    if (!Object.keys(path).length) return;
+    if (id === undefined || id === null) apiObservations.bestPaths[section] = clone(path);
+    else apiObservations.bestPaths[section][String(id)] = clone(path);
+  };
+  const keepExactStep = (target, row, extra = {}) => {
+    const step = exactStep(record(row));
+    if (step.nextCost !== null || step.nextGain !== null || step.nextKind !== null) {
+      target.push({ ...extra, ...step });
+    }
+  };
   const importObject = objectValue => {
     const object = unwrap(objectValue);
     const levels = record(object.levels);
     const conclave = record(object.conclave);
+    const bonds = record(object.bonds);
+    const auras = record(object.auras);
+    const presences = record(object.presences);
+    const skins = record(object.skins);
     const talents = record(object.talents);
     const books = record(object.books);
-    const manuscripts = record(object.manuscripts);
-    const auras = record(object.auras);
+    const courtyard = record(object.courtyard);
 
-    if (object.wardens !== undefined) setWardenRows(object.wardens);
-    if (object.warden_list !== undefined) setWardenRows(object.warden_list);
-    if (levels.wardens !== undefined) setWardenRows(levels.wardens);
-    if (object.lovers !== undefined) setLoverRows(object.lovers);
-    if (object.lover_list !== undefined) setLoverRows(object.lover_list);
-    if (levels.lovers !== undefined) setLoverRows(levels.lovers);
-    if (object.bonds !== undefined) setBondRows(object.bonds);
-    if (object.scarlet_bonds !== undefined) setBondRows(object.scarlet_bonds);
-    if (object.presences !== undefined) setPresenceRows(object.presences);
-    if (object.skins !== undefined) setSkinRows(object.skins);
-    if (object.skin_levels !== undefined) setSkinRows(object.skin_levels);
+    if (object.total !== undefined) apiObservations.total = clone(object.total);
+    if (object.gain !== undefined) apiObservations.gain = clone(object.gain);
     if (object.attributes !== undefined) {
       if (Array.isArray(object.attributes)) setAttributeRows(object.attributes);
-      else apiObservations.attributes = clone(object.attributes);
+      apiObservations.attributes = clone(object.attributes);
     }
-    if (object.conclave_attributes !== undefined) setAttributeRows(object.conclave_attributes);
-    if (object.conclaveLevels !== undefined) setAttributeRows(object.conclaveLevels);
+
+    // Global resources and current progression values from the Helper response.
+    if (levels.blood !== undefined || levels.left !== undefined) {
+      account.blood = nonNegative(levels.left ?? levels.blood);
+    }
+    if (levels.wardens !== undefined) setWardenRows(levels.wardens);
+    if (levels.lovers !== undefined) setLoverRows(levels.lovers);
+    if (levels.items !== undefined) {
+      for (const item of rowsOf(levels.items)) setItemCount(item);
+    }
+    keepPath('levels', null, levels.best_path);
+
+    if (conclave.points !== undefined || conclave.left !== undefined) {
+      account.conclaveExp = nonNegative(conclave.left ?? conclave.points);
+    }
     if (Array.isArray(conclave.attributes)) setAttributeRows(conclave.attributes);
-    else if (Object.keys(conclave).length) apiObservations.conclave = clone(conclave);
-    if (object.inventory !== undefined) setInventoryRows(object.inventory);
-    if (object.bag_items !== undefined) setInventoryRows(object.bag_items);
-    if (object.bag !== undefined) setInventoryRows(object.bag);
-    if (auras.items !== undefined) setAuraItems(auras.items);
-    if (talents.scripts !== undefined) {
-      pushBounded(apiObservations.talentScripts, talents.scripts);
-      summary.talentScripts += rowsOf(talents.scripts).length;
+    keepPath('conclave', null, conclave.best_path);
+    if (Object.keys(conclave).length) apiObservations.conclave = clone(conclave);
+
+    // The API returns Scarlet Bonds as a nested lover -> attribute -> level/percent structure.
+    if (Array.isArray(bonds.lovers)) {
+      for (const value of bonds.lovers) {
+        const row = record(value);
+        const loverId = Math.round(numeric(row.lover_id ?? row.id));
+        const lover = knownLovers.get(loverId);
+        if (!lover) { summary.skipped++; continue; }
+        const owned = ensureLover(loverId);
+        if (row.trust !== undefined) owned.affinity = nonNegative(row.trust);
+        const bondStates = { ...record(owned.bonds) };
+        for (const bondValue of rowsOf(row.bonds)) {
+          const bond = record(bondValue);
+          const attribute = bond.attribute;
+          if (!ATTRIBUTES.includes(attribute)) continue;
+          const flat = record(bond.level);
+          const percent = record(bond.percent);
+          bondStates[attribute] = {
+            level: Math.max(0, Math.min(600, Math.round(numeric(flat.level)))),
+            percentLevel: Math.max(0, Math.min(600, Math.round(numeric(percent.level)))),
+          };
+          keepExactStep(apiObservations.bondSteps, flat, { loverId, attribute, kind: 'level' });
+          keepExactStep(apiObservations.bondSteps, percent, { loverId, attribute, kind: 'percent' });
+          summary.bonds++;
+        }
+        owned.bonds = bondStates;
+        keepPath('bonds', loverId, row.best_path);
+      }
     }
-    if (talents.scrolls !== undefined) apiObservations.talentScrolls = clone(talents.scrolls);
+    if (bonds.trust !== undefined) apiObservations.trust = clone(bonds.trust);
+    if (bonds.idle !== undefined) apiObservations.idleBondLovers = clone(bonds.idle);
+
+    // Auras: retain original routes and map current levels by Warden/aura id.
+    if (Array.isArray(auras.items)) {
+      for (const item of auras.items) {
+        const itemId = Math.round(numeric(item.item_id ?? item.id));
+        setItemCount(item);
+        keepPath('auras', itemId, item.best_path);
+      }
+      setAuraItems(auras.items);
+    }
+    if (auras.free !== undefined) apiObservations.freeAuras = clone(auras.free);
+
+    // Presences are grouped by upgrade token, then by Lover and Presence.
+    if (Array.isArray(presences.items)) {
+      for (const item of presences.items) {
+        const itemId = Math.round(numeric(item.item_id ?? item.id));
+        setItemCount(item);
+        keepPath('presences', itemId, item.best_path);
+        for (const loverRowValue of rowsOf(item.lovers)) {
+          const loverRow = record(loverRowValue);
+          const loverId = Math.round(numeric(loverRow.lover_id ?? loverRow.id));
+          if (!knownLovers.has(loverId)) { summary.skipped++; continue; }
+          if (loverRow.owned === true || account.ownedLovers[loverId]) ensureLover(loverId);
+          for (const level of rowsOf(loverRow.levels)) {
+            setPresenceRows([{ ...level, lover_id: loverId }], loverId);
+          }
+          keepPath('presences', String(itemId) + ':' + String(loverId), loverRow.best_path);
+        }
+      }
+    }
+    if (presences.free !== undefined) apiObservations.freePresences = clone(presences.free);
+
+    // Skins: fabric inventory and owned skin levels arrive inside skins.fabrics[].skins.
+    if (Array.isArray(skins.fabrics)) {
+      for (const fabric of skins.fabrics) {
+        setItemCount(fabric);
+        for (const skinValue of rowsOf(fabric.skins)) {
+          const skin = record(skinValue);
+          const kind = String(skin.owner ?? skin.kind ?? skin.owner_type ?? '').toLowerCase();
+          const ownerId = Math.round(numeric(skin.owner_id ?? skin.ownerId));
+          if (skin.owned === true && kind === 'warden' && knownWardens.has(ownerId)) ensureWarden(ownerId);
+          if (skin.owned === true && kind === 'lover' && knownLovers.has(ownerId)) ensureLover(ownerId);
+          setSkinRows([{ ...skin, kind, owner_id: ownerId, template_id: skin.skin_id }]);
+          keepExactStep(apiObservations.skinSteps, skin, {
+            skinId: skin.skin_id, ownerType: kind, ownerId,
+          });
+        }
+      }
+    } else if (Array.isArray(object.skins)) {
+      setSkinRows(object.skins);
+      for (const row of object.skins) keepExactStep(apiObservations.skinSteps, row, {
+        skinId: row.id ?? row.template_id ?? row.skin_id ?? null,
+      });
+    }
+    if (skins.store !== undefined) {
+      apiObservations.skinStore = clone(skins.store);
+      if (skins.store.exp !== undefined) account.skinStoreExp = nonNegative(skins.store.exp);
+    }
+
+    // Talent items are grouped by item id and contain per-Warden talent rows.
+    const importTalentGroups = (groups, category) => {
+      for (const item of rowsOf(groups)) {
+        setItemCount(item);
+        pushBounded(category === 'scripts' ? apiObservations.talentScripts : apiObservations.talentScrollsRows || (apiObservations.talentScrollsRows = []), [item]);
+        for (const wardenRowValue of rowsOf(item.wardens)) {
+          const wardenRow = record(wardenRowValue);
+          const wardenId = Math.round(numeric(wardenRow.warden_id ?? wardenRow.id));
+          if (!knownWardens.has(wardenId)) { summary.skipped++; continue; }
+          if (wardenRow.owned === true || account.ownedWardens[wardenId]) {
+            const owned = ensureWarden(wardenId);
+            const talentLevels = { ...record(owned.talents) };
+            for (const talent of rowsOf(wardenRow.talents)) {
+              const position = Math.round(numeric(talent.position ?? talent.index, -1));
+              if (position < 0 || position >= 50) continue;
+              if (talent.level !== undefined) talentLevels[position] = Math.max(1, Math.round(numeric(talent.level, 1)));
+              keepExactStep(apiObservations.talentScripts, talent, {
+                wardenId, position, category,
+              });
+            }
+            owned.talents = talentLevels;
+          }
+        }
+        if (category === 'scripts') summary.talentScripts++;
+      }
+    };
+    if (talents.scripts !== undefined) importTalentGroups(talents.scripts, 'scripts');
+    if (talents.scrolls !== undefined) importTalentGroups(talents.scrolls, 'scrolls');
+    if (talents.exp_items !== undefined) {
+      for (const item of rowsOf(talents.exp_items)) setItemCount(item);
+      apiObservations.talentExpItems = clone(talents.exp_items);
+    }
+    if (Array.isArray(talents.own_exp)) {
+      for (const row of talents.own_exp) {
+        const wardenId = Math.round(numeric(row.warden_id ?? row.id));
+        if (!knownWardens.has(wardenId) || row.owned === false) continue;
+        const owned = ensureWarden(wardenId);
+        if (row.exp !== undefined) owned.exp = nonNegative(row.exp);
+        for (const talent of rowsOf(row.talents)) {
+          const position = Math.round(numeric(talent.position ?? talent.index, -1));
+          if (position >= 0 && position < 50 && talent.level !== undefined) {
+            owned.talents[position] = Math.max(1, Math.round(numeric(talent.level, 1)));
+          }
+        }
+      }
+    }
+
+    // Books and manuscripts retain their per-item values and any supplied inventory counts.
     if (books.items !== undefined) {
+      for (const item of rowsOf(books.items)) setItemCount(item);
       pushBounded(apiObservations.bookItems, books.items);
       summary.bookRows += rowsOf(books.items).length;
     }
@@ -1954,29 +2141,25 @@ export function importDhampirSnapshot(input = {}) {
       pushBounded(apiObservations.manuscriptTiers, manuscripts.tiers);
       summary.manuscriptTiers += rowsOf(manuscripts.tiers).length;
     }
-    if (object.intimacy !== undefined) apiObservations.intimacy = clone(object.intimacy);
-    if (object.attraction !== undefined) apiObservations.attraction = clone(object.attraction);
-    if (object.skins !== undefined) {
-      for (const row of rowsOf(object.skins)) {
-        const step = exactStep(row);
-        if (step.nextCost !== null || step.nextGain !== null || row.next_kind !== undefined) {
-          apiObservations.skinSteps.push({ skinId: row.id ?? row.template_id ?? row.skin_id ?? null, ...step });
-        }
-      }
+
+    if (object.inventory !== undefined) setInventoryRows(object.inventory);
+    if (object.bag_items !== undefined) setInventoryRows(object.bag_items);
+    if (object.bag !== undefined && !Array.isArray(object.bag)) {
+      setInventoryRows(object.bag);
+    } else if (Array.isArray(object.bag)) {
+      setInventoryRows(object.bag);
     }
 
-    const guild = record(object.guildProgress ?? object.guild_progress ?? object.guild);
-    const candidate = Object.keys(guild).length ? guild : object;
-    if (candidate.level !== undefined && candidate.exp !== undefined &&
-        (candidate.next_level_exp !== undefined || candidate.nextLevelExp !== undefined ||
-         object.guildProgress !== undefined || object.guild_progress !== undefined || object.guild !== undefined)) {
-      account.guildProgress = {
-        exp: nonNegative(candidate.exp),
-        level: Math.max(0, Math.min(999, Math.round(numeric(candidate.level)))),
-        nextLevelExp: nonNegative(candidate.next_level_exp ?? candidate.nextLevelExp),
-      };
-      summary.guildProgress = true;
+    if (courtyard.level !== undefined) account.courtyardLvl = Math.max(0, Math.min(210, Math.round(numeric(courtyard.level))));
+    if (courtyard.points !== undefined || courtyard.left !== undefined) {
+      account.courtyardExp = nonNegative(courtyard.left ?? courtyard.points);
     }
+    keepPath('courtyard', null, courtyard.best_path);
+    if (object.intimacy !== undefined) apiObservations.intimacy = clone(object.intimacy);
+    if (object.attraction !== undefined) apiObservations.attraction = clone(object.attraction);
+    if (levels.best_path !== undefined) apiObservations.levelBestPath = clone(levels.best_path);
+    if (conclave.best_path !== undefined) apiObservations.conclaveBestPath = clone(conclave.best_path);
+    if (object.books !== undefined) apiObservations.books = clone(object.books);
     apiObservations.responseCount++;
   };
 
