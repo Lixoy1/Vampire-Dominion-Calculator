@@ -1086,3 +1086,54 @@ body { overflow-x: hidden; }
 [hidden] {display:none !important}
 
 .catalog-pick img {border-radius:7px;background:rgba(0,0,0,.16)}
+
+
+/* Official supplied Blood Moon artwork */
+.home-hero {
+  min-height:clamp(260px,56vw,430px);
+  padding:26px 22px;
+  background:
+    linear-gradient(90deg,rgba(8,4,8,.86) 0%,rgba(8,4,8,.48) 50%,rgba(8,4,8,.12) 100%),
+    linear-gradient(0deg,rgba(8,4,8,.76),transparent 54%),
+    url("../../1000021575.png") center 34%/cover no-repeat,
+    linear-gradient(135deg,#260812,#090507);
+}
+.home-brand-title {max-width:68%;font-size:clamp(28px,7vw,46px);text-shadow:0 3px 22px #000}
+.home-brand-sub {max-width:64%;color:#f1d8d7;text-shadow:0 2px 8px #000}
+.home-sticker {display:none}
+.warden-art-card {
+  min-height:116px;position:relative;overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(12,5,10,.94),rgba(12,5,10,.76) 55%,rgba(12,5,10,.32)),
+    url("../../1000024449.png") center 38%/cover no-repeat,
+    var(--bg-card);
+}
+.warden-art-card .warden-avatar-lg {border-color:rgba(214,176,109,.5);box-shadow:0 4px 20px rgba(0,0,0,.55)}
+.collection-banner {
+  position:relative;isolation:isolate;display:flex;align-items:flex-end;
+  min-height:142px;margin:8px 0 13px;padding:16px;
+  overflow:hidden;border:1px solid rgba(214,176,109,.32);border-radius:17px;
+  background-color:#16070d;background-position:center;background-size:cover;
+  box-shadow:inset 0 -70px 60px rgba(0,0,0,.62),0 12px 28px rgba(0,0,0,.18);
+}
+.collection-banner:before {
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(90deg,rgba(8,4,8,.82),rgba(8,4,8,.08));
+}
+.collection-banner>div {display:flex;flex-direction:column;gap:5px;text-shadow:0 2px 12px #000}
+.collection-banner b {font:800 20px Georgia,serif;letter-spacing:.1em;color:#f1d7b1}
+.collection-banner span {font-size:11px;color:#f5dfe2}
+.partners-banner {background-image:url("../../1000024228.png")}
+.calculations-banner {background-image:url("../../1000024228.png");background-position:center 42%}
+.settings-banner,.summon-banner {background-image:url("../../1000019874.png")}
+.resources-banner {background-image:url("../../1000024228.png");background-position:center 52%}
+.summon-banner {min-height:174px}
+.summon-banner b {font-size:25px}
+@media(max-width:560px) {
+  .home-hero {min-height:330px;background-position:48% center;padding:20px 16px}
+  .home-brand-title {max-width:76%;font-size:34px}
+  .home-brand-sub {max-width:78%;font-size:10px}
+  .collection-banner {min-height:118px}
+  .summon-banner {min-height:146px}
+  .warden-art-card {min-height:104px}
+}
