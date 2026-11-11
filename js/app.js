@@ -620,7 +620,7 @@ async function render() {
   const visibleTabs = allTabs.filter(([id]) => navGroups[activeMain].includes(id));
 
   root.innerHTML = `
-    <div class="app-shell">
+    <div class="app-shell bloodmoon-shell">
 
       <header class="top-bar bloodmoon-topbar">
         <div class="brand-block">
