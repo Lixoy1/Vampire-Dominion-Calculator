@@ -158,6 +158,33 @@ function normalizePlan(input = {}, account) {
     if (/^\d+$/.test(id)) plan.bonds[id] = clone(record(raw));
   }
 
+  // Planned talent additions are increments, not absolute talent levels.
+  // Clamp scroll + script increments together so a talent cannot exceed the
+  // selected promotion's cap.
+  plan.talents = {};
+  for (const [id, raw] of Object.entries(record(source.talents))) {
+    if (!/^\d+$/.test(id)) continue;
+    const warden = db.wardens.find(item => item.id === Number(id));
+    const owned = account.ownedWardens[id];
+    if (!warden || !owned) continue;
+    const promoteId = Math.max(1, Math.min(db.promotes.length, Math.round(numeric(plan.promotes[id], owned.promoteId || 1))));
+    const maxLevel = db.promotes.find(item => item.id === promoteId)?.max_talent_lvl ?? 40;
+    const selected = record(raw);
+    const scrolls = {};
+    const scripts = {};
+    for (let position = 0; position < warden.talents.length; position++) {
+      const baseLevel = Math.max(1, Math.min(maxLevel, Math.round(numeric(record(owned.talents)[position], 1))));
+      const room = Math.max(0, maxLevel - baseLevel);
+      const scrollCount = Math.max(0, Math.min(room, Math.round(numeric(record(selected.scrolls)[position]))));
+      const scriptCount = Math.max(0, Math.min(room - scrollCount, Math.round(numeric(record(selected.scripts)[position]))));
+      if (scrollCount) scrolls[position] = scrollCount;
+      if (scriptCount) scripts[position] = scriptCount;
+    }
+    if (Object.keys(scrolls).length || Object.keys(scripts).length) {
+      plan.talents[id] = { scrolls, scripts };
+    }
+  }
+
   // Include current bond levels as the baseline even when a player has not
   // edited a branch yet. Warden attributes are always recomputed server-side.
   for (const [id, owned] of Object.entries(account.ownedLovers)) {
@@ -225,11 +252,180 @@ function makeWarnings(account, plan) {
   return warnings;
 }
 
+function getTalentPlanUsage(plan, ownedWardens) {
+  const byItem = {};
+  const byWarden = {};
+  let scrollLevels = 0;
+  let scriptLevels = 0;
+  let totalLevels = 0;
+
+  for (const [wardenId, selectedRaw] of Object.entries(record(plan.talents))) {
+    const warden = db.wardens.find(item => item.id === Number(wardenId));
+    if (!warden || !ownedWardens[wardenId]) continue;
+    const selected = record(selectedRaw);
+    const scrolls = record(selected.scrolls);
+    const scripts = record(selected.scripts);
+    const wardenSummary = { scrollLevels: 0, scriptLevels: 0, itemCosts: {} };
+
+    for (let position = 0; position < warden.talents.length; position++) {
+      const talent = warden.talents[position];
+      const scrollCount = Math.max(0, Math.round(numeric(scrolls[position])));
+      const scriptCount = Math.max(0, Math.round(numeric(scripts[position])));
+      if (scrollCount && talent.scroll_item_id) {
+        byItem[talent.scroll_item_id] = (byItem[talent.scroll_item_id] || 0) + scrollCount;
+        wardenSummary.itemCosts[talent.scroll_item_id] = (wardenSummary.itemCosts[talent.scroll_item_id] || 0) + scrollCount;
+      }
+      if (scriptCount && talent.script_item_id) {
+        const scriptCost = Engine.calcScriptExpectedCost({ tries: talent.stars }, scriptCount);
+        byItem[talent.script_item_id] = (byItem[talent.script_item_id] || 0) + scriptCost;
+        wardenSummary.itemCosts[talent.script_item_id] = (wardenSummary.itemCosts[talent.script_item_id] || 0) + scriptCost;
+      }
+      wardenSummary.scrollLevels += scrollCount;
+      wardenSummary.scriptLevels += scriptCount;
+    }
+    if (wardenSummary.scrollLevels || wardenSummary.scriptLevels) {
+      byWarden[wardenId] = wardenSummary;
+      scrollLevels += wardenSummary.scrollLevels;
+      scriptLevels += wardenSummary.scriptLevels;
+      totalLevels += wardenSummary.scrollLevels + wardenSummary.scriptLevels;
+    }
+  }
+
+  return { byItem, byWarden, scrollLevels, scriptLevels, totalLevels };
+}
+
+function buildTalentDistributionBlock(account, plan, availableBag = account.bag) {
+  const groups = { scrolls: new Map(), scripts: new Map() };
+  const usage = getTalentPlanUsage(plan, account.ownedWardens);
+  const targetLevel = id => Math.max(account.ownedWardens[id]?.level || 1, numeric(plan.levels[id], account.ownedWardens[id]?.level || 1));
+
+  for (const [wardenId, owned] of Object.entries(account.ownedWardens)) {
+    const warden = db.wardens.find(item => item.id === Number(wardenId));
+    if (!warden) continue;
+    const promotionId = Math.max(1, Math.min(db.promotes.length, Math.round(numeric(plan.promotes[wardenId], owned.promoteId || 1))));
+    const cap = db.promotes.find(item => item.id === promotionId)?.max_talent_lvl ?? 40;
+    const selection = record(plan.talents[wardenId]);
+    const selectedScrolls = record(selection.scrolls);
+    const selectedScripts = record(selection.scripts);
+    const multiplier = Engine.calcWardenLevelMultiplier(targetLevel(wardenId));
+
+    for (let position = 0; position < warden.talents.length; position++) {
+      const talent = warden.talents[position];
+      if (!talent.scroll_item_id && !talent.script_item_id) continue;
+      const baseLevel = Math.max(1, Math.min(cap, Math.round(numeric(record(owned.talents)[position], 1))));
+      const scrollChosen = Math.max(0, Math.round(numeric(selectedScrolls[position])));
+      const scriptChosen = Math.max(0, Math.round(numeric(selectedScripts[position])));
+      const finalLevel = Math.min(cap, baseLevel + scrollChosen + scriptChosen);
+      const common = {
+        position,
+        cap,
+        final: finalLevel,
+        max_chosen: Math.max(0, cap - baseLevel),
+        next_gain: talent.stars * multiplier,
+      };
+
+      const addLine = (category, itemId, chosen, extra) => {
+        if (!itemId) return;
+        const groupMap = groups[category];
+        if (!groupMap.has(itemId)) {
+          const reserved = usage.byItem[itemId] || 0;
+          groupMap.set(itemId, {
+            item_id: itemId,
+            left: Math.max(0, nonNegative(availableBag[itemId]) - reserved),
+            wardens: new Map(),
+          });
+        }
+        const group = groupMap.get(itemId);
+        if (!group.wardens.has(Number(wardenId))) {
+          group.wardens.set(Number(wardenId), { warden_id: Number(wardenId), talents: [] });
+        }
+        group.wardens.get(Number(wardenId)).talents.push({
+          ...common,
+          chosen,
+          ...extra,
+        });
+      };
+
+      addLine('scrolls', talent.scroll_item_id, scrollChosen, { next_cost: 1 });
+      addLine('scripts', talent.script_item_id, scriptChosen, { tries: Math.max(1, Number(talent.stars) || 1) });
+    }
+  }
+
+  return {
+    scrolls: [...groups.scrolls.values()].map(group => ({
+      item_id: group.item_id,
+      left: group.left,
+      wardens: [...group.wardens.values()],
+    })),
+    scripts: [...groups.scripts.values()].map(group => ({
+      item_id: group.item_id,
+      left: group.left,
+      wardens: [...group.wardens.values()],
+    })),
+    own_exp: [],
+  };
+}
+
+function runTalentAutoDistribution(account, plan, availableBag = account.bag) {
+  const block = buildTalentDistributionBlock(account, plan, availableBag);
+  const result = Engine.autoDistributeTalents(block, plan.talents || {});
+  const nextPlan = { ...plan, talents: result.after };
+  return {
+    plan: normalizePlan(nextPlan, account),
+    opened: result.opened,
+    usage: getTalentPlanUsage(nextPlan, account.ownedWardens),
+  };
+}
+
+function calculateTalentGain(account, plan) {
+  let gain = 0;
+  for (const [wardenId, selectedRaw] of Object.entries(record(plan.talents))) {
+    const warden = db.wardens.find(item => item.id === Number(wardenId));
+    const owned = account.ownedWardens[wardenId];
+    if (!warden || !owned) continue;
+    const selected = record(selectedRaw);
+    const multiplier = Engine.calcWardenLevelMultiplier(
+      Math.max(owned.level || 1, numeric(plan.levels[wardenId], owned.level || 1))
+    );
+    for (let position = 0; position < warden.talents.length; position++) {
+      const levels = Math.max(0, numeric(record(selected.scrolls)[position]))
+        + Math.max(0, numeric(record(selected.scripts)[position]));
+      gain += levels * warden.talents[position].stars * multiplier;
+    }
+  }
+  return Math.round(gain);
+}
+
+export function autoDistributeTalentPlan(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const plan = normalizePlan(raw.plan, account);
+  const distribution = runTalentAutoDistribution(account, plan, account.bag);
+  return {
+    plan: distribution.plan,
+    opened: distribution.opened,
+    summary: {
+      plannedLevels: distribution.usage.totalLevels,
+      scrollLevels: distribution.usage.scrollLevels,
+      scriptLevels: distribution.usage.scriptLevels,
+      items: distribution.usage.byItem,
+    },
+  };
+}
+
 export function calculateOracle(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
   const report = Engine.calculateTotalDominanceReport({ db, account, plan });
+  const talentUsage = getTalentPlanUsage(plan, account.ownedWardens);
+  const talentGain = calculateTalentGain(account, plan);
+  report.gain.talents = talentGain;
+  report.gain.total += talentGain;
+  report.gain.totalWithSummonEstimate += talentGain;
+  report.spent.talentScrolls = talentUsage.scrollLevels;
+  report.spent.talentScripts = talentUsage.scriptLevels;
+  report.spent.talentItems = talentUsage.byItem;
 
   const conclaveBranches = {};
   for (const attribute of ATTRIBUTES) {
@@ -393,6 +589,7 @@ export function calculateOracle(input = {}) {
     bloodCost: 'approximate',
     bondCost: 'approximate',
     summonGain: 'estimate-only',
+    talentGain: 'engine-modelled-not-game-verified',
   };
 
   return {
@@ -418,6 +615,13 @@ export function calculateOracle(input = {}) {
     wardens,
     lovers,
     summonCandidates,
+    talentPlan: {
+      plannedLevels: talentUsage.totalLevels,
+      scrollLevels: talentUsage.scrollLevels,
+      scriptLevels: talentUsage.scriptLevels,
+      items: talentUsage.byItem,
+      byWarden: talentUsage.byWarden,
+    },
     warnings: makeWarnings(account, plan),
   };
 }
@@ -510,6 +714,14 @@ export function autoDistributeAll(input = {}) {
 
   plan.levels = nextLevels;
   plan.promotes = nextPromotes;
+
+  // Plan scrolls and scripts against the bag remaining after Warden
+  // breakthrough reservations. The optimiser preserves any existing choices.
+  const talentDistribution = runTalentAutoDistribution(account, plan, tempBag);
+  plan.talents = talentDistribution.plan.talents;
+  for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
+    tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
+  }
 
   // Reserve summon resources through one shared bag ledger. A Lover can be
   // auto-selected only when their Warden is already owned or included above.
@@ -615,6 +827,27 @@ export function commitOraclePlan(input = {}) {
     wardenPromotes[id] = nextPromoteId;
   }
 
+  // Apply planned talent levels using the same inventory ledger as
+  // breakthrough items and summons. Script requirements use expected tries
+  // from the reference engine (one try per talent star).
+  const talentUsage = getTalentPlanUsage(plan, draft.ownedWardens);
+  for (const [itemId, count] of Object.entries(talentUsage.byItem)) {
+    const available = draft.bag[itemId] || 0;
+    if (available < count) {
+      return {
+        ok: false,
+        error: {
+          code: 'INSUFFICIENT_TALENT_ITEMS',
+          itemId: Number(itemId),
+          required: count,
+          available,
+          message: 'Недостаточно свитков или рукописей талантов для выбранного плана.',
+        },
+      };
+    }
+    draft.bag[itemId] = Math.max(0, available - count);
+  }
+
   const summonCandidates = Engine.getSummonCandidates(
     db.wardens, db.lovers,
     new Set(Object.keys(draft.ownedWardens).map(Number)),
@@ -682,6 +915,22 @@ export function commitOraclePlan(input = {}) {
     if (!owned) continue;
     owned.level = Math.max(owned.level || 1, Number(targetLevel) || 1);
     owned.promoteId = wardenPromotes[id] || plan.promotes[id] || owned.promoteId || 1;
+  }
+
+  for (const [wardenId, selectedRaw] of Object.entries(record(plan.talents))) {
+    const owned = draft.ownedWardens[wardenId];
+    const warden = db.wardens.find(item => item.id === Number(wardenId));
+    if (!owned || !warden) continue;
+    owned.talents ||= {};
+    const selected = record(selectedRaw);
+    for (let position = 0; position < warden.talents.length; position++) {
+      const increments = Math.max(0, numeric(record(selected.scrolls)[position]))
+        + Math.max(0, numeric(record(selected.scripts)[position]));
+      if (!increments) continue;
+      const cap = db.promotes.find(item => item.id === (wardenPromotes[wardenId] || owned.promoteId || 1))?.max_talent_lvl ?? 40;
+      const currentLevel = Math.max(1, numeric(owned.talents[position], 1));
+      owned.talents[position] = Math.min(cap, currentLevel + increments);
+    }
   }
 
   for (const [id, update] of Object.entries(bondUpdates)) {
