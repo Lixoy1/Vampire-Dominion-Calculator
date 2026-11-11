@@ -860,12 +860,9 @@ function renderSkinsTab(db, oracle) {
 
 function renderSummonTab(db, oracle) {
   const cands = oracle.summonCandidates;
-
   return `
     <section class="card card-gold">
-      <div class="card-head">
-        <div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div>
-      </div>
+      <div class="card-head"><div class="card-title">➕ Доступные для призыва Смотрители (${cands.wardens.length})</div></div>
       ${cands.wardens.map(c => {
         const w = db.wardens.find(x => x.id === c.id);
         const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
@@ -874,13 +871,27 @@ function renderSummonTab(db, oracle) {
             <img class="avatar" src="${getIconUrl(w?.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
             <div class="row-info">
               <div class="row-name">${tName('warden', c.name)} (${c.baseTalentStars}★)</div>
-              <div class="row-sub">
-                ${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}
-              </div>
+              <div class="row-sub">${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / VIP / Событие)'}</div>
             </div>
             <button class="btn btn-sm btn-primary summon-warden" data-wid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
-          </div>
-        `;
+          </div>`;
+      }).join('')}
+    </section>
+    <section class="card">
+      <div class="card-head"><div class="card-title">💞 Доступные для призыва Возлюбленные (${cands.lovers.length})</div></div>
+      ${cands.lovers.map(c => {
+        const lover = db.lovers.find(x => x.id === c.id);
+        const itemObj = c.itemId ? db.items.find(i => i.id === c.itemId) : null;
+        const warden = db.wardens.find(x => x.id === c.wardenId);
+        return `
+          <div class="item-row">
+            <img class="avatar" src="${getIconUrl(getLoverIconPath(lover || {}, null), state.preferLocalIcons)}" alt="" loading="lazy" />
+            <div class="row-info">
+              <div class="row-name">${tName('lover', c.name)}</div>
+              <div class="row-sub">${warden ? `Смотритель: ${tName('warden', warden.name)} · ` : ''}${itemObj ? `Нужно: ${c.cost} × ${tName('item', itemObj.name)} (в сумке: ${c.have})` : 'Бесплатный призыв (Сюжет / Событие)'}${c.hasWarden ? '' : ' · Смотритель ещё не добавлен в профиль'}</div>
+            </div>
+            <button class="btn btn-sm btn-primary summon-lover" data-lid="${c.id}" ${c.canSummon ? '' : 'disabled'}>${c.canSummon ? 'Призвать' : 'Не хватает'}</button>
+          </div>`;
       }).join('')}
     </section>
   `;
@@ -1112,6 +1123,23 @@ function bindEvents(db) {
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       try {
         const result = await requestOracle('/api/oracle/summon', { account: state.account, wardenId: id });
+        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        state.account = normalizeAccountData(result.account);
+        saveState();
+        render();
+      } catch (error) {
+        alert(error.message || 'Oracle не смог выполнить призыв.');
+      }
+    });
+  });
+
+  document.querySelectorAll('.summon-lover').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = Number(btn.dataset.lid);
+      const candidate = oracle.summonCandidates.lovers.find(item => item.id === id);
+      if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
+      try {
+        const result = await requestOracle('/api/oracle/summon-lover', { account: state.account, loverId: id });
         if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
         state.account = normalizeAccountData(result.account);
         saveState();
