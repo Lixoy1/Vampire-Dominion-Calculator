@@ -98,6 +98,7 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
     talents: Object.fromEntries(Object.entries(incoming?.talents || {}).map(([id, value]) => [id, {
       scrolls: { ...(value?.scrolls || {}) },
       scripts: { ...(value?.scripts || {}) },
+      exp_levels: { ...(value?.exp_levels || {}) },
     }])),
     skins: { ...(incoming?.skins || {}) },
     summons: {
@@ -418,10 +419,32 @@ async function runAutoTalentDistribution() {
       'План талантов готов.\\n' +
       'Уровней: ' + (summary.plannedLevels || 0) + '\\n' +
       'Свитки: ' + (summary.scrollLevels || 0) + '\\n' +
-      'Рукописи: ' + (summary.scriptLevels || 0)
+      'Рукописи: ' + (summary.scriptLevels || 0) + '\\n' +
+      'За личный опыт: ' + (summary.expLevels || 0) + ' уровн. / ' + (summary.expSpentTotal || 0) + ' EXP'
     );
   } catch (error) {
     alert(error.message || 'Oracle не смог распределить свитки и рукописи.');
+  }
+}
+
+async function runAutoBondDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-bonds', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План Кровных уз рассчитан.\\n' +
+      'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
+      'Доверие по расчётной формуле: ' + (summary.estimatedAffinity || 0) + '\\n' +
+      'Оценка прироста: +' + (summary.estimatedGain || 0) + ' Господства'
+    );
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить Доверие.');
   }
 }
 
@@ -454,8 +477,10 @@ async function runFullAutoDistribute() {
     state.plan = normalizePlan(result.plan, state.account);
     saveState();
     await render();
-    const added = result.summary?.presences?.addedLevels || 0;
-    if (added) alert('Авторасчёт готов. Дополнительно распределено уровней Веяний: ' + added + '.');
+    const presenceAdded = result.summary?.presences?.addedLevels || 0;
+    const bondAdded = result.summary?.bonds?.addedLevels || 0;
+    const expLevels = result.summary?.talents?.expLevels || 0;
+    if (presenceAdded || bondAdded || expLevels) alert('Авторасчёт готов.\\nВеяния: +' + presenceAdded + ' уровн.\\nКровные узы: +' + bondAdded + ' уровн.\\nТаланты за личный опыт: +' + expLevels + ' уровн.');
   } catch (error) {
     alert(error.message || 'Oracle не смог распределить ресурсы.');
   }
@@ -950,6 +975,7 @@ function renderBondsTab(db, oracle) {
         <div>
           <div class="card-title">🔗 Кровные узы и спутники (${ownedCount} в профиле)</div>
           <div class="row-sub">Близость открывает ветви уз; очки Доверия расходуются на уровни. Расчёт выполняет Server Oracle.</div>
+          <button class="btn btn-gold btn-sm" id="btn-auto-bonds">⚡ Распределить Доверие</button>
         </div>
       </div>
       ${db.lovers.map(l => {
@@ -1263,6 +1289,7 @@ function bindEvents(db) {
   document.getElementById('btn-auto-all')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-auto-talents')?.addEventListener('click', runAutoTalentDistribution);
   document.getElementById('btn-auto-presences')?.addEventListener('click', runAutoPresenceDistribution);
+  document.getElementById('btn-auto-bonds')?.addEventListener('click', runAutoBondDistribution);
   document.getElementById('btn-quick-run')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-commit-plan')?.addEventListener('click', commitPlanToAccount);
 
