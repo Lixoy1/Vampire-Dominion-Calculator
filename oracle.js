@@ -309,8 +309,6 @@ export function calculateOracle(input = {}) {
 
   // The engine's summon gain is explicitly an estimate. Keep it visible, but
   // do not roll it into the exact planned dominance total.
-  report.gain.totalWithSummonEstimate = report.gain.total + report.gain.summon;
-  report.gain.total = report.gain.totalWithSummonEstimate - report.gain.summon;
   report.precision = {
     totalExcludesSummonEstimate: true,
     bloodCost: 'approximate',
