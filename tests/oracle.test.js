@@ -165,7 +165,11 @@ function walkNumbers(value, path = 'root') {
     account.bag[talent.scroll_item_id] = 1;
     account.bag[talent.script_item_id] = 500;
   }
-  const auto = autoDistributeTalentPlan({ account, plan: makePlan() });
+  const auto = autoDistributeTalentPlan({ account, plan: {
+    ...makePlan(),
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+  } });
   assert.ok(auto.summary.plannedLevels > 0, 'talent optimiser allocates owned Warden talent levels');
   assert.ok(auto.summary.scrollLevels > 0, 'scroll groups receive levels');
   assert.ok(auto.summary.scriptLevels > 0, 'script groups receive levels');
@@ -516,7 +520,11 @@ function walkNumbers(value, path = 'root') {
 
   const insufficient = commitOraclePlan({
     account: { ...account, ownedWardens: { [expWarden.id]: { ...account.ownedWardens[expWarden.id], exp: 0 } } },
-    plan: { ...makePlan(), talents: { [expWarden.id]: { exp_levels: { 0: 1 } } } },
+    plan: { ...{
+    ...makePlan(),
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+  }, talents: { [expWarden.id]: { exp_levels: { 0: 1 } } } },
   });
   assert.equal(insufficient.ok, false);
   assert.equal(insufficient.error.code, 'INSUFFICIENT_TALENT_EXP');
@@ -532,7 +540,11 @@ function walkNumbers(value, path = 'root') {
     },
     bag: {}, skins: {},
   };
-  const automatic = autoDistributeBondPlan({ account, plan: makePlan() });
+  const automatic = autoDistributeBondPlan({ account, plan: {
+    ...makePlan(),
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+  } });
   assert.ok(automatic.summary.addedLevels > 0, 'Bond allocator spends available Affinity on unlocked branches');
   assert.ok(automatic.summary.estimatedAffinity <= 1000);
   assert.ok(automatic.plan.bonds[bondLover.id]);
