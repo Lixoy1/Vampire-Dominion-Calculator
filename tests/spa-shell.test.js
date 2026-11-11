@@ -63,6 +63,7 @@ for (const [file, key] of [
 ]) {
   const rows = JSON.parse(readFileSync(new URL(`../data/${file}`, import.meta.url), 'utf8'));
   assert.equal(rows.length, expected[key], `source table ${file} contains ${expected[key]} records`);
+  assert.deepEqual(rows, GAME_DB[key], `source table ${file} matches compiled GAME_DB exactly`);
 }
 for (const path of [
   '../scripts/app.js', '../scripts/data.js', '../scripts/engine.js',
