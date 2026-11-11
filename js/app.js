@@ -1294,10 +1294,11 @@ function bindEvents(db) {
     if (!state.account.oracleSnapshot) return;
     const blob = new Blob([JSON.stringify(state.account.oracleSnapshot, null, 2)], { type: 'application/json' });
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    const downloadUrl = URL.createObjectURL(blob);
+    link.href = downloadUrl;
     link.download = 'optimist-oracle-api-snapshot.json';
     link.click();
-    URL.revokeObjectURL(link.href);
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
   });
   document.getElementById('btn-oracle-clear')?.addEventListener('click', () => {
     if (!state.account.oracleSnapshot || !confirm('Удалить сохранённый JSON-снимок Oracle из этого профиля?')) return;
