@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { GAME_DB, getIconUrl } from '../js/data.js';
-import * as E from '../js/engine.js';
+import { GAME_DB, getIconUrl } from '../scripts/data.js';
+import * as E from '../scripts/engine.js';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 let passed = 0;
