@@ -874,7 +874,7 @@ function renderTalentsTab(db, oracle) {
         </div>
         <button class="btn btn-primary btn-sm" id="btn-auto-talents">⚡ Распределить таланты</button>
       </div>
-      ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels}</div>` : ''}
+      ${oracle.talentPlan?.plannedLevels ? `<div class="row-sub">В текущем плане: ${oracle.talentPlan.plannedLevels} уровней · свитки ${oracle.talentPlan.scrollLevels} · рукописи ${oracle.talentPlan.scriptLevels} · личный опыт ${oracle.talentPlan.expLevels} (${fmt(oracle.talentPlan.expSpentTotal)} EXP)</div>` : ''}
       ${db.wardens.map(w => {
         const isOwned = !!state.account.ownedWardens[w.id];
         const owned = state.account.ownedWardens[w.id];
@@ -902,7 +902,13 @@ function renderTalentsTab(db, oracle) {
             <label class="talent-control"><span>Личный опыт талантов (бонус прорыва учитывается отдельно)</span><input class="input talent-exp" type="number" min="0" step="1" data-wid="${w.id}" value="${owned.exp || 0}" /></label>
             <div class="talent-grid">${w.talents.map((talent, index) => {
               const lvl = owned.talents?.[index] ?? 1;
-              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" /></label>`;
+              const selected = state.plan.talents?.[w.id] || {};
+              const scrolls = Number(selected.scrolls?.[index]) || 0;
+              const scripts = Number(selected.scripts?.[index]) || 0;
+              const expLevels = Number(selected.exp_levels?.[index]) || 0;
+              const planned = scrolls + scripts + expLevels;
+              const target = Math.min(maxTalentLvl, lvl + planned);
+              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" />${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} EXP</small>` : ''}</label>`;
             }).join('')}</div>
           </details>` : ''}
         `;
