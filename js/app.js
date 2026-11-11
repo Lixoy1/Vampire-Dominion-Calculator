@@ -634,6 +634,21 @@ async function render() {
               Веяния ${oracle.meta.helperApi.presenceSteps} · узы ${oracle.meta.helperApi.bondSteps} ·
               облики ${oracle.meta.helperApi.skinSteps}
             </div>
+            ${oracle.meta.helperApi.attributeBreakdown ? `
+              <div class="table-wrap" style="margin-top:10px;">
+                <div class="row-sub">Точные значения атрибутов из ответа API</div>
+                <div class="grid-4" style="margin-top:6px;">
+                  ${['strength','allure','intellect','spirit'].map((attr, i) => {
+                    const labels = ['Сила','Харизма','Интеллект','Воля'];
+                    const value = oracle.meta.helperApi.attributeBreakdown[attr];
+                    const total = value && typeof value === 'object' ? (value.total ?? value.dominance ?? '—') : (value ?? '—');
+                    return `<div><div class="row-sub">${labels[i]}</div><div class="row-name">${String(total)}</div></div>`;
+                  }).join('')}
+                </div>
+              </div>` : ''}`
+);
+
+            </div>
           </section>` : ''}
         ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
         ${renderActiveTab(db, report, oracle)}
