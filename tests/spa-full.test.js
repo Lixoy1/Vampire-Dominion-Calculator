@@ -75,5 +75,12 @@ for (const target of ['home', 'resources', 'calculations', 'settings']) {
 assert.ok(css.includes('.spa-topbar') && css.includes('.home-hero'), 'Blood Moon styles the SPA shell and home hero');
 assert.ok(css.includes('.warden-hero-card') && css.includes('.bag-grid-4'), 'Blood Moon styles entity details and inventory grid');
 assert.ok(css.includes('.formula-status-list') && css.includes('.quick-calc-summary'), 'modals have complete styling');
+assert.ok(css.includes('url("../../1000021575.png")'), 'home hero references the supplied king artwork');
+assert.ok(css.includes('url("../../1000024449.png")'), 'Warden detail references the supplied character artwork');
+assert.ok(css.includes('url("../../1000024228.png")'), 'partner and calculation sections reference the supplied banner');
+assert.ok(css.includes('url("../../1000019874.png")'), 'summon and settings reference the supplied banner');
+assert.ok(fn('renderSpaScreen').includes("case 'summon':"), 'summon has a first-class SPA route');
+assert.ok(fn('renderResourcesScreen').includes("data-screen=\"summon\""), 'resources screen links to summon');
+
 
 console.log('PASS full SPA screen routes, Oracle-only detail formulas, and modal actions');
