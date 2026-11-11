@@ -299,6 +299,51 @@ export function calculateOracle(input = {}) {
     };
   }
 
+  const inventory = Engine.summarizeBag(db.items, account.bag);
+  const skins = {};
+  for (const warden of db.wardens) {
+    for (const skin of warden.skins || []) {
+      const level = Math.max(0, Math.min(skin.max_lvl || 10, Math.round(numeric(account.skins[skin.id]))));
+      const costPerLevel = Engine.FABRIC_COST_BY_QUALITY[skin.quality] ?? null;
+      skins[skin.id] = {
+        skinId: skin.id,
+        ownerType: 'warden',
+        ownerId: warden.id,
+        level,
+        maxLevel: skin.max_lvl || 10,
+        quality: skin.quality,
+        purchasable: Boolean(skin.purchasable),
+        storeExp: nonNegative(skin.store_exp),
+        fabricPerLevel: costPerLevel,
+        levelsRemaining: Math.max(0, (skin.max_lvl || 10) - level),
+        fabricToMax: skin.purchasable && costPerLevel != null
+          ? Math.max(0, (skin.max_lvl || 10) - level) * costPerLevel
+          : null,
+      };
+    }
+  }
+  for (const lover of db.lovers) {
+    for (const skin of lover.skins || []) {
+      const level = Math.max(0, Math.min(skin.max_lvl || 10, Math.round(numeric(account.skins[skin.id]))));
+      const costPerLevel = Engine.FABRIC_COST_BY_QUALITY[skin.quality] ?? null;
+      skins[skin.id] = {
+        skinId: skin.id,
+        ownerType: 'lover',
+        ownerId: lover.id,
+        level,
+        maxLevel: skin.max_lvl || 10,
+        quality: skin.quality,
+        purchasable: Boolean(skin.purchasable),
+        storeExp: nonNegative(skin.store_exp),
+        fabricPerLevel: costPerLevel,
+        levelsRemaining: Math.max(0, (skin.max_lvl || 10) - level),
+        fabricToMax: skin.purchasable && costPerLevel != null
+          ? Math.max(0, (skin.max_lvl || 10) - level) * costPerLevel
+          : null,
+      };
+    }
+  }
+
   const summonCandidates = Engine.getSummonCandidates(
     db.wardens,
     db.lovers,
@@ -328,6 +373,8 @@ export function calculateOracle(input = {}) {
       stateless: true,
     },
     report,
+    inventory,
+    skins,
     conclaveBranches,
     courtyardUpgrade,
     wardens,
