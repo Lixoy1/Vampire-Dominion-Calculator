@@ -15,15 +15,15 @@ const CATALOG_PROVENANCE = Object.freeze({
   sourceId: 'dhampir-helper-api',
   sourceLabel: 'API бота «Помощник Дампира»',
   sourceType: 'third-party-bot-api',
-  trustLevel: 'reference-unverified',
+  trustLevel: 'user-confirmed',
   gameServerVerified: false,
-  note: 'Справочные каталоги и ограничения получены из API стороннего бота. Они не являются подтверждёнными ответами Game of Vampires.',
+  note: 'Пользователь подтвердил ответы и каталоги API «Помощника Дампира» как контрольный источник для совместимости Oracle с ботом.',
 });
 
 const GAME_VERIFICATION = Object.freeze({
-  status: 'not-verified',
+  status: 'helper-api-confirmed',
   verifiedAgainstGame: false,
-  note: 'Контрольные значения непосредственно из игрового клиента пока не внесены.',
+  note: 'Контрольным источником проекта являются выгрузки API «Помощника Дампира». Подключение к официальному API Game of Vampires не выполняется.',
 });
 
 const ATTRIBUTES = Engine.ATTRIBUTES;
@@ -1559,80 +1559,247 @@ export function summonLover(input = {}) {
 }
 
 /**
- * Imports manual account snapshots exported by the third-party Dhampir Helper.
- * Source dominance values are retained as references, never added to formulas.
+ * Imports the user's exact Helper API responses. The original API values are
+ * retained as observations so an absent next_cost/next_gain is never replaced
+ * with a guessed value during import.
  */
 export function importDhampirSnapshot(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
-  const snapshots = Array.isArray(raw.snapshots) ? raw.snapshots : [raw.snapshot ?? raw.data ?? raw];
+  const snapshots = Array.isArray(raw.snapshots)
+    ? raw.snapshots
+    : [raw.snapshot ?? raw.data ?? raw];
   const bondIndex = new Map();
   for (const lover of db.lovers) {
-    for (const bond of lover.scarlet_bonds || []) bondIndex.set(Number(bond.id), { loverId: lover.id, attribute: bond.attribute });
+    for (const bond of lover.scarlet_bonds || []) {
+      bondIndex.set(Number(bond.id), { loverId: lover.id, attribute: bond.attribute });
+    }
   }
   const knownItems = new Set(db.items.map(item => item.id));
   const knownWardens = new Map(db.wardens.map(item => [item.id, item]));
   const knownLovers = new Map(db.lovers.map(item => [item.id, item]));
-  const summary = { wardens: 0, bonds: 0, skins: 0, inventory: 0, conclaveAttributes: 0, guildProgress: false, skipped: 0 };
+  const summary = {
+    wardens: 0, lovers: 0, bonds: 0, skins: 0, auras: 0, presences: 0,
+    inventory: 0, conclaveAttributes: 0, guildProgress: false, skipped: 0,
+    wardenSteps: 0, talentScripts: 0, auraPaths: 0, bookRows: 0, manuscriptTiers: 0,
+  };
   const warnings = [];
-  const observedWardenDominance = { ...(record(account.helperImport).observedWardenDominance || {}) };
-  const sourceWardenFlags = { ...(record(account.helperImport).wardenFlags || {}) };
+  const previousImport = record(account.helperImport);
+  const observedWardenDominance = { ...record(previousImport.observedWardenDominance) };
+  const sourceWardenFlags = { ...record(previousImport.wardenFlags) };
+  const previousObservations = record(previousImport.apiObservations);
+  const apiObservations = {
+    wardenSteps: { ...record(previousObservations.wardenSteps) },
+    talentScripts: Array.isArray(previousObservations.talentScripts) ? [...previousObservations.talentScripts] : [],
+    talentScrolls: previousObservations.talentScrolls ?? null,
+    auraItems: Array.isArray(previousObservations.auraItems) ? [...previousObservations.auraItems] : [],
+    bookItems: Array.isArray(previousObservations.bookItems) ? [...previousObservations.bookItems] : [],
+    manuscriptTiers: Array.isArray(previousObservations.manuscriptTiers) ? [...previousObservations.manuscriptTiers] : [],
+    skinSteps: Array.isArray(previousObservations.skinSteps) ? [...previousObservations.skinSteps] : [],
+    presenceSteps: Array.isArray(previousObservations.presenceSteps) ? [...previousObservations.presenceSteps] : [],
+    attributes: previousObservations.attributes ?? null,
+    conclave: previousObservations.conclave ?? null,
+    intimacy: previousObservations.intimacy ?? null,
+    attraction: previousObservations.attraction ?? null,
+    responseCount: Math.max(0, Math.round(numeric(previousObservations.responseCount))),
+  };
+
+  const rowsOf = value => {
+    if (Array.isArray(value)) return value.map(record);
+    const object = record(value);
+    return Object.entries(object).map(([key, child]) => ({
+      ...(typeof child === 'object' && child !== null ? record(child) : { count: child }),
+      id: record(child).id ?? key,
+    }));
+  };
+  const exactStep = row => ({
+    nextCost: row.next_cost ?? row.nextCost ?? null,
+    nextGain: row.next_gain ?? row.nextGain ?? null,
+    nextKind: row.next_kind ?? row.nextKind ?? row.resource ?? row.resource_type ?? null,
+  });
+  const pushBounded = (target, rows, limit = 1000) => {
+    for (const row of rowsOf(rows)) {
+      if (target.length >= limit) break;
+      target.push(clone(row));
+    }
+  };
+  const unwrap = value => {
+    let object = record(value);
+    const rootKeys = ['wardens', 'warden_list', 'lovers', 'levels', 'auras', 'talents',
+      'books', 'manuscripts', 'skins', 'presences', 'inventory', 'bag_items', 'attributes',
+      'conclave', 'guild', 'guildProgress'];
+    for (let depth = 0; depth < 4; depth++) {
+      if (rootKeys.some(key => object[key] !== undefined)) break;
+      const nested = record(object.data ?? object.result ?? object.response ?? object.payload);
+      if (!Object.keys(nested).length) break;
+      object = nested;
+    }
+    return object;
+  };
+
+  const mapTalentLevels = (target, source) => {
+    const result = { ...record(target) };
+    if (Array.isArray(source)) {
+      source.forEach((value, index) => {
+        const row = record(value);
+        const position = Math.round(numeric(row.position ?? row.index, index));
+        const level = row.level ?? row.current_level ?? row.currentLevel;
+        if (level !== undefined && position >= 0 && position < 50) result[position] = Math.max(1, Math.round(numeric(level, 1)));
+      });
+    } else {
+      for (const [position, value] of Object.entries(record(source))) {
+        if (!/^\d+$/.test(position)) continue;
+        const level = typeof value === 'object' && value !== null
+          ? (value.level ?? value.current_level ?? value.currentLevel)
+          : value;
+        if (level !== undefined && Number(position) < 50) result[position] = Math.max(1, Math.round(numeric(level, 1)));
+      }
+    }
+    return result;
+  };
 
   const setWardenRows = rows => {
-    for (const value of rows) {
+    for (const value of rowsOf(rows)) {
       const row = record(value);
-      const id = Math.round(numeric(row.template_id ?? row.id));
-      if (!knownWardens.has(id) || row.level === undefined) { summary.skipped++; continue; }
-      const current = account.ownedWardens[id] || {};
+      const id = Math.round(numeric(row.template_id ?? row.warden_id ?? row.owner_id ?? row.id));
+      if (!knownWardens.has(id)) { summary.skipped++; continue; }
+      const step = exactStep(row);
+      if (step.nextCost !== null || step.nextGain !== null) {
+        apiObservations.wardenSteps[id] = {
+          ...step,
+          level: row.level ?? row.current_level ?? null,
+          dominance: row.dominance ?? null,
+        };
+        summary.wardenSteps++;
+      }
+      if (row.dominance !== undefined && Number.isFinite(Number(row.dominance))) {
+        observedWardenDominance[id] = String(row.dominance);
+      }
+      if (typeof row.filled === 'boolean') sourceWardenFlags[id] = row.filled;
+
+      const incomingLevel = row.level ?? row.current_level ?? row.currentLevel;
+      if (incomingLevel === undefined) continue;
+      const current = record(account.ownedWardens[id]);
       account.ownedWardens[id] = {
         ...current,
-        level: Math.max(1, Math.min(450, Math.round(numeric(row.level, current.level || 1)))),
+        level: Math.max(1, Math.min(450, Math.round(numeric(incomingLevel, current.level || 1)))),
         promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(row.promote_id ?? row.promoteId, current.promoteId || 1)))),
         exp: nonNegative(row.talent_exp ?? row.exp ?? current.exp),
-        talents: record(current.talents),
+        talents: mapTalentLevels(current.talents, row.talents),
         auras: record(current.auras),
         sourceFilled: typeof row.filled === 'boolean' ? row.filled : current.sourceFilled,
       };
-      if (row.dominance !== undefined && Number.isFinite(Number(row.dominance))) observedWardenDominance[id] = String(row.dominance);
-      if (typeof row.filled === 'boolean') sourceWardenFlags[id] = row.filled;
       summary.wardens++;
     }
   };
 
-  const setBondRows = rows => {
-    for (const value of rows) {
+  const setLoverRows = rows => {
+    for (const value of rowsOf(rows)) {
       const row = record(value);
-      const bondMeta = bondIndex.get(Math.round(numeric(row.template_id ?? row.id)));
+      const id = Math.round(numeric(row.template_id ?? row.lover_id ?? row.owner_id ?? row.id));
+      const lover = knownLovers.get(id);
+      if (!lover) { summary.skipped++; continue; }
+      const hasCurrentState = row.affinity !== undefined || row.closeness !== undefined ||
+        row.presences !== undefined || row.presence !== undefined || row.scarlet_bonds !== undefined ||
+        row.sex !== undefined;
+      if (hasCurrentState) {
+        const current = record(account.ownedLovers[id]);
+        account.ownedLovers[id] = {
+          ...current,
+          affinity: nonNegative(row.affinity ?? current.affinity),
+          closeness: nonNegative(row.closeness ?? row.intimacy ?? current.closeness),
+          sex: row.sex || current.sex || lover.fixed_sex || 'female',
+          presences: record(current.presences),
+          bonds: record(current.bonds),
+        };
+        summary.lovers++;
+      }
+      const presenceRows = row.presences ?? row.presence;
+      if (presenceRows) setPresenceRows(presenceRows, id);
+      if (Array.isArray(row.scarlet_bonds)) {
+        setBondRows(row.scarlet_bonds.map(bond => ({ ...record(bond), lover_id: id })));
+      }
+    }
+  };
+
+  const setBondRows = rows => {
+    for (const value of rowsOf(rows)) {
+      const row = record(value);
+      const bondId = Math.round(numeric(row.template_id ?? row.bond_id ?? row.id));
+      let bondMeta = bondIndex.get(bondId);
+      const specifiedLoverId = Math.round(numeric(row.lover_id ?? row.owner_id));
+      if (!bondMeta && knownLovers.has(specifiedLoverId) && ATTRIBUTES.includes(row.attribute)) {
+        bondMeta = { loverId: specifiedLoverId, attribute: row.attribute };
+      }
       if (!bondMeta) { summary.skipped++; continue; }
       const lover = knownLovers.get(bondMeta.loverId);
-      const current = account.ownedLovers[bondMeta.loverId] || {};
+      const current = record(account.ownedLovers[bondMeta.loverId]);
       account.ownedLovers[bondMeta.loverId] = {
         ...current,
         affinity: nonNegative(row.affinity ?? current.affinity),
-        closeness: nonNegative(row.closeness ?? current.closeness),
+        closeness: nonNegative(row.closeness ?? row.intimacy ?? current.closeness),
         sex: current.sex || lover?.fixed_sex || 'female',
         presences: record(current.presences),
         bonds: {
           ...record(current.bonds),
           [bondMeta.attribute]: {
-            level: Math.max(0, Math.min(600, Math.round(numeric(row.level)))),
-            percentLevel: Math.max(0, Math.min(600, Math.round(numeric(row.percent_level ?? row.percentLevel)))),
+            level: Math.max(0, Math.min(600, Math.round(numeric(row.level ?? row.current_level)))),
+            percentLevel: Math.max(0, Math.min(600, Math.round(numeric(row.percent_level ?? row.percentLevel ?? row.current_percent_level)))),
           },
         },
       };
+      const step = exactStep(row);
+      if (step.nextCost !== null || step.nextGain !== null) {
+        apiObservations.presenceSteps.push({ kind: 'bond', loverId: bondMeta.loverId, attribute: bondMeta.attribute, ...step });
+      }
       summary.bonds++;
     }
   };
 
-  const setSkinRows = rows => {
-    for (const value of rows) {
+  const setPresenceRows = (rows, fallbackLoverId = 0) => {
+    for (const value of rowsOf(rows)) {
       const row = record(value);
-      const id = Math.round(numeric(row.template_id ?? row.id));
-      const level = Math.max(0, Math.min(10, Math.round(numeric(row.level))));
-      const kind = row.kind === 'warden' || row.kind === 'lover' ? row.kind : null;
-      const ownerId = Math.round(numeric(row.owner_id ?? row.ownerId));
+      const loverId = Math.round(numeric(row.lover_id ?? row.owner_id ?? row.loverId, fallbackLoverId));
+      const lover = knownLovers.get(loverId);
+      const presenceId = Math.round(numeric(row.presence_id ?? row.template_id ?? row.id));
+      const presence = lover?.presences?.find(item => item.id === presenceId);
+      if (!lover || !presence) { summary.skipped++; continue; }
+      const current = record(account.ownedLovers[loverId]);
+      const level = row.level ?? row.current_level ?? row.currentLevel;
+      if (level !== undefined) {
+        account.ownedLovers[loverId] = {
+          ...current,
+          affinity: nonNegative(current.affinity),
+          closeness: nonNegative(current.closeness),
+          sex: current.sex || lover.fixed_sex || 'female',
+          bonds: record(current.bonds),
+          presences: { ...record(current.presences), [presence.id]: Math.max(0, Math.min(presence.max_lvl ?? 30, Math.round(numeric(level)))) },
+        };
+        summary.presences++;
+      }
+      const step = exactStep(row);
+      if (step.nextCost !== null || step.nextGain !== null) {
+        apiObservations.presenceSteps.push({ loverId, presenceId: presence.id, ...step });
+      }
+    }
+  };
+
+  const setSkinRows = rows => {
+    for (const value of rowsOf(rows)) {
+      const row = record(value);
+      const id = Math.round(numeric(row.template_id ?? row.skin_id ?? row.id));
+      const level = Math.max(0, Math.min(10, Math.round(numeric(row.level ?? row.current_level))));
+      const kindRaw = String(row.kind ?? row.owner_type ?? row.ownerType ?? '').toLowerCase();
+      const kind = kindRaw === 'warden' || kindRaw === 'lover'
+        ? kindRaw
+        : row.lover_id !== undefined ? 'lover' : row.warden_id !== undefined ? 'warden' : null;
+      const ownerId = Math.round(numeric(row.owner_id ?? row.ownerId ?? row.lover_id ?? row.warden_id));
       const owner = kind === 'warden' ? knownWardens.get(ownerId) : kind === 'lover' ? knownLovers.get(ownerId) : null;
       const skin = owner?.skins?.find(item => item.id === id);
+      const step = exactStep(row);
+      if (step.nextCost !== null || step.nextGain !== null || row.next_kind !== undefined) {
+        apiObservations.skinSteps.push({ skinId: id, ownerType: kind, ownerId, ...step });
+      }
       if (!skin) { summary.skipped++; continue; }
       account.skins[id] = level;
       account.skinOwnership[id] = true;
@@ -1642,10 +1809,10 @@ export function importDhampirSnapshot(input = {}) {
 
   const setAttributeRows = rows => {
     let changed = 0;
-    for (const value of rows) {
+    for (const value of rowsOf(rows)) {
       const row = record(value);
       if (!ATTRIBUTES.includes(row.attribute)) continue;
-      const level = Math.round(numeric(row.level, -1));
+      const level = Math.round(numeric(row.level ?? row.current_level, -1));
       if (level < 0 || level > 180) continue;
       account.conclave[row.attribute] = level;
       changed++;
@@ -1654,7 +1821,7 @@ export function importDhampirSnapshot(input = {}) {
   };
 
   const setInventoryRows = rows => {
-    for (const value of rows) {
+    for (const value of rowsOf(rows)) {
       const row = record(value);
       const id = Math.round(numeric(row.item_id ?? row.template_id ?? row.id));
       const count = row.count ?? row.quantity ?? row.amount;
@@ -1664,19 +1831,111 @@ export function importDhampirSnapshot(input = {}) {
     }
   };
 
+  const setAuraItems = rows => {
+    for (const value of rowsOf(rows)) {
+      const item = record(value);
+      const itemId = Math.round(numeric(item.item_id ?? item.id));
+      const path = record(item.best_path ?? item.bestPath);
+      if (itemId || Object.keys(path).length) {
+        apiObservations.auraItems.push({
+          itemId: itemId || null,
+          count: item.count ?? null,
+          bestPath: {
+            cost: Array.isArray(path.cost) ? [...path.cost] : [],
+            gain: Array.isArray(path.gain) ? [...path.gain] : [],
+          },
+        });
+        if (Array.isArray(path.cost) || Array.isArray(path.gain)) summary.auraPaths++;
+      }
+      const owners = rowsOf(item.wardens);
+      for (const ownerRow of owners) {
+        const owner = record(ownerRow);
+        const wardenId = Math.round(numeric(owner.warden_id ?? owner.owner_id ?? owner.template_id ?? owner.id));
+        const warden = knownWardens.get(wardenId);
+        const owned = account.ownedWardens[wardenId];
+        if (!warden || !owned) continue;
+        for (const levelRow of rowsOf(owner.levels)) {
+          const level = record(levelRow);
+          let auraId = Math.round(numeric(level.aura_id ?? level.template_id ?? level.id));
+          let aura = (warden.auras || []).find(candidate => candidate.id === auraId);
+          if (!aura && itemId) {
+            const matches = (warden.auras || []).filter(candidate => candidate.upgrade_item_id === itemId);
+            if (matches.length === 1) aura = matches[0];
+          }
+          const currentLevel = level.level ?? level.current_level ?? level.currentLevel;
+          if (aura && currentLevel !== undefined && owner.owned !== false) {
+            account.ownedWardens[wardenId] = {
+              ...owned,
+              auras: { ...record(owned.auras), [aura.id]: Math.max(aura.min_lvl || 0, Math.min(aura.max_lvl ?? 30, Math.round(numeric(currentLevel)))) },
+            };
+            summary.auras++;
+          }
+          const step = exactStep(level);
+          if (step.nextCost !== null || step.nextGain !== null) {
+            apiObservations.auraItems.push({
+              itemId: itemId || null, wardenId, auraId: aura?.id ?? auraId || null, ...step,
+            });
+          }
+        }
+      }
+    }
+  };
+
   const importObject = objectValue => {
-    const object = record(objectValue);
-    if (Array.isArray(object.wardens)) setWardenRows(object.wardens);
-    if (Array.isArray(object.warden_list)) setWardenRows(object.warden_list);
-    if (Array.isArray(object.bonds)) setBondRows(object.bonds);
-    if (Array.isArray(object.scarlet_bonds)) setBondRows(object.scarlet_bonds);
-    if (Array.isArray(object.skins)) setSkinRows(object.skins);
-    if (Array.isArray(object.skin_levels)) setSkinRows(object.skin_levels);
-    if (Array.isArray(object.attributes)) setAttributeRows(object.attributes);
-    if (Array.isArray(object.conclave_attributes)) setAttributeRows(object.conclave_attributes);
-    if (Array.isArray(object.conclaveLevels)) setAttributeRows(object.conclaveLevels);
-    if (Array.isArray(object.inventory)) setInventoryRows(object.inventory);
-    if (Array.isArray(object.bag_items)) setInventoryRows(object.bag_items);
+    const object = unwrap(objectValue);
+    const levels = record(object.levels);
+    const conclave = record(object.conclave);
+    const talents = record(object.talents);
+    const books = record(object.books);
+    const manuscripts = record(object.manuscripts);
+    const auras = record(object.auras);
+
+    if (object.wardens !== undefined) setWardenRows(object.wardens);
+    if (object.warden_list !== undefined) setWardenRows(object.warden_list);
+    if (levels.wardens !== undefined) setWardenRows(levels.wardens);
+    if (object.lovers !== undefined) setLoverRows(object.lovers);
+    if (object.lover_list !== undefined) setLoverRows(object.lover_list);
+    if (levels.lovers !== undefined) setLoverRows(levels.lovers);
+    if (object.bonds !== undefined) setBondRows(object.bonds);
+    if (object.scarlet_bonds !== undefined) setBondRows(object.scarlet_bonds);
+    if (object.presences !== undefined) setPresenceRows(object.presences);
+    if (object.skins !== undefined) setSkinRows(object.skins);
+    if (object.skin_levels !== undefined) setSkinRows(object.skin_levels);
+    if (object.attributes !== undefined) {
+      if (Array.isArray(object.attributes)) setAttributeRows(object.attributes);
+      else apiObservations.attributes = clone(object.attributes);
+    }
+    if (object.conclave_attributes !== undefined) setAttributeRows(object.conclave_attributes);
+    if (object.conclaveLevels !== undefined) setAttributeRows(object.conclaveLevels);
+    if (Array.isArray(conclave.attributes)) setAttributeRows(conclave.attributes);
+    else if (Object.keys(conclave).length) apiObservations.conclave = clone(conclave);
+    if (object.inventory !== undefined) setInventoryRows(object.inventory);
+    if (object.bag_items !== undefined) setInventoryRows(object.bag_items);
+    if (object.bag !== undefined) setInventoryRows(object.bag);
+    if (auras.items !== undefined) setAuraItems(auras.items);
+    if (talents.scripts !== undefined) {
+      pushBounded(apiObservations.talentScripts, talents.scripts);
+      summary.talentScripts += rowsOf(talents.scripts).length;
+    }
+    if (talents.scrolls !== undefined) apiObservations.talentScrolls = clone(talents.scrolls);
+    if (books.items !== undefined) {
+      pushBounded(apiObservations.bookItems, books.items);
+      summary.bookRows += rowsOf(books.items).length;
+    }
+    if (manuscripts.tiers !== undefined) {
+      pushBounded(apiObservations.manuscriptTiers, manuscripts.tiers);
+      summary.manuscriptTiers += rowsOf(manuscripts.tiers).length;
+    }
+    if (object.intimacy !== undefined) apiObservations.intimacy = clone(object.intimacy);
+    if (object.attraction !== undefined) apiObservations.attraction = clone(object.attraction);
+    if (object.skins !== undefined) {
+      for (const row of rowsOf(object.skins)) {
+        const step = exactStep(row);
+        if (step.nextCost !== null || step.nextGain !== null || row.next_kind !== undefined) {
+          apiObservations.skinSteps.push({ skinId: row.id ?? row.template_id ?? row.skin_id ?? null, ...step });
+        }
+      }
+    }
 
     const guild = record(object.guildProgress ?? object.guild_progress ?? object.guild);
     const candidate = Object.keys(guild).length ? guild : object;
@@ -1690,22 +1949,29 @@ export function importDhampirSnapshot(input = {}) {
       };
       summary.guildProgress = true;
     }
+    apiObservations.responseCount++;
   };
 
   for (const snapshot of snapshots) {
     if (Array.isArray(snapshot)) {
       const rows = snapshot.map(record);
-      if (rows.some(row => (row.kind === 'warden' || row.kind === 'lover') && row.owner_id !== undefined && row.template_id !== undefined)) {
+      if (rows.some(row => (row.kind === 'warden' || row.kind === 'lover' || row.owner_type !== undefined) &&
+          (row.owner_id !== undefined || row.warden_id !== undefined || row.lover_id !== undefined) &&
+          (row.template_id !== undefined || row.skin_id !== undefined))) {
         setSkinRows(rows);
-      } else if (rows.some(row => row.promote_id !== undefined || row.talent_exp !== undefined) &&
-                 rows.some(row => knownWardens.has(Number(row.template_id ?? row.id)))) {
+      } else if (rows.some(row => row.promote_id !== undefined || row.talent_exp !== undefined || row.dominance !== undefined) &&
+                 rows.some(row => knownWardens.has(Number(row.template_id ?? row.warden_id ?? row.id)))) {
         setWardenRows(rows);
-      } else if (rows.some(row => row.percent_level !== undefined || bondIndex.has(Number(row.template_id ?? row.id)))) {
+      } else if (rows.some(row => row.percent_level !== undefined || row.percentLevel !== undefined ||
+                 bondIndex.has(Number(row.template_id ?? row.bond_id ?? row.id)))) {
         setBondRows(rows);
       } else if (rows.some(row => ATTRIBUTES.includes(row.attribute))) {
         setAttributeRows(rows);
       } else if (rows.some(row => row.item_id !== undefined || row.quantity !== undefined || row.amount !== undefined)) {
         setInventoryRows(rows);
+      } else if (rows.some(row => row.next_cost !== undefined || row.next_gain !== undefined)) {
+        pushBounded(apiObservations.talentScripts, rows);
+        summary.talentScripts += rows.length;
       } else {
         summary.skipped += rows.length;
       }
@@ -1717,13 +1983,12 @@ export function importDhampirSnapshot(input = {}) {
   account.helperImport = {
     source: 'dhampir-helper-api',
     sourceLabel: 'API бота «Помощник Дампира»',
-    trustLevel: 'reference-unverified',
+    trustLevel: 'user-confirmed',
     importedAt: new Date().toISOString(),
     observedWardenDominance,
     wardenFlags: sourceWardenFlags,
+    apiObservations,
   };
-  warnings.push('Импортированы данные стороннего бота; они не подтверждают ответы игрового сервера.');
-  if (summary.bonds) warnings.push('Проверьте Доверие и Близость отдельно: в этих фрагментах их значения не передавались.');
   if (summary.skipped) warnings.push('Пропущено записей, не совпавших со схемой или каталогом: ' + summary.skipped + '.');
   return { account, summary, warnings, provenance: CATALOG_PROVENANCE };
 }
