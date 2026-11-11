@@ -424,4 +424,37 @@ function walkNumbers(value, path = 'root') {
   assert.equal(result.report.gain.total, 0, 'unverified percentage modifiers are not misrepresented as absolute dominance');
 }
 
+
+{
+  const loverTemplate = GAME_DB.lovers.find(item => (item.presences || []).some(p => p.presence_type === 'updatable'));
+  const presence = loverTemplate.presences.find(p => p.presence_type === 'updatable');
+  const currentLevel = 0;
+  const targetLevel = 2;
+  const requiredTokens = GAME_DB.lover_presence_levels
+    .filter(row => row.curve === presence.level_curve && row.lvl > currentLevel && row.lvl <= targetLevel)
+    .reduce((sum, row) => sum + Number(row.cost), 0);
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {},
+    ownedLovers: {
+      [loverTemplate.id]: { affinity: 0, closeness: 0, sex: 'female', presences: { [presence.id]: currentLevel }, bonds: {} },
+    },
+    bag: { [presence.upgrade_item_id]: requiredTokens }, skins: {},
+  };
+  const plan = { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: {}, presences: { [loverTemplate.id]: { [presence.id]: targetLevel } }, summons: { wardens: [], lovers: [] } };
+  const preview = calculateOracle({ account, plan });
+  assert.equal(preview.report.presenceUpgrade.byItem[presence.upgrade_item_id], requiredTokens);
+  assert.equal(preview.lovers[loverTemplate.id].presences[presence.id].level, targetLevel);
+  assert.ok(preview.report.modifiers.presences[presence.main_attribute] > 0);
+  const committed = commitOraclePlan({ account, plan });
+  assert.equal(committed.ok, true, 'presence upgrade commits with required curve tokens');
+  assert.equal(committed.account.ownedLovers[loverTemplate.id].presences[presence.id], targetLevel);
+  assert.equal(committed.account.bag[presence.upgrade_item_id], 0);
+  assert.equal(account.bag[presence.upgrade_item_id], requiredTokens, 'presence commit leaves original profile untouched');
+
+  const insufficient = commitOraclePlan({ account: { ...account, bag: { [presence.upgrade_item_id]: requiredTokens - 1 } }, plan });
+  assert.equal(insufficient.ok, false);
+  assert.equal(insufficient.error.code, 'INSUFFICIENT_PRESENCE_ITEMS');
+}
+
 console.log('PASS unified server Oracle tests');
