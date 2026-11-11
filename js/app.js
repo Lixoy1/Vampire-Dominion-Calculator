@@ -1758,6 +1758,14 @@ function getPrimaryNav(screen) {
   return 'home';
 }
 
+
+function getAccountProgressPercent(account) {
+  const wPct = Object.keys(account.ownedWardens || {}).length / Math.max(1, GAME_DB.wardens.length);
+  const lPct = Object.keys(account.ownedLovers || {}).length / Math.max(1, GAME_DB.lovers.length);
+  const bagPct = Object.values(account.bag || {}).filter(function (value) { return Number(value) > 0; }).length / Math.max(1, GAME_DB.items.length);
+  return Math.max(1, Math.min(100, Math.round(((wPct + lPct + bagPct) / 3) * 100)));
+}
+
 function renderSpaTopbar() {
   const avatar = GAME_DB.wardens.find(function (warden) {
     return warden.id === Number(state.profile.avatarId);
@@ -1955,7 +1963,7 @@ function renderWardenDetailScreen(db) {
       '</div></div>';
   } else if (state.wardenTab === 'talents') {
     const cap = Number((db.promotes.find(function (p) { return p.id === Number(owned.promoteId || 1); }) || {}).max_talent_lvl || 40);
-    body = '<div class="attrs-box"><label class="field-stack"><span>Личный опыт талантов</span><input class="input" type="number" min="0" data-wid="' + id + '" class="talent-exp" data-spa-warden-exp value="' + Number(owned.exp || 0) + '"></label><div class="grid-2">' +
+    body = '<div class="attrs-box"><label class="field-stack"><span>Личный опыт талантов</span><input class="input talent-exp" type="number" min="0" data-wid="' + id + '" data-spa-warden-exp value="' + Number(owned.exp || 0) + '"></label><div class="grid-2">' +
       (warden.talents || []).map(function (talent, index) { return '<label class="field-stack"><span><span class="dot ' + talent.attribute + '"></span> ' + tName('attribute', talent.attribute) + ' · ' + talent.stars + '★</span><input class="input" type="number" min="1" max="' + cap + '" data-spa-warden-talent="' + index + '" value="' + Number(owned.talents && owned.talents[index] || 1) + '"></label>'; }).join('') +
       '</div></div>';
   } else if (state.wardenTab === 'auras') {
@@ -2086,7 +2094,7 @@ function renderConclaveScreen(db, report) {
     const row = db.conclaveLevels.find(function (item) { return item.id === level; });
     const target = Math.max(level, Number(state.plan.conclave[attr] || level));
     const calc = calcConclaveBranch(db.conclaveLevels, level, target, 1);
-    return '<div class="conclave-branch"><div class="branch-title"><span class="dot ' + attr + '"></span>' + tName('attribute', attr) + '</div><label class="field-stack"><span>Текущий уровень / 180</span><input class="input" type="number" min="0" max="180" data-spa-conclave-level="' + attr + '" value="' + level + '"></label><div class="row-sub">Бонус таблицы: +' + fmt(row && row.attribute_bonus || 0) + ' · Стоимость до цели: ' + fmt(calc.spent) + '</div></div>';
+    return '<div class="conclave-branch"><div class="branch-title"><span class="dot ' + attr + '"></span>' + tName('attribute', attr) + '</div><label class="field-stack"><span>Текущий уровень / 180</span><input class="input" type="number" min="0" max="180" data-spa-conclave-level="' + attr + '" value="' + level + '"></label><label class="field-stack"><span>Целевой уровень</span><input class="input conc-target" type="number" min="' + level + '" max="180" data-attr="' + attr + '" value="' + target + '"></label><div class="row-sub">Бонус текущего уровня: +' + fmt(row && row.attribute_bonus || 0) + ' · Цена цели: ' + fmt(calc.spent) + ' · Прирост всем смотрителям: +' + fmt(calc.directAttributeGain) + '</div></div>';
   }).join('');
   const gardenNow = calcCourtyardUpgrade(db.courtyardLevels, 0, Number(state.account.courtyardLvl || 0));
   const gardenTarget = Math.max(Number(state.account.courtyardLvl || 0), Number(state.plan.courtyardToLvl || state.account.courtyardLvl || 0));
@@ -2171,7 +2179,7 @@ function renderSettingsScreen() {
       '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
       '<label class="field-stack"><span>Портрет профиля</span><select class="select" id="profile-avatar-select">' + GAME_DB.wardens.map(function (warden) { return '<option value="' + warden.id + '"' + (Number(state.profile.avatarId) === warden.id ? ' selected' : '') + '>' + tName('warden', warden.name) + '</option>'; }).join('') + '</select></label></section>' +
     '<section class="attrs-box"><div class="card-title">Профили</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) { return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>'; }).join('') + '</select>' +
-      '<div class="settings-actions"><button class="btn btn-primary" id="btn-new-account">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля / JSON API</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
+      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля / JSON API</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
       '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Импорт JSON сохраняет контрольный серверный снимок отдельно от ручного профиля.</div></section>' +
     renderServerSnapshotCard();
 }
@@ -2389,6 +2397,16 @@ function bindSpaEvents(db, report) {
     });
   });
 
+  root.querySelectorAll('[data-spa-conclave-level]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      state.account.conclave[input.dataset.spaConclaveLevel] = Math.min(180, Math.max(0, Number(input.value) || 0));
+      state.plan.conclave[input.dataset.spaConclaveLevel] = state.account.conclave[input.dataset.spaConclaveLevel];
+      saveState();
+      render();
+    });
+  });
+
   root.querySelectorAll('[data-spa-warden-book]').forEach(function (input) {
     input.addEventListener('change', function () {
       pushUndoSnapshot();
@@ -2484,6 +2502,8 @@ function bindSpaEvents(db, report) {
       render();
     });
   });
+
+  document.getElementById('btn-create-account-settings')?.addEventListener('click', createNewAccount);
 
   root.querySelectorAll('#profile-avatar-select').forEach(function (input) {
     input.addEventListener('change', function () {
