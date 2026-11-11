@@ -1,16 +1,91 @@
 <!doctype html>
-<html lang="ru">
+<html lang="ru" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0b0609" />
-  <meta name="description" content="OPTIMIST Blood Moon — локальный бесплатный калькулятор Vampire Dominion: Господство, Конклав, Сад, смотрители, таланты, узы, облики и инвентарь." />
-  <title>OPTIMIST — Vampire Dominion</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>Помощник Дампира — Vampire Dominion</title>
+  <meta name="description" content="Vampire Dominion — персональный калькулятор господства, смотрителей, партнёров, ресурсов и развития аккаунта." />
+  <meta name="theme-color" content="#090507" />
   <link rel="icon" href="./assets/crest.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./css/style.css" />
+  <link rel="stylesheet" href="./assets/css/style.css" />
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-  <div id="app"></div>
-  <script type="module" src="./js/app.js"></script>
+  <div id="app" class="app-shell">
+    <main id="screen-container" class="screen-viewport"></main>
+
+    <nav class="bottom-nav-bar bloodmoon-bottom-nav" id="bottom-nav" aria-label="Главная навигация">
+      <button class="nav-item active" data-target="home" type="button">
+        <span class="nav-icon">🏰</span>
+        <span class="nav-label">Главная</span>
+      </button>
+      <button class="nav-item" data-target="resources" type="button">
+        <span class="nav-icon">🎒</span>
+        <span class="nav-label">Ресурсы</span>
+      </button>
+      <button class="nav-item" data-target="calculations" type="button">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Расчёты</span>
+      </button>
+      <button class="nav-item" data-target="settings" type="button">
+        <span class="nav-icon">⚙️</span>
+        <span class="nav-label">Настройки</span>
+      </button>
+    </nav>
+  </div>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <section id="modal-sheet" class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <h3 id="modal-title">Заголовок</h3>
+        <button id="modal-close" class="icon-btn" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </section>
+  </div>
+
+  <div id="numpad-overlay" class="numpad-overlay hidden">
+    <section class="numpad-sheet" role="dialog" aria-modal="true" aria-labelledby="numpad-title">
+      <div class="numpad-top">
+        <div class="numpad-label" id="numpad-title">Введите значение</div>
+        <div class="numpad-display" id="numpad-display">0</div>
+      </div>
+      <div class="numpad-multipliers">
+        <button type="button" data-mult="K">K (×10³)</button>
+        <button type="button" data-mult="M">M (×10⁶)</button>
+        <button type="button" data-mult="B">B (×10⁹)</button>
+        <button type="button" data-mult="T">T (×10¹²)</button>
+      </div>
+      <div class="numpad-grid">
+        <button type="button" data-key="1">1</button>
+        <button type="button" data-key="2">2</button>
+        <button type="button" data-key="3">3</button>
+        <button type="button" data-key="4">4</button>
+        <button type="button" data-key="5">5</button>
+        <button type="button" data-key="6">6</button>
+        <button type="button" data-key="7">7</button>
+        <button type="button" data-key="8">8</button>
+        <button type="button" data-key="9">9</button>
+        <button type="button" data-key=".">.</button>
+        <button type="button" data-key="0">0</button>
+        <button type="button" data-key="BACK">⌫</button>
+      </div>
+      <div class="numpad-actions">
+        <button type="button" class="btn-secondary" data-key="CLEAR">Сброс</button>
+        <button type="button" class="btn-primary" data-key="DONE">Готово</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="calc-loader" class="calc-loader hidden" aria-live="polite" aria-busy="true">
+    <div class="calc-loader-card">
+      <div class="crimson-spinner"></div>
+      <div class="calc-loader-title" id="calc-loader-text">Считаем господство…</div>
+      <div class="calc-loader-sub">Unified Oracle API проверяет ресурсы и кривые</div>
+    </div>
+  </div>
+
+  <script type="module" src="./scripts/app.js"></script>
 </body>
 </html>
