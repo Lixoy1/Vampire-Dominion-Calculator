@@ -585,6 +585,39 @@ function runTalentAutoDistribution(account, plan, availableBag = account.bag) {
   };
 }
 
+function calculatePlannedWardenLevelGain(account, plan) {
+  let total = 0;
+  const byWarden = {};
+  for (const [wardenId, owned] of Object.entries(account.ownedWardens)) {
+    const warden = db.wardens.find(item => item.id === Number(wardenId));
+    if (!warden) continue;
+    const fromLevel = Math.max(1, Number(owned.level) || 1);
+    const toLevel = Math.max(fromLevel, numeric(plan.levels[wardenId], fromLevel));
+    if (toLevel <= fromLevel) continue;
+    const promoteId = Math.max(
+      Number(owned.promoteId) || 1,
+      Math.round(numeric(plan.promotes[wardenId], Number(owned.promoteId) || 1))
+    );
+    const cap = db.promotes.find(item => item.id === promoteId)?.max_talent_lvl ?? 40;
+    const selected = record(plan.talents[wardenId]);
+    const talentLevels = {};
+    for (let position = 0; position < warden.talents.length; position++) {
+      const current = Math.max(1, Math.round(numeric(owned.talents?.[position], 1)));
+      const increments = Math.max(0, Math.round(numeric(record(selected.scrolls)[position])))
+        + Math.max(0, Math.round(numeric(record(selected.scripts)[position])))
+        + Math.max(0, Math.round(numeric(record(selected.exp_levels)[position])));
+      talentLevels[position] = Math.min(cap, current + increments);
+    }
+    const talentSum = Engine.calcWardenTalentSum(warden, talentLevels);
+    const gain = Math.round(talentSum * (
+      Engine.calcWardenLevelMultiplier(toLevel) - Engine.calcWardenLevelMultiplier(fromLevel)
+    ));
+    byWarden[wardenId] = gain;
+    total += gain;
+  }
+  return { total, byWarden };
+}
+
 function calculateTalentGain(account, plan) {
   let gain = 0;
   for (const [wardenId, selectedRaw] of Object.entries(record(plan.talents))) {
@@ -630,6 +663,11 @@ export function calculateOracle(input = {}) {
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
   const report = Engine.calculateTotalDominanceReport({ db, account, plan });
+  const plannedLevelGain = calculatePlannedWardenLevelGain(account, plan);
+  report.gain.level = plannedLevelGain.total;
+  report.gain.total += plannedLevelGain.total;
+  report.gain.totalWithSummonEstimate += plannedLevelGain.total;
+  report.gain.levelByWarden = plannedLevelGain.byWarden;
   const talentUsage = getTalentPlanUsage(plan, account.ownedWardens);
   const skinUsage = getSkinPlanUsage(plan, account);
   const talentGain = calculateTalentGain(account, plan);
