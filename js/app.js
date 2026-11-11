@@ -225,22 +225,52 @@ function switchAccount(id) {
 }
 
 function createNewAccount() {
-  const name = globalThis.prompt?.('Название нового аккаунта:', `Аккаунт ${state.accounts.length + 1}`);
-  if (name == null) return;
-  const server = globalThis.prompt?.('Сервер (например, EU S-629):', 'EU S-629');
-  if (server == null) return;
-  saveState();
-  const id = `account-${Date.now()}`;
-  const account = createBlankAccountData();
-  const profile = { name: name.trim() || `Аккаунт ${state.accounts.length + 1}`, server: server.trim(), region: 'EU', avatarId: 10010 };
-  const plan = createBlankPlan(account);
-  state.accounts.push({ id, ...profile, account, plan });
-  state.activeAccountId = id;
-  state.profile = profile;
-  state.account = account;
-  state.plan = plan;
-  saveState();
-  render();
+  const dialog = document.createElement('div');
+  dialog.className = 'account-wizard';
+  dialog.innerHTML = `
+    <div class="account-wizard-backdrop" data-wizard-close></div>
+    <section class="account-wizard-panel" role="dialog" aria-modal="true" aria-labelledby="account-wizard-title">
+      <div class="number-sheet-handle"></div>
+      <div class="account-wizard-head">
+        <div><div class="eyebrow">CRIMSON OBSIDIAN</div><h2 id="account-wizard-title">Новый аккаунт</h2></div>
+        <button class="number-sheet-close" type="button" data-wizard-close aria-label="Закрыть">×</button>
+      </div>
+      <div class="account-wizard-sync"><strong>Подтянуть из игры</strong><span>Недоступно без игрового подключения. Создай профиль вручную — пароль и токены не нужны.</span></div>
+      <label class="account-wizard-field">Имя аккаунта<input class="input" id="wizard-name" maxlength="40" value="Аккаунт ${state.accounts.length + 1}" autocomplete="off"></label>
+      <div class="grid-2">
+        <label class="account-wizard-field">Номер сервера<input class="input" id="wizard-server" inputmode="numeric" type="number" min="1" max="9999" placeholder="Например, 629"></label>
+        <label class="account-wizard-field">Регион<select class="select" id="wizard-region"><option value="EU">EU</option><option value="AS">AS</option><option value="US">US</option></select></label>
+      </div>
+      <label class="account-wizard-field">Портрет профиля<select class="select" id="wizard-avatar">${GAME_DB.wardens.map(w => `<option value="${w.id}">${tName('warden', w.name)}</option>`).join('')}</select></label>
+      <div class="account-wizard-note">После создания внеси реальные значения из игры в разделах «Ресурсы» и «Расчёты».</div>
+      <div class="account-wizard-actions"><button class="btn" type="button" data-wizard-close>Отмена</button><button class="btn btn-primary" type="button" id="wizard-create">Создать аккаунт</button></div>
+    </section>`;
+  document.body.appendChild(dialog);
+  const close = () => dialog.remove();
+  dialog.querySelectorAll('[data-wizard-close]').forEach(button => button.addEventListener('click', close));
+  dialog.querySelector('#wizard-create').addEventListener('click', () => {
+    const name = dialog.querySelector('#wizard-name').value.trim();
+    const server = String(Math.max(1, Math.min(9999, Number(dialog.querySelector('#wizard-server').value) || 0)));
+    const region = dialog.querySelector('#wizard-region').value;
+    const avatarId = Number(dialog.querySelector('#wizard-avatar').value) || 10010;
+    if (!name || !server || server === '0') {
+      alert('Укажи имя аккаунта и номер сервера.');
+      return;
+    }
+    saveState();
+    const id = `account-${Date.now()}`;
+    const account = createBlankAccountData();
+    const profile = { name, server, region, avatarId };
+    const plan = createBlankPlan(account);
+    state.accounts.push({ id, ...profile, account, plan });
+    state.activeAccountId = id;
+    state.profile = profile;
+    state.account = account;
+    state.plan = plan;
+    saveState();
+    close();
+    render();
+  });
 }
 
 let state = loadState();
