@@ -447,3 +447,14 @@ html, body {
 .account-wizard-actions { display:grid; grid-template-columns:1fr 1.4fr; gap:8px; margin-top:16px; }
 .account-wizard-actions .btn { min-height:44px; }
 @media(min-width:600px) { .account-wizard { align-items:center; padding:20px; } .account-wizard-panel { border-radius:20px; } }
+
+/* Compact summary for the three inventory-derived event calculators. */
+.grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; }
+.event-metric { min-width:0; display:grid; gap:4px; padding:10px; border:1px solid var(--line); border-radius:11px; background:rgba(255,255,255,.025); }
+.event-metric strong { color:var(--gold); font-size:20px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.event-metric small { color:var(--muted); font-size:10px; line-height:1.4; }
+.guild-progress-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:10px 0 4px; }
+.guild-progress-grid label { display:grid; gap:5px; color:var(--muted); font-size:10px; }
+.guild-progress-grid .input { min-width:0; padding:7px 6px; }
+.guild-progress-remaining { padding:4px 0 10px; }
+@media(max-width:440px) { .guild-progress-grid { grid-template-columns:1fr; } }
