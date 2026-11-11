@@ -41,7 +41,7 @@ globalThis.document = {
   querySelectorAll(selector) { return selector === '[data-tab]' ? navButtons : []; },
 };
 
-await import('../js/app.js');
+const appModule = await import('../js/app.js');
 assert.equal(typeof readyHandler, 'function', 'app registers DOMContentLoaded');
 await readyHandler();
 
@@ -55,6 +55,20 @@ for (const expected of expectedTabs) {
   assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
 }
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
+const importedHelperProfile = appModule.normalizeState({
+  profile: { name: 'API import', region: 'EU', server: '328' },
+  wardens: [
+    { template_id: 10270, talent_exp: 0, level: 450, promote_id: 8, filled: true, dominance: '6701429.0000000000' },
+    { template_id: 10540, talent_exp: 45, level: 5, promote_id: 1, filled: true, dominance: '1758651.0000000000' },
+  ],
+  skins: [{ kind: 'warden', owner_id: 10270, template_id: 10273101, level: 8 }],
+  guild: { exp: 6800, level: 11, next_level_exp: 7000 },
+});
+assert.equal(importedHelperProfile.account.ownedWardens[10270].level, 450, 'helper warden level is imported');
+assert.equal(importedHelperProfile.account.ownedWardens[10270].promoteId, 8, 'helper promotion is imported');
+assert.equal(importedHelperProfile.account.ownedWardens[10270].observedDominance, 6701429, 'helper dominance is preserved as observed reference data');
+assert.equal(importedHelperProfile.account.skins[10273101], 8, 'helper skin level is imported');
+assert.deepEqual(importedHelperProfile.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 }, 'guild progress fields are normalized');
 assert.ok(root.innerHTML.includes('assets/icons/'), 'local icon URLs are used');
 const appSource = (await import('node:fs')).readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
 assert.ok(appSource.includes('data-np-unit'), 'touch numeric keypad supports K/M/B/T suffixes');
