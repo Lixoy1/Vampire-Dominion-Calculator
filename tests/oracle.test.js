@@ -507,13 +507,17 @@ function walkNumbers(value, path = 'root') {
     },
     ownedLovers: {}, bag: {}, skins: {},
   };
-  const automatic = autoDistributeTalentPlan({ account, plan: makePlan() });
+  const automatic = autoDistributeTalentPlan({ account, plan: {
+    ...makePlan(),
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+  } });
   assert.equal(automatic.summary.expSpentTotal, 600, 'bounded allocator finds an exact 3-star-point spend from 600 EXP');
   assert.ok(automatic.summary.expLevels > 0);
   assert.ok(automatic.plan.talents[expWarden.id].exp_levels);
 
   const committed = commitOraclePlan({ account, plan: automatic.plan });
-  assert.equal(committed.ok, true, 'personal talent EXP can be committed');
+  assert.equal(committed.ok, true, 'personal talent EXP can be committed: ' + JSON.stringify(committed.error || null));
   assert.equal(committed.account.ownedWardens[expWarden.id].exp, 0);
   assert.ok(Object.values(committed.account.ownedWardens[expWarden.id].talents).some(level => level > 1));
   assert.equal(account.ownedWardens[expWarden.id].exp, 600, 'commit does not mutate the source account');
