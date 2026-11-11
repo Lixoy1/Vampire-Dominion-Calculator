@@ -571,7 +571,7 @@ export function calculateOracle(input = {}) {
       : null;
     const presences = {};
     for (const presence of lover.presences || []) {
-      const level = owned?.presences?.[presence.id] ?? presence.min_lvl ?? 0;
+      const level = plan.presences[lover.id]?.[presence.id] ?? owned?.presences?.[presence.id] ?? presence.min_lvl ?? 0;
       presences[presence.id] = {
         level,
         percents: Engine.calcPresencePercents(presence, level, db.presenceCurvesMap),
@@ -619,7 +619,7 @@ export function calculateOracle(input = {}) {
     const owned = account.ownedLovers[lover.id];
     if (!owned) continue;
     for (const presence of lover.presences || []) {
-      const level = owned.presences?.[presence.id] ?? presence.min_lvl ?? 0;
+      const level = plan.presences[lover.id]?.[presence.id] ?? owned.presences?.[presence.id] ?? presence.min_lvl ?? 0;
       const percents = Engine.calcPresencePercents(presence, level, db.presenceCurvesMap);
       for (const attr of ATTRIBUTES) modifierBreakdown.presences[attr] += numeric(percents[attr]);
     }
