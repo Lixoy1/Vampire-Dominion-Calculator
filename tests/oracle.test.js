@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { GAME_DB } from '../js/data.js';
-import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap } from '../js/engine.js';
+import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../js/engine.js';
 
 function EngineFabricCost(quality) { return EngineFabricCostMap[quality] ?? null; }
 import {
@@ -521,6 +521,39 @@ function walkNumbers(value, path = 'root') {
   assert.equal(committed.account.ownedWardens[expWarden.id].exp, 0);
   assert.ok(Object.values(committed.account.ownedWardens[expWarden.id].talents).some(level => level > 1));
   assert.equal(account.ownedWardens[expWarden.id].exp, 600, 'commit does not mutate the source account');
+
+  const combinedPlan = {
+    ...automatic.plan,
+    levels: { [expWarden.id]: 21 },
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    courtyardToLvl: 0,
+  };
+  const combinedPreview = calculateOracle({
+    account: { ...account, blood: 1_000_000 },
+    plan: combinedPlan,
+  });
+  const selected = combinedPlan.talents[expWarden.id];
+  const finalLevels = Object.fromEntries(expWarden.talents.map((talent, position) => [
+    position,
+    1 + (selected.exp_levels?.[position] || 0)
+      + (selected.scrolls?.[position] || 0)
+      + (selected.scripts?.[position] || 0),
+  ]));
+  const expectedCombinedLevelGain = Math.round(
+    calcWardenTalentSum(expWarden, finalLevels) *
+    (calcWardenLevelMultiplier(21) - calcWardenLevelMultiplier(20))
+  );
+  assert.equal(
+    combinedPreview.report.gain.level,
+    expectedCombinedLevelGain,
+    'Warden level gain includes the planned talent levels instead of the old talent baseline'
+  );
+  assert.ok(combinedPreview.report.gain.level > 0);
+  assert.equal(
+    combinedPreview.report.gain.total,
+    combinedPreview.report.gain.level + combinedPreview.report.gain.talents,
+    'unified dominance total includes both talent and Warden-level interactions'
+  );
 
   const insufficient = commitOraclePlan({
     account: { ...account, ownedWardens: { [expWarden.id]: { ...account.ownedWardens[expWarden.id], exp: 0 } } },
