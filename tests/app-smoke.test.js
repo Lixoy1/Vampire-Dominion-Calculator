@@ -81,6 +81,12 @@ for (const expected of expectedTabs) {
   assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
 }
 const clickTab = async name => {
+  const mainName = mainForTab[name];
+  const main = document.querySelectorAll('[data-main]').find(item => item.dataset.main === mainName);
+  if (main) {
+    main.handlers.click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
   const tab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === name);
   assert.ok(tab, `tab ${name} is available`);
   tab.handlers.click();
