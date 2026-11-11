@@ -645,10 +645,7 @@ async function render() {
                     return `<div><div class="row-sub">${labels[i]}</div><div class="row-name">${String(total)}</div></div>`;
                   }).join('')}
                 </div>
-              </div>` : ''}`
-);
-
-            </div>
+              </div>` : ''}
           </section>` : ''}
         ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
         ${renderActiveTab(db, report, oracle)}
