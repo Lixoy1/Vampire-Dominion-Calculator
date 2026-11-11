@@ -439,8 +439,7 @@ export function autoDistributeTalents(talentsBlock, currentPlan) {
 
     for (const [item, count] of selected) {
       const target = item.current + count;
-      if (setPlanValue(wId, 'exp_levels', item.line.position, target)) {
-      }
+      setPlanValue(wId, 'exp_levels', item.line.position, target);
     }
   }
 
