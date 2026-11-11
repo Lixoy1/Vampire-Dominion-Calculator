@@ -547,7 +547,8 @@ function renderHelperApiPaths(helperApi) {
       const to = String(run?.to ?? '—').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
       return key + ' → ' + to;
     }).join(' · ');
-    rows.push('<div class="helper-route-row"><strong>' + label + '</strong><span>' + sequence + '</span></div>');
+    const safeLabel = String(label).replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+    rows.push('<div class="helper-route-row"><strong>' + safeLabel + '</strong><span>' + sequence + '</span></div>');
   };
   add('Уровни смотрителей', paths.levels);
   add('Конклав', paths.conclave);
@@ -1028,7 +1029,7 @@ function renderAurasPresencesTab(db, oracle) {
               const owned = state.account.ownedLovers[l.id];
               const targetLvl = state.plan.presences?.[l.id]?.[p.id] ?? curLvl;
               const targetPercs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || percs;
-              const apiPresenceStep = (oracle.meta.helperApi?.presenceSteps || []).find(step =>
+              const apiPresenceStep = (oracle.meta.helperApi?.presenceStepRows || []).find(step =>
                 Number(step.loverId) === Number(l.id) && Number(step.presenceId) === Number(p.id)
               );
               return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}% ${apiPresenceStep ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiPresenceStep.nextCost)} жетонов · +${fmt(apiPresenceStep.nextGain)}</span>` : ''}
@@ -1085,7 +1086,7 @@ function renderBondsTab(db, oracle) {
                 ${(l.scarlet_bonds || []).map(b => {
                   const st = bondPlan[b.attribute];
                   const detail = result.details.find(x => x.attribute === b.attribute);
-                  const apiBondSteps = (oracle.meta.helperApi?.bondSteps || []).filter(step =>
+                  const apiBondSteps = (oracle.meta.helperApi?.bondStepRows || []).filter(step =>
                     Number(step.loverId) === Number(l.id) && step.attribute === b.attribute
                   );
                   return `<div class="bond-row">
@@ -1122,7 +1123,7 @@ function renderSkinsTab(db, oracle) {
       </div>
       ${allSkins.map(s => {
         const result = oracle.skins[s.id];
-        const apiSkinStep = (oracle.meta.helperApi?.skinSteps || []).find(step => Number(step.skinId) === Number(s.id));
+        const apiSkinStep = (oracle.meta.helperApi?.skinStepRows || []).find(step => Number(step.skinId) === Number(s.id));
         return `
         <div class="item-row">
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
