@@ -3,6 +3,7 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
+import { buildOraclePlan, normalizeOracleSnapshot } from './oracle-engine.js';
 import {
   ATTRIBUTES,
   FABRIC_COST_BY_QUALITY,
@@ -44,6 +45,8 @@ function createBlankAccountData() {
     ownedLovers: {},
     skins: {},
     bag: {},
+    oracleSnapshot: null,
+    oracleImportedAt: null,
   };
 }
 
@@ -95,6 +98,8 @@ function normalizeAccountData(incoming = {}) {
     ownedLovers: { ...(incoming?.ownedLovers || {}) },
     skins: { ...(incoming?.skins || {}) },
     bag: { ...(incoming?.bag || {}) },
+    oracleSnapshot: incoming?.oracleSnapshot ?? null,
+    oracleImportedAt: incoming?.oracleImportedAt ?? null,
   };
 }
 
@@ -552,6 +557,7 @@ function render() {
 
   const tabs = [
     ['dominance', '👑 Господство'],
+    ['oracle', '🔮 Оракул'],
     ['conclave', '🏛 Конклав и Сад'],
     ['levels', '🩸 Уровни и Кровь'],
     ['talents', '📜 Таланты и Опыт'],
@@ -612,6 +618,7 @@ function render() {
 function renderActiveTab(db, report) {
   switch (state.activeTab) {
     case 'dominance': return renderDominanceTab(db, report);
+    case 'oracle': return renderOracleTab(db);
     case 'conclave': return renderConclaveGardenTab(db, report);
     case 'levels': return renderLevelsTab(db, report);
     case 'talents': return renderTalentsTab(db);
@@ -622,6 +629,178 @@ function renderActiveTab(db, report) {
     case 'bag': return renderBagTab(db, report);
     default: return renderDominanceTab(db, report);
   }
+}
+
+function htmlSafe(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
+
+function renderOracleTab(db) {
+  const snapshot = state.account.oracleSnapshot;
+  let model = null;
+  let modelError = '';
+  if (snapshot) {
+    try {
+      const wardenNames = Object.fromEntries(db.wardens.map(item => [String(item.id), tName('warden', item.name)]));
+      const loverNames = Object.fromEntries(db.lovers.map(item => [String(item.id), tName('lover', item.name)]));
+      const itemNames = Object.fromEntries(db.items.map(item => [String(item.id), tName('item', item.name)]));
+      model = buildOraclePlan(snapshot, { wardens: wardenNames, lovers: loverNames, items: itemNames });
+    } catch (error) {
+      modelError = error?.message || 'Не удалось разобрать снимок API.';
+    }
+  }
+
+  const header = `
+    <section class="card card-gold oracle-header">
+      <div class="card-head">
+        <div>
+          <div class="card-title">🔮 OPTIMIST ORACLE</div>
+          <div class="row-sub">Серверные ответы «Помощника Дампира» · без выдуманных игровых формул</div>
+        </div>
+        <span class="badge badge-gold">${model ? 'Данные загружены' : 'Ожидает JSON'}</span>
+      </div>
+      <div class="oracle-toolbar">
+        <input type="file" id="oracle-json-file" accept=".json,application/json,text/json" hidden />
+        <button class="btn btn-gold" id="btn-oracle-import">📥 Загрузить JSON API</button>
+        <button class="btn" id="btn-oracle-export" ${model ? '' : 'disabled'}>💾 Экспорт снимка</button>
+        <button class="btn" id="btn-oracle-clear" ${model ? '' : 'disabled'}>Очистить</button>
+      </div>
+      ${state.account.oracleImportedAt ? `<div class="row-sub oracle-stamp">Последняя загрузка: ${htmlSafe(new Date(state.account.oracleImportedAt).toLocaleString())}</div>` : ''}
+    </section>
+  `;
+
+  if (modelError) {
+    return header + `
+      <section class="card oracle-warning">
+        <div class="card-title">Не удалось прочитать сохранённый снимок</div>
+        <div class="row-sub">${htmlSafe(modelError)}. Загрузите корректный JSON-ответ API.</div>
+      </section>
+    `;
+  }
+
+  if (!model) {
+    return header + `
+      <section class="card oracle-empty">
+        <div class="oracle-emblem">ORACLE</div>
+        <div class="card-title">Загрузите ответ из режима разработчика</div>
+        <p class="row-sub">Подойдёт JSON-объект, в котором есть разделы <code>levels</code>, <code>conclave</code>, <code>bonds</code>, <code>auras</code>, <code>presences</code>, <code>skins</code> или <code>talents</code>.</p>
+        <p class="row-sub">Oracle прочитает итоговое Господство, четыре атрибута, остатки ресурсов, серверный <code>best_path</code> и точные значения <code>next_cost / next_gain</code>. Файл хранится локально в выбранном профиле.</p>
+        <div class="oracle-security">Не загружайте пароли, cookies, токены авторизации или полные данные входа. Нужен только JSON-ответ с расчётами.</div>
+      </section>
+    `;
+  }
+
+  const attrLabel = key => tName('attribute', key);
+  const metric = model.metrics;
+  const resourceCards = [
+    ['Кровь', metric.blood.available, metric.blood.spent, metric.blood.left],
+    ['Конклав', metric.conclave.available, metric.conclave.spent, metric.conclave.left],
+    ['Доверие', metric.trust.available, metric.trust.spent, metric.trust.left],
+  ];
+  const resourceMarkup = resourceCards.map(([label, available, spent, left]) => `
+    <div class="oracle-resource">
+      <div class="row-sub">${label}</div>
+      <div class="oracle-value">${fmt(available)}</div>
+      <div class="row-sub">Потрачено: ${fmt(spent)} · Остаток: <strong>${fmt(left)}</strong></div>
+    </div>
+  `).join('');
+
+  const attributesMarkup = metric.attributes.map(row => {
+    const gain = metric.gains.find(item => item.attribute === row.attribute)?.total ?? 0;
+    return `
+      <div class="item-row oracle-attribute">
+        <div class="row-info">
+          <div class="row-name">${htmlSafe(attrLabel(row.attribute))}</div>
+          <div class="row-sub">Прирост в ответе API: +${fmt(gain)}</div>
+        </div>
+        <div class="oracle-value">${fmt(row.total)}</div>
+      </div>
+    `;
+  }).join('');
+
+  const routeRow = item => {
+    const actor = item.section === 'levels'
+      ? (db.wardens.find(w => String(w.id) === item.key) ? tName('warden', db.wardens.find(w => String(w.id) === item.key).name) : `Смотритель ${item.key}`)
+      : item.section === 'conclave'
+        ? attrLabel(item.key)
+        : item.key;
+    return `
+      <div class="item-row oracle-route-row">
+        <span class="oracle-step">${item.index}</span>
+        <div class="row-info">
+          <div class="row-name">${htmlSafe(item.sectionLabel)} · ${htmlSafe(item.label)}</div>
+          <div class="row-sub">${htmlSafe(actor)} → цель ${htmlSafe(item.target)}</div>
+        </div>
+      </div>
+    `;
+  };
+  const visibleRoute = model.paths.slice(0, 16).map(routeRow).join('');
+  const fullRoute = model.paths.length > 16 ? `
+    <details class="oracle-more">
+      <summary>Показать весь серверный маршрут (${model.paths.length} шагов)</summary>
+      ${model.paths.slice(16).map(routeRow).join('')}
+    </details>
+  ` : '';
+
+  const recommendationGroups = Object.entries(model.recommendations).filter(([, rows]) => rows.length);
+  const recommendationsMarkup = recommendationGroups.length
+    ? recommendationGroups.map(([resource, rows]) => `
+      <section class="oracle-recommendation-group">
+        <div class="oracle-group-head">
+          <strong>${htmlSafe(rows[0].resourceLabel)}</strong>
+          <span class="badge">${rows.length} доступно</span>
+        </div>
+        ${rows.slice(0, 6).map((item, index) => `
+          <div class="item-row">
+            <span class="oracle-step">${index + 1}</span>
+            <div class="row-info">
+              <div class="row-name">${htmlSafe(item.label)}</div>
+              <div class="row-sub">${htmlSafe(item.detail)} · ${item.free ? 'без затрат' : `цена ${fmt(item.cost)}`}</div>
+            </div>
+            <div class="oracle-gain">+${fmt(item.gain)}</div>
+          </div>
+        `).join('')}
+      </section>
+    `).join('')
+    : '<div class="row-sub">По этому снимку нет доступных следующих улучшений с полными next_cost / next_gain и достаточным остатком ресурса.</div>';
+
+  return header + `
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Снимок сервера</div>
+          <div class="row-sub">Значения перенесены из API без пересчёта</div>
+        </div>
+      </div>
+      <div class="oracle-summary-grid">
+        <div class="oracle-total"><div class="row-sub">Итоговое Господство</div><div class="oracle-big">${fmt(metric.total)}</div></div>
+        <div class="oracle-total"><div class="row-sub">Прирост в ответе</div><div class="oracle-big oracle-positive">+${fmt(metric.gain)}</div></div>
+      </div>
+      <div class="oracle-resource-grid">${resourceMarkup}</div>
+    </section>
+    <section class="card">
+      <div class="card-head"><div class="card-title">Атрибуты персонажа</div></div>
+      <div class="oracle-attributes">${attributesMarkup || '<div class="row-sub">В ответе нет агрегированных атрибутов.</div>'}</div>
+    </section>
+    <section class="card">
+      <div class="card-head">
+        <div><div class="card-title">Серверный best_path</div><div class="row-sub">Точный порядок действий, полученный из JSON</div></div>
+        <span class="gain-pill">${model.routeCount} шагов</span>
+      </div>
+      ${model.routeCount ? visibleRoute + fullRoute : '<div class="row-sub">Сервер не вернул непустой best_path для этого снимка.</div>'}
+    </section>
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">Выгодные следующие шаги</div><div class="row-sub">Ранжирование по next_gain / next_cost внутри каждого ресурса</div></div></div>
+      ${recommendationsMarkup}
+    </section>
+    <section class="card oracle-notes">
+      <div class="card-title">Правила точности</div>
+      ${model.notes.map(note => `<div class="row-sub">• ${htmlSafe(note)}</div>`).join('')}
+      <div class="oracle-security">Это анализ загруженного снимка, а не живая синхронизация с игровым сервером. Oracle не списывает ресурсы в игре и не подменяет локальный профиль автоматически.</div>
+    </section>
+  `;
 }
 
 function renderDominanceTab(db, report) {
@@ -1093,6 +1272,40 @@ function bindEvents(db) {
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
+  document.getElementById('btn-oracle-import')?.addEventListener('click', () => {
+    document.getElementById('oracle-json-file')?.click();
+  });
+  document.getElementById('oracle-json-file')?.addEventListener('change', async event => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      state.account.oracleSnapshot = normalizeOracleSnapshot(parsed);
+      state.account.oracleImportedAt = new Date().toISOString();
+      state.activeTab = 'oracle';
+      saveState();
+      render();
+    } catch (error) {
+      alert(`Не удалось импортировать ответ API: ${error?.message || 'ошибка формата'}`);
+      event.target.value = '';
+    }
+  });
+  document.getElementById('btn-oracle-export')?.addEventListener('click', () => {
+    if (!state.account.oracleSnapshot) return;
+    const blob = new Blob([JSON.stringify(state.account.oracleSnapshot, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'optimist-oracle-api-snapshot.json';
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+  document.getElementById('btn-oracle-clear')?.addEventListener('click', () => {
+    if (!state.account.oracleSnapshot || !confirm('Удалить сохранённый JSON-снимок Oracle из этого профиля?')) return;
+    state.account.oracleSnapshot = null;
+    state.account.oracleImportedAt = null;
+    saveState();
+    render();
+  });
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
