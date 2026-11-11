@@ -848,37 +848,52 @@ export function commitOraclePlan(input = {}) {
     draft.bag[itemId] = Math.max(0, available - count);
   }
 
-  const summonCandidates = Engine.getSummonCandidates(
-    db.wardens, db.lovers,
-    new Set(Object.keys(draft.ownedWardens).map(Number)),
-    new Set(Object.keys(draft.ownedLovers).map(Number)),
-    draft.bag
-  );
   const summonIds = [...new Set(plan.summons.wardens.map(Number))];
   const loverSummonIds = [...new Set(plan.summons.lovers.map(Number))];
   for (const id of summonIds) {
-    const candidate = summonCandidates.wardens.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) {
+    const warden = db.wardens.find(item => item.id === id);
+    const itemId = warden?.summon_item_id;
+    const cost = Math.max(0, numeric(warden?.summon_item_count));
+    const available = itemId ? (draft.bag[itemId] || 0) : 0;
+    if (!warden || (cost > 0 && (!itemId || available < cost))) {
       return {
         ok: false,
-        error: { code: 'SUMMON_UNAVAILABLE', kind: 'warden', wardenId: id, message: `Призыв смотрителя ${candidate?.name || id} недоступен: проверь предметы в сумке.` },
+        error: {
+          code: 'SUMMON_UNAVAILABLE',
+          kind: 'warden',
+          wardenId: id,
+          itemId: itemId ?? null,
+          required: cost,
+          available,
+          message: `Призыв смотрителя ${warden?.name || id} недоступен: проверь предметы в сумке.`,
+        },
       };
     }
-    if (candidate.itemId && candidate.cost > 0) {
-      draft.bag[candidate.itemId] = Math.max(0, (draft.bag[candidate.itemId] || 0) - candidate.cost);
-    }
+    if (itemId && cost > 0) draft.bag[itemId] = available - cost;
   }
   for (const id of loverSummonIds) {
-    const candidate = summonCandidates.lovers.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) {
+    const lover = db.lovers.find(item => item.id === id);
+    const hasWarden = Boolean(lover && (
+      draft.ownedWardens[lover.warden_id] || summonIds.includes(lover.warden_id)
+    ));
+    const itemId = lover?.summon_item_id;
+    const cost = Math.max(0, numeric(lover?.summon_item_count));
+    const available = itemId ? (draft.bag[itemId] || 0) : 0;
+    if (!lover || !hasWarden || (cost > 0 && (!itemId || available < cost))) {
       return {
         ok: false,
-        error: { code: 'SUMMON_UNAVAILABLE', kind: 'lover', loverId: id, message: `Призыв возлюбленной ${candidate?.name || id} недоступен: проверь предметы в сумке.` },
+        error: {
+          code: 'SUMMON_UNAVAILABLE',
+          kind: 'lover',
+          loverId: id,
+          itemId: itemId ?? null,
+          required: cost,
+          available,
+          message: `Призыв возлюбленной ${lover?.name || id} недоступен: проверь её смотрителя и предметы в сумке.`,
+        },
       };
     }
-    if (candidate.itemId && candidate.cost > 0) {
-      draft.bag[candidate.itemId] = Math.max(0, (draft.bag[candidate.itemId] || 0) - candidate.cost);
-    }
+    if (itemId && cost > 0) draft.bag[itemId] = available - cost;
   }
 
   const bondUpdates = {};
