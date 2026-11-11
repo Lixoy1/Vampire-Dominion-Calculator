@@ -896,6 +896,9 @@ function renderLevelsTab(db, report, oracle) {
         const ow = state.account.ownedWardens[w.id];
         const tgt = Math.max(ow.level, state.plan.levels[w.id] ?? ow.level);
         const upg = oracle.wardens[w.id]?.levelUpgrade;
+        const apiStep = state.account.helperImport?.apiObservations?.wardenSteps?.[w.id];
+        const apiStepMatches = apiStep && Number(apiStep.level) === Number(ow.level)
+          && apiStep.nextCost != null && apiStep.nextGain != null;
         const prom = db.promotes.find(p => p.id === (ow.promoteId || 1));
         return `
           <div class="item-row">
@@ -903,7 +906,8 @@ function renderLevelsTab(db, report, oracle) {
             <div class="row-info">
               <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
               <div class="row-sub">
-                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь: ${fmt(upg.bloodSpent)}
+                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь по расчёту: ${fmt(upg.bloodSpent)}
+                ${apiStepMatches ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiStep.nextCost)} Крови · +${fmt(apiStep.nextGain)} Господства</span>` : ''}
                 ${!upg.canPromote ? `<span style="color:var(--warn)"> · Нужны предметы прорыва</span>` : ''}
               </div>
             </div>
@@ -1071,13 +1075,17 @@ function renderBondsTab(db, oracle) {
                 ${(l.scarlet_bonds || []).map(b => {
                   const st = bondPlan[b.attribute];
                   const detail = result.details.find(x => x.attribute === b.attribute);
+                  const apiBondSteps = (oracle.meta.helperApi?.bondSteps || []).filter(step =>
+                    Number(step.loverId) === Number(l.id) && step.attribute === b.attribute
+                  );
                   return `<div class="bond-row">
                     <div class="bond-head"><strong>${tName('attribute', b.attribute)}${b.is_advantage ? ' ★' : ''}</strong><span class="row-sub">${fmt(detail?.totalAttrGain || 0)} госп.</span></div>
                     <div class="grid-2 bond-inputs">
                       <label><span class="row-sub">Уровень ${detail?.unlockedFlat ? '' : `· закрыто до близости ${b.unlock_closeness}`}</span><input class="input bond-target" type="number" min="${st.level}" max="600" data-lid="${l.id}" data-attr="${b.attribute}" data-kind="flat" value="${st.targetLevel}" ${detail?.unlockedFlat ? '' : 'disabled'} /></label>
                       <label><span class="row-sub">Процент ${detail?.unlockedPct ? '' : `· закрыто до близости ${b.unlock_closeness_percent}`}</span><input class="input bond-target" type="number" min="${st.percentLevel}" max="600" data-lid="${l.id}" data-attr="${b.attribute}" data-kind="percent" value="${st.targetPercentLevel}" ${detail?.unlockedPct ? '' : 'disabled'} /></label>
                     </div>
-                    <div class="row-sub">Цена: ${fmt((detail?.costFlat || 0) + (detail?.costPct || 0))} · Бонус: +${fmt(detail?.totalAttrGain || 0)}</div>
+                    <div class="row-sub">Цена по расчёту: ${fmt((detail?.costFlat || 0) + (detail?.costPct || 0))} · Бонус: +${fmt(detail?.totalAttrGain || 0)}</div>
+                    ${apiBondSteps.length ? `<div class="api-exact-step">${apiBondSteps.map(step => (step.kind === 'percent' ? 'Процент' : 'Уровень') + ': API следующий шаг ' + (step.nextCost == null ? '—' : fmt(step.nextCost)) + ' Доверия · +' + (step.nextGain == null ? '—' : fmt(step.nextGain))).join(' · ')}</div>` : ''}
                   </div>`;
                 }).join('')}
               </div>
