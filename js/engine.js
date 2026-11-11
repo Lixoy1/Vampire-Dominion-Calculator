@@ -376,6 +376,73 @@ export function autoDistributeTalents(talentsBlock, currentPlan) {
     }
   }
 
+  // Allocate each Warden's personal EXP exactly in 200-point talent units.
+  // Every level costs talent stars × 200 EXP. Bounded knapsack finds the
+  // largest spendable weighted level set without discarding a better fit.
+  for (const w of talentsBlock.own_exp || []) {
+    const wId = w.warden_id;
+    const left = Math.max(0, Math.floor(Number(w.left) || 0));
+    const budgetPoints = Math.floor(left / 200);
+    if (!budgetPoints) continue;
+    const lines = (w.talents || []).map(line => {
+      const current = Math.max(0, Number(nextPlan[wId]?.exp_levels?.[line.position]) || 0);
+      const maxTotal = Math.max(0, Number(line.max_chosen) || 0);
+      const room = Math.max(0, Math.min(
+        getRoom(wId, line.position),
+        maxTotal - current
+      ));
+      return { line, current, room, weight: Math.max(1, Math.round(Number(line.next_cost) || 1)) };
+    }).filter(item => item.room > 0 && item.weight > 0 && Number(item.line.next_gain) > 0);
+    if (!lines.length) continue;
+
+    const totalCapacity = lines.reduce((sum, item) => sum + item.weight * item.room, 0);
+    const cap = Math.min(budgetPoints, totalCapacity);
+    if (!cap) continue;
+    const initial = new Uint8Array(cap + 1);
+    initial[0] = 1;
+    let reachable = initial;
+    const chunks = [];
+    const stages = [];
+    for (const item of lines) {
+      let remaining = item.room;
+      let bundle = 1;
+      while (remaining > 0) {
+        const count = Math.min(bundle, remaining);
+        const weight = item.weight * count;
+        if (weight <= cap) {
+          const next = reachable.slice();
+          for (let points = cap; points >= weight; points--) {
+            if (reachable[points - weight]) next[points] = 1;
+          }
+          reachable = next;
+          chunks.push({ item, count, weight });
+          stages.push(next);
+        }
+        remaining -= count;
+        bundle *= 2;
+      }
+    }
+
+    let best = cap;
+    while (best > 0 && !reachable[best]) best--;
+    let remainingPoints = best;
+    const selected = new Map();
+    for (let index = chunks.length - 1; index >= 0 && remainingPoints > 0; index--) {
+      const previous = index === 0 ? initial : stages[index - 1];
+      if (previous[remainingPoints]) continue;
+      const chunk = chunks[index];
+      if (remainingPoints >= chunk.weight && previous[remainingPoints - chunk.weight]) {
+        selected.set(chunk.item, (selected.get(chunk.item) || 0) + chunk.count);
+        remainingPoints -= chunk.weight;
+      }
+    }
+
+    for (const [item, count] of selected) {
+      const target = item.current + count;
+      setPlanValue(wId, 'exp_levels', item.line.position, target);
+    }
+  }
+
   return { after: nextPlan, opened: [...openedGroups] };
 }
 
@@ -785,11 +852,12 @@ export function calculateTotalDominanceReport({
     return sum + (c?.estimatedBaseGain ?? 0);
   }, 0);
 
-  const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain + summonGain;
+  const totalDominanceGain = conclaveGain + courtyardRes.totalGain + levelsGain + bondsGain;
 
   return {
     gain: {
       total: totalDominanceGain,
+      totalWithSummonEstimate: totalDominanceGain + summonGain,
       conclave: conclaveGain,
       courtyard: courtyardRes.totalGain,
       levels: levelsGain,

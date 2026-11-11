@@ -412,53 +412,81 @@ html, body {
   .profile-avatar-select { flex: 1; max-width: none; }
 }
 
-/* OPTIMIST ORACLE — server snapshot and action route */
-.oracle-toolbar { display:flex; gap:8px; flex-wrap:wrap; }
-.oracle-stamp { margin-top:9px; }
-.oracle-empty { text-align:center; padding:28px 18px; }
-.oracle-emblem {
-  margin:0 auto 12px; width:112px; height:112px; display:grid; place-items:center;
-  border-radius:50%; color:#f1d7a5; font:800 20px Georgia,serif; letter-spacing:.15em;
-  border:1px solid rgba(214,176,109,.55);
-  background:radial-gradient(circle,rgba(160,29,57,.42),rgba(18,7,12,.95) 68%);
-  box-shadow:0 0 28px rgba(201,42,66,.18),inset 0 0 22px rgba(214,176,109,.08);
+/* Touch-first numeric editor matching the reference helper's compact K/M/B/T keypad. */
+.number-sheet { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: flex-end; justify-content: center; }
+.number-sheet.hidden { display: none; }
+.number-sheet-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.72); backdrop-filter: blur(4px); }
+.number-sheet-panel { position: relative; width: min(100%, 520px); max-height: 88dvh; overflow-y: auto; padding: 12px 16px max(18px, env(safe-area-inset-bottom)); border: 1px solid rgba(214,176,109,.35); border-radius: 22px 22px 0 0; background: linear-gradient(160deg,#281a2d,#17101d 70%); box-shadow: 0 -16px 48px rgba(0,0,0,.5); }
+.number-sheet-handle { width: 42px; height: 4px; border-radius: 9px; background: #74677a; margin: 0 auto 14px; }
+.number-sheet-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.number-sheet-title { color:var(--gold); font-weight:750; font-size:15px; }
+.number-sheet-subtitle { color:var(--muted); font-size:11px; }
+.number-sheet-close { border:0; background:transparent; color:var(--muted); font-size:26px; }
+.number-sheet-display { display:block; text-align:right; padding:13px 12px; margin:12px 0; border:1px solid rgba(214,176,109,.28); border-radius:12px; background:rgba(0,0,0,.24); color:var(--text); font-size:clamp(26px,7vw,36px); font-weight:800; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.number-sheet-units { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:8px; }
+.number-sheet-units button,.number-sheet-keys button { min-height:46px; border:1px solid var(--line); border-radius:10px; background:var(--bg-card-hover); color:var(--text); font-weight:700; font-size:16px; }
+.number-sheet-units button.active { border-color:var(--gold); color:var(--gold); background:var(--gold-soft); }
+.number-sheet-keys { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.number-sheet-keys button { min-height:50px; }
+.number-sheet-keys .np-clear { color:#ef8c9b; font-size:12px; }
+.number-sheet-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:10px; }
+.number-sheet-actions .btn { min-height:44px; }
+@media (min-width:600px) { .number-sheet { align-items:center; padding:20px; } .number-sheet-panel { border-radius:20px; } }
+
+/* Manual multi-account creation wizard. */
+.account-wizard { position:fixed; inset:0; z-index:950; display:flex; align-items:flex-end; justify-content:center; }
+.account-wizard-backdrop { position:absolute; inset:0; background:rgba(0,0,0,.72); backdrop-filter:blur(4px); }
+.account-wizard-panel { position:relative; width:min(100%,520px); max-height:90dvh; overflow-y:auto; padding:14px 16px max(18px,env(safe-area-inset-bottom)); border:1px solid rgba(214,176,109,.35); border-radius:22px 22px 0 0; background:linear-gradient(160deg,#281a2d,#17101d 70%); box-shadow:0 -16px 48px rgba(0,0,0,.5); }
+.account-wizard-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.account-wizard-head h2 { margin:2px 0 0; font-size:20px; color:var(--text); }
+.account-wizard-head .eyebrow { font-size:9px; letter-spacing:.2em; color:var(--gold); font-weight:800; }
+.account-wizard-sync { display:grid; gap:3px; padding:10px 12px; margin-bottom:12px; border:1px solid var(--line-strong); border-radius:12px; background:var(--gold-soft); }
+.account-wizard-sync strong { color:var(--gold); font-size:13px; }
+.account-wizard-sync span,.account-wizard-note { color:var(--muted); font-size:11px; line-height:1.5; }
+.account-wizard-field { display:grid; gap:6px; margin:10px 0; color:var(--muted); font-size:12px; font-weight:650; }
+.account-wizard-actions { display:grid; grid-template-columns:1fr 1.4fr; gap:8px; margin-top:16px; }
+.account-wizard-actions .btn { min-height:44px; }
+@media(min-width:600px) { .account-wizard { align-items:center; padding:20px; } .account-wizard-panel { border-radius:20px; } }
+
+/* Compact summary for the three inventory-derived event calculators. */
+.grid-3 { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:8px; }
+.event-metric { min-width:0; display:grid; gap:4px; padding:10px; border:1px solid var(--line); border-radius:11px; background:rgba(255,255,255,.025); }
+.event-metric strong { color:var(--gold); font-size:20px; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.event-metric small { color:var(--muted); font-size:10px; line-height:1.4; }
+.guild-progress-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:10px 0 4px; }
+.guild-progress-grid label { display:grid; gap:5px; color:var(--muted); font-size:10px; }
+.guild-progress-grid .input { min-width:0; padding:7px 6px; }
+.guild-progress-remaining { padding:4px 0 10px; }
+@media(max-width:440px) { .guild-progress-grid { grid-template-columns:1fr; } }
+
+
+/* Exact Helper API observations remain visually distinct from modelled estimates. */
+.api-exact-step {
+  display: inline-block;
+  margin: 3px 4px 2px 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(83, 190, 156, .38);
+  border-radius: 7px;
+  color: var(--ok);
+  background: rgba(39, 156, 123, .09);
+  font-size: 11px;
+  line-height: 1.35;
 }
-.oracle-empty .row-sub { max-width:680px; margin:10px auto; line-height:1.65; }
-.oracle-security {
-  margin-top:12px; padding:10px 12px; border-radius:10px;
-  border:1px solid rgba(214,176,109,.2); background:rgba(255,255,255,.025);
-  color:var(--muted); font-size:12px; line-height:1.55;
+.helper-routes {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
 }
-.oracle-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.oracle-total, .oracle-resource {
-  min-width:0; padding:13px; border-radius:12px;
-  border:1px solid var(--line); background:rgba(255,255,255,.025);
+.helper-route-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 180px) 1fr;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
 }
-.oracle-big { font-size:clamp(20px,4vw,28px); font-weight:800; font-variant-numeric:tabular-nums; }
-.oracle-positive, .oracle-gain { color:var(--ok); }
-.oracle-resource-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
-.oracle-value { font-size:18px; font-weight:750; font-variant-numeric:tabular-nums; }
-.oracle-resource .row-sub:last-child { line-height:1.5; }
-.oracle-attributes { display:grid; gap:5px; }
-.oracle-attribute, .oracle-route-row { margin:0; }
-.oracle-step {
-  width:28px; height:28px; flex:0 0 28px; border-radius:9px;
-  display:grid; place-items:center; font-size:11px; font-weight:800;
-  color:#f2dfb7; background:rgba(185,31,59,.2); border:1px solid rgba(214,176,109,.25);
-}
-.oracle-route-row .row-info, .oracle-recommendation-group .row-info { min-width:0; }
-.oracle-more { margin-top:10px; }
-.oracle-more summary { cursor:pointer; padding:10px; color:var(--gold); font-weight:700; }
-.oracle-more .item-row { margin:3px 0; }
-.oracle-recommendation-group { display:grid; gap:5px; margin:12px 0; }
-.oracle-group-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; }
-.oracle-gain { font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.oracle-notes .row-sub { margin:6px 0; line-height:1.5; }
-.oracle-warning { border-color:rgba(229,107,85,.4); }
-.oracle-header .badge { white-space:nowrap; }
-.light-theme .oracle-emblem { color:#794c38; background:radial-gradient(circle,#f8d9d8,#fffaf2 68%); }
-@media (max-width:560px) {
-  .oracle-resource-grid, .oracle-summary-grid { grid-template-columns:1fr; }
-  .oracle-empty { padding:22px 12px; }
-  .oracle-toolbar .btn { flex:1 1 100%; }
+.helper-route-row strong { color: var(--accent-gold); }
+.helper-route-row span { overflow-wrap: anywhere; color: var(--text); }
+@media (max-width: 560px) {
+  .helper-route-row { grid-template-columns: 1fr; gap: 3px; }
 }
