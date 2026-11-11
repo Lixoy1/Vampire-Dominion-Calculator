@@ -1151,7 +1151,7 @@ body { overflow-x: hidden; }
   width:100%; min-height:54px; margin:8px 0 5px; padding:10px 14px;
   border:1px solid rgba(214,173,104,.3); border-radius:14px;
   color:var(--text); background:rgba(0,0,0,.32);
-  font:700 24px inherit; font-variant-numeric:tabular-nums;
+  font-family:inherit; font-size:24px; font-weight:700; font-variant-numeric:tabular-nums;
 }
 .numpad-direct-input[hidden] { display:none !important; }
 .numpad-resolved { min-height:24px; text-align:right; color:var(--gold); font-size:18px; font-weight:750; font-variant-numeric:tabular-nums; }
@@ -1178,4 +1178,31 @@ body { overflow-x: hidden; }
 @media(max-width:560px) {
   .collection-banner { min-height:148px; background-position:center center; }
   .summon-banner { min-height:154px; }
+}
+
+
+/* Talent planner — readable on narrow Telegram WebViews. */
+.talent-help-card {
+  margin:12px 0; padding:12px 13px;
+  border:1px solid rgba(214,176,109,.2); border-radius:14px;
+  background:rgba(0,0,0,.14);
+}
+.talent-help-card>summary { color:var(--gold); font-weight:750; cursor:pointer; }
+.talent-help-list { display:grid; gap:10px; padding-top:12px; }
+.talent-help-list>div { display:grid; gap:2px; }
+.talent-help-list b { color:var(--text); font-size:13px; }
+.talent-help-list span { color:var(--muted); font-size:12px; line-height:1.45; }
+.talent-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0 4px; }
+.talent-actions button { min-height:44px; }
+.talent-editor { margin:8px 0; padding:10px; border:1px solid var(--line); border-radius:13px; background:rgba(255,255,255,.025); }
+.talent-editor>summary { color:var(--gold); font-weight:700; cursor:pointer; padding:4px 0; }
+.talent-control { display:grid; gap:5px; min-width:0; }
+.talent-control>span { color:var(--text); font-size:12px; }
+.talent-control .row-sub { line-height:1.4; }
+.talent-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:9px; padding-top:10px; }
+.talent-grid .talent-control { padding:10px; border:1px solid var(--line); border-radius:12px; background:rgba(0,0,0,.14); }
+.talent-grid .talent-control .input { min-width:0; width:100%; }
+@media(max-width:420px) {
+  .talent-actions { grid-template-columns:1fr; }
+  .talent-grid { grid-template-columns:1fr 1fr; }
 }
