@@ -409,7 +409,7 @@ function makeWarnings(account, plan) {
   });
   if (hasLevelPlan) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Для уровней без импортированного community reference data next_cost используется расчётная кривая. Введённые API next_cost/next_gain сохраняются как точные наблюдения и не подменяются этой оценкой.',
+    message: 'Для уровней без полной таблицы стоимости используется расчётная кривая; оценка отображается отдельно.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
@@ -418,7 +418,7 @@ function makeWarnings(account, plan) {
   });
   if (hasBondPlan) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
-    message: 'Для шагов Кровных уз без соответствующего community reference data next_cost применяется оценочная формула; импортированные API-наблюдения сохраняются отдельно.',
+    message: 'Стоимость Кровных уз рассчитывается по оценочной модели, если точная стоимость шага отсутствует в каталоге.',
   });
   if (plan.summons.wardens.length) warnings.push({
     code: 'ESTIMATED_SUMMON_GAIN',
@@ -649,41 +649,6 @@ export function autoDistributeTalentPlan(input = {}) {
   };
 }
 
-function getCommunityApiImportSummary(account) {
-  const imported = record(account.communityImport);
-  const observations = record(imported.referenceObservations);
-  const wardenSteps = record(observations.wardenSteps);
-  return {
-    source: imported.source || null,
-    sourceLabel: imported.sourceLabel || null,
-    trustLevel: imported.trustLevel || null,
-    importedAt: imported.importedAt || null,
-    observedWardens: Object.keys(record(imported.observedWardenDominance)).length,
-    observedWardenSteps: Object.keys(wardenSteps).length,
-    wardenSteps,
-    bondStepRows: Array.isArray(observations.bondSteps) ? observations.bondSteps.slice(0, 180) : [],
-    presenceStepRows: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.slice(0, 180) : [],
-    auraSteps: Array.isArray(observations.auraItems) ? observations.auraItems.filter(row => row && row.nextCost != null).slice(0, 180) : [],
-    skinStepRows: Array.isArray(observations.skinSteps) ? observations.skinSteps.slice(0, 180) : [],
-    talentSteps: Array.isArray(observations.talentSteps) ? observations.talentSteps.slice(0, 180) : [],
-    talentScriptRows: Array.isArray(observations.talentScripts) ? observations.talentScripts.length : 0,
-    auraPathRows: Array.isArray(observations.auraItems)
-      ? observations.auraItems.filter(row => Array.isArray(record(row).bestPath?.cost) || Array.isArray(record(row).bestPath?.gain)).length
-      : 0,
-    bookRows: Array.isArray(observations.bookItems) ? observations.bookItems.length : 0,
-    manuscriptTiers: Array.isArray(observations.manuscriptTiers) ? observations.manuscriptTiers.length : 0,
-    skinSteps: Array.isArray(observations.skinSteps) ? observations.skinSteps.length : 0,
-    presenceSteps: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.length : 0,
-    bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.length : 0,
-    responseCount: Math.max(0, Math.round(numeric(observations.responseCount))),
-    attributeBreakdown: observations.attributes ?? null,
-    bestPaths: record(observations.bestPaths),
-    skinStore: observations.skinStore ?? null,
-    trustPool: observations.trust ?? null,
-    observedWardenDominance: record(imported.observedWardenDominance),
-  };
-}
-
 export function calculateOracle(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
@@ -857,7 +822,7 @@ export function calculateOracle(input = {}) {
   report.presenceUpgrade = presenceUpgrade;
   const inventory = Engine.summarizeBag(db.items, account.bag);
   // Event and guild calculators use the same server-side inventory snapshot.
-  // The three-day donation cap is part of the reference community's calculation.
+  // The three-day donation cap is modeled as a configured event limit.
   const eventCalculators = {
     intimacy: Engine.calcBagPoints(account.bag, INTIMACY_ITEM_IDS),
     attraction: Engine.calcBagPoints(account.bag, ATTRACTION_ITEM_IDS),
@@ -937,7 +902,6 @@ export function calculateOracle(input = {}) {
       inputSource: 'player-entered',
       gameConnected: false,
       stateless: true,
-      communityApi: getCommunityApiImportSummary(account),
     },
     report,
     inventory,
@@ -1585,7 +1549,7 @@ export function summonLover(input = {}) {
 }
 
 /**
- * Imports the user's exact community reference data responses. The original API values are
+ * Imports a previously saved community data snapshot. Supplied values are
  * retained as observations so an absent next_cost/next_gain is never replaced
  * with a guessed value during import.
  */
@@ -1978,7 +1942,7 @@ export function importCommunitySnapshot(input = {}) {
     const manuscripts = record(object.manuscripts);
     const courtyard = record(object.courtyard);
 
-    // Compatibility with separate/flat community reference data endpoints.
+    // Compatibility with older saved profile snapshots.
     if (object.wardens !== undefined) setWardenRows(object.wardens);
     if (object.warden_list !== undefined) setWardenRows(object.warden_list);
     if (object.lovers !== undefined) setLoverRows(object.lovers);
@@ -1996,7 +1960,7 @@ export function importCommunitySnapshot(input = {}) {
       referenceObservations.attributes = clone(object.attributes);
     }
 
-    // Global resources and current progression values from the Community response.
+    // Global resources and current progression values from a saved snapshot.
     if (levels.blood !== undefined || levels.left !== undefined) {
       account.blood = nonNegative(levels.left ?? levels.blood);
     }
@@ -2247,7 +2211,7 @@ export function getOracleCapabilities() {
     sections: [
       'dominance', 'conclave', 'courtyard', 'warden-levels', 'talents',
       'auras', 'presences', 'presence-auto-distribution', 'blood-bonds', 'bond-auto-distribution', 'talent-exp-allocation', 'skins', 'summons', 'inventory',
-      'intimacy', 'attraction', 'guild-exp', 'community-snapshot-import',
+      'intimacy', 'attraction', 'guild-exp',
     ],
     formulaCaveats: [
       'Warden blood costs currently use an approximate progression curve.',
@@ -2255,8 +2219,8 @@ export function getOracleCapabilities() {
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
-      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula when no matching community reference data step/path is supplied.',
-      'Aura best_path values from community reference data are retained; the fallback catalogue has no complete per-level aura cost table.',
+      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula.',
+      'Aura upgrades are shown from the current catalogue; a complete per-level cost table is not available for every aura.',
       'Automatic skin ranking remains disabled until a complete, reliable gain table is available.',
     ],
   };
