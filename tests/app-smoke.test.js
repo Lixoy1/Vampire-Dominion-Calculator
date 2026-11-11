@@ -34,7 +34,7 @@ await import('../js/app.js');
 assert.equal(typeof readyHandler, 'function', 'app registers DOMContentLoaded');
 readyHandler();
 
-const expectedTabs = ['dominance', 'conclave', 'levels', 'talents', 'auras', 'bonds', 'skins', 'summon', 'bag'];
+const expectedTabs = ['dominance', 'oracle', 'conclave', 'levels', 'talents', 'auras', 'bonds', 'skins', 'summon', 'bag'];
 for (const expected of expectedTabs) {
   const tab = document.querySelectorAll('[data-tab]').find(item => item.dataset.tab === expected);
   assert.ok(tab, `tab ${expected} is rendered`);
