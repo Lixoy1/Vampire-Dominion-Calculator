@@ -1977,6 +1977,17 @@ export function importDhampirSnapshot(input = {}) {
     const books = record(object.books);
     const courtyard = record(object.courtyard);
 
+    // Compatibility with separate/flat Helper API endpoints.
+    if (object.wardens !== undefined) setWardenRows(object.wardens);
+    if (object.warden_list !== undefined) setWardenRows(object.warden_list);
+    if (object.lovers !== undefined) setLoverRows(object.lovers);
+    if (object.lover_list !== undefined) setLoverRows(object.lover_list);
+    if (Array.isArray(object.bonds)) setBondRows(object.bonds);
+    if (Array.isArray(object.presences)) setPresenceRows(object.presences);
+    if (Array.isArray(object.skins)) setSkinRows(object.skins);
+    if (object.conclave_attributes !== undefined) setAttributeRows(object.conclave_attributes);
+    if (object.conclaveLevels !== undefined) setAttributeRows(object.conclaveLevels);
+
     if (object.total !== undefined) apiObservations.total = clone(object.total);
     if (object.gain !== undefined) apiObservations.gain = clone(object.gain);
     if (object.attributes !== undefined) {
