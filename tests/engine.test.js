@@ -204,4 +204,31 @@ test('breakthrough reservation accumulates repeated item costs across tiers', ()
   assert.deepEqual(oneSeal, { 990001: 1 }, 'checks must not mutate inventory');
 });
 
+
+test('legacy workbook Conclave sample separates exact gain from catalogue cost drift', () => {
+  // Workbook-derived fixture only: the source workbook warns that its values
+  // no longer match the game screenshots.
+  const sample = {
+    watcherCount: 43,
+    branches: {
+      strength: { from: 82, to: 84, bookTotal: 5077150 },
+      allure: { from: 80, to: 84, bookTotal: 5289450 },
+      intellect: { from: 81, to: 84, bookTotal: 5313250 },
+      spirit: { from: 71, to: 80, bookTotal: 5276650 },
+    },
+  };
+  let totalGain = 0;
+  let catalogueCost = 0;
+  for (const row of Object.values(sample.branches)) {
+    const branch = E.calcConclaveBranch(
+      GAME_DB.conclave_levels, row.from, row.to, sample.watcherCount
+    );
+    totalGain += branch.directAttributeGain + row.bookTotal * branch.bookPercentDelta / 100;
+    catalogueCost += branch.spent;
+  }
+  assert.equal(totalGain, 4_994_446, 'workbook sample dominance gain matches');
+  assert.equal(catalogueCost, 62_622_720, 'current Helper catalogue cost is stable');
+  assert.notEqual(catalogueCost, 62_440_000, 'do not silently overwrite catalogue rows to fit the stale workbook cost');
+});
+
 console.log(`\n${passed} test groups passed.`);
