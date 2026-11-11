@@ -117,3 +117,8 @@ API принимает только JSON-объект с `account`; при от�
 ## Skin upgrade transaction
 
 The account's current skin level is separate from the planned target (`plan.skins[skinId]`). Oracle resolves each target against the catalogue and current account state, then computes card and fabric usage. A skin's own card item (same ID as the skin) is consumed before quality fabric: A = item 4421 / 50, S = 4422 / 100, SS = 4423 / 200 per level. Fabric is rejected for non-purchasable skins. The commit validates all required resources before mutating the cloned account, updates skin levels and adds the catalogue `store_exp` for each gained level. This changes shop experience, not the exact dominance total. Automatic skin ranking is intentionally withheld until trustworthy per-level `next_gain` data is available for every skin.
+
+
+## Aura and presence reporting
+
+The calculation response exposes `report.modifiers` with per-attribute aura percentages split into `talent` and `book` buckets, plus per-attribute presence percentages. The values use the existing engine formulas (`calcAuraPercent` and `calcPresencePercents`) and the imported presence curve table. These are modifier percentages, not absolute dominance points: they are intentionally excluded from `report.gain.total` until the game's exact stacking/rounding rules can be checked against a game-side reference result. The UI presents them separately in the dominance dashboard.
