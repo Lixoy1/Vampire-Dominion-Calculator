@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.1.0';
+export const ORACLE_VERSION = '1.2.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
@@ -103,6 +103,11 @@ function normalizeAccount(input = {}) {
     conclaveExp: nonNegative(account.conclaveExp),
     courtyardExp: nonNegative(account.courtyardExp),
     courtyardLvl: Math.max(0, Math.min(210, Math.round(numeric(account.courtyardLvl)))),
+    guildProgress: {
+      exp: nonNegative(record(account.guildProgress || account.guild).exp),
+      level: Math.max(0, Math.min(999, Math.round(numeric(record(account.guildProgress || account.guild).level)))),
+      nextLevelExp: nonNegative(record(account.guildProgress || account.guild).nextLevelExp ?? record(account.guildProgress || account.guild).next_level_exp),
+    },
     conclave,
     ownedWardens,
     ownedLovers,
@@ -113,6 +118,7 @@ function normalizeAccount(input = {}) {
       nextLevelExp: nonNegative(record(account.guildProgress || account.guild).nextLevelExp ?? record(account.guild).next_level_exp),
     },
     skins: record(account.skins),
+    skinOwnership: record(account.skinOwnership),
   };
 }
 
@@ -785,6 +791,176 @@ export function summonLover(input = {}) {
   return { ok: true, account, candidate };
 }
 
+/**
+ * Imports manual account snapshots exported by the third-party Dhampir Helper.
+ * Source dominance values are retained as references, never added to formulas.
+ */
+export function importDhampirSnapshot(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const snapshots = Array.isArray(raw.snapshots) ? raw.snapshots : [raw.snapshot ?? raw.data ?? raw];
+  const bondIndex = new Map();
+  for (const lover of db.lovers) {
+    for (const bond of lover.scarlet_bonds || []) bondIndex.set(Number(bond.id), { loverId: lover.id, attribute: bond.attribute });
+  }
+  const knownItems = new Set(db.items.map(item => item.id));
+  const knownWardens = new Map(db.wardens.map(item => [item.id, item]));
+  const knownLovers = new Map(db.lovers.map(item => [item.id, item]));
+  const summary = { wardens: 0, bonds: 0, skins: 0, inventory: 0, conclaveAttributes: 0, guildProgress: false, skipped: 0 };
+  const warnings = [];
+  const observedWardenDominance = { ...(record(account.helperImport).observedWardenDominance || {}) };
+  const sourceWardenFlags = { ...(record(account.helperImport).wardenFlags || {}) };
+
+  const setWardenRows = rows => {
+    for (const value of rows) {
+      const row = record(value);
+      const id = Math.round(numeric(row.template_id ?? row.id));
+      if (!knownWardens.has(id) || row.level === undefined) { summary.skipped++; continue; }
+      const current = account.ownedWardens[id] || {};
+      account.ownedWardens[id] = {
+        ...current,
+        level: Math.max(1, Math.min(450, Math.round(numeric(row.level, current.level || 1)))),
+        promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(row.promote_id ?? row.promoteId, current.promoteId || 1)))),
+        exp: nonNegative(row.talent_exp ?? row.exp ?? current.exp),
+        talents: record(current.talents),
+        auras: record(current.auras),
+        sourceFilled: typeof row.filled === 'boolean' ? row.filled : current.sourceFilled,
+      };
+      if (row.dominance !== undefined && Number.isFinite(Number(row.dominance))) observedWardenDominance[id] = String(row.dominance);
+      if (typeof row.filled === 'boolean') sourceWardenFlags[id] = row.filled;
+      summary.wardens++;
+    }
+  };
+
+  const setBondRows = rows => {
+    for (const value of rows) {
+      const row = record(value);
+      const bondMeta = bondIndex.get(Math.round(numeric(row.template_id ?? row.id)));
+      if (!bondMeta) { summary.skipped++; continue; }
+      const lover = knownLovers.get(bondMeta.loverId);
+      const current = account.ownedLovers[bondMeta.loverId] || {};
+      account.ownedLovers[bondMeta.loverId] = {
+        ...current,
+        affinity: nonNegative(row.affinity ?? current.affinity),
+        closeness: nonNegative(row.closeness ?? current.closeness),
+        sex: current.sex || lover?.fixed_sex || 'female',
+        presences: record(current.presences),
+        bonds: {
+          ...record(current.bonds),
+          [bondMeta.attribute]: {
+            level: Math.max(0, Math.min(600, Math.round(numeric(row.level)))),
+            percentLevel: Math.max(0, Math.min(600, Math.round(numeric(row.percent_level ?? row.percentLevel)))),
+          },
+        },
+      };
+      summary.bonds++;
+    }
+  };
+
+  const setSkinRows = rows => {
+    for (const value of rows) {
+      const row = record(value);
+      const id = Math.round(numeric(row.template_id ?? row.id));
+      const level = Math.max(0, Math.min(10, Math.round(numeric(row.level))));
+      const kind = row.kind === 'warden' || row.kind === 'lover' ? row.kind : null;
+      const ownerId = Math.round(numeric(row.owner_id ?? row.ownerId));
+      const owner = kind === 'warden' ? knownWardens.get(ownerId) : kind === 'lover' ? knownLovers.get(ownerId) : null;
+      const skin = owner?.skins?.find(item => item.id === id);
+      if (!skin) { summary.skipped++; continue; }
+      account.skins[id] = level;
+      account.skinOwnership[id] = true;
+      summary.skins++;
+    }
+  };
+
+  const setAttributeRows = rows => {
+    let changed = 0;
+    for (const value of rows) {
+      const row = record(value);
+      if (!ATTRIBUTES.includes(row.attribute)) continue;
+      const level = Math.round(numeric(row.level, -1));
+      if (level < 0 || level > 180) continue;
+      account.conclave[row.attribute] = level;
+      changed++;
+    }
+    summary.conclaveAttributes += changed;
+  };
+
+  const setInventoryRows = rows => {
+    for (const value of rows) {
+      const row = record(value);
+      const id = Math.round(numeric(row.item_id ?? row.template_id ?? row.id));
+      const count = row.count ?? row.quantity ?? row.amount;
+      if (!knownItems.has(id) || count === undefined) { summary.skipped++; continue; }
+      account.bag[id] = nonNegative(count);
+      summary.inventory++;
+    }
+  };
+
+  const importObject = objectValue => {
+    const object = record(objectValue);
+    if (Array.isArray(object.wardens)) setWardenRows(object.wardens);
+    if (Array.isArray(object.warden_list)) setWardenRows(object.warden_list);
+    if (Array.isArray(object.bonds)) setBondRows(object.bonds);
+    if (Array.isArray(object.scarlet_bonds)) setBondRows(object.scarlet_bonds);
+    if (Array.isArray(object.skins)) setSkinRows(object.skins);
+    if (Array.isArray(object.skin_levels)) setSkinRows(object.skin_levels);
+    if (Array.isArray(object.attributes)) setAttributeRows(object.attributes);
+    if (Array.isArray(object.conclave_attributes)) setAttributeRows(object.conclave_attributes);
+    if (Array.isArray(object.conclaveLevels)) setAttributeRows(object.conclaveLevels);
+    if (Array.isArray(object.inventory)) setInventoryRows(object.inventory);
+    if (Array.isArray(object.bag_items)) setInventoryRows(object.bag_items);
+
+    const guild = record(object.guildProgress ?? object.guild_progress ?? object.guild);
+    const candidate = Object.keys(guild).length ? guild : object;
+    if (candidate.level !== undefined && candidate.exp !== undefined &&
+        (candidate.next_level_exp !== undefined || candidate.nextLevelExp !== undefined ||
+         object.guildProgress !== undefined || object.guild_progress !== undefined || object.guild !== undefined)) {
+      account.guildProgress = {
+        exp: nonNegative(candidate.exp),
+        level: Math.max(0, Math.min(999, Math.round(numeric(candidate.level)))),
+        nextLevelExp: nonNegative(candidate.next_level_exp ?? candidate.nextLevelExp),
+      };
+      summary.guildProgress = true;
+    }
+  };
+
+  for (const snapshot of snapshots) {
+    if (Array.isArray(snapshot)) {
+      const rows = snapshot.map(record);
+      if (rows.some(row => (row.kind === 'warden' || row.kind === 'lover') && row.owner_id !== undefined && row.template_id !== undefined)) {
+        setSkinRows(rows);
+      } else if (rows.some(row => row.promote_id !== undefined || row.talent_exp !== undefined) &&
+                 rows.some(row => knownWardens.has(Number(row.template_id ?? row.id)))) {
+        setWardenRows(rows);
+      } else if (rows.some(row => row.percent_level !== undefined || bondIndex.has(Number(row.template_id ?? row.id)))) {
+        setBondRows(rows);
+      } else if (rows.some(row => ATTRIBUTES.includes(row.attribute))) {
+        setAttributeRows(rows);
+      } else if (rows.some(row => row.item_id !== undefined || row.quantity !== undefined || row.amount !== undefined)) {
+        setInventoryRows(rows);
+      } else {
+        summary.skipped += rows.length;
+      }
+    } else {
+      importObject(snapshot);
+    }
+  }
+
+  account.helperImport = {
+    source: 'dhampir-helper-api',
+    sourceLabel: 'API бота «Помощник Дампира»',
+    trustLevel: 'reference-unverified',
+    importedAt: new Date().toISOString(),
+    observedWardenDominance,
+    wardenFlags: sourceWardenFlags,
+  };
+  warnings.push('Импортированы данные стороннего бота; они не подтверждают ответы игрового сервера.');
+  if (summary.bonds) warnings.push('Проверьте Доверие и Близость отдельно: в этих фрагментах их значения не передавались.');
+  if (summary.skipped) warnings.push('Пропущено записей, не совпавших со схемой или каталогом: ' + summary.skipped + '.');
+  return { account, summary, warnings, provenance: CATALOG_PROVENANCE };
+}
+
 export function getOracleCapabilities() {
   return {
     oracleVersion: ORACLE_VERSION,
@@ -799,12 +975,13 @@ export function getOracleCapabilities() {
     sections: [
       'dominance', 'conclave', 'courtyard', 'warden-levels', 'talents',
       'auras', 'presences', 'blood-bonds', 'skins', 'summons', 'inventory',
-      'intimacy', 'attraction', 'guild-exp',
+      'intimacy', 'attraction', 'guild-exp', 'helper-snapshot-import',
     ],
     formulaCaveats: [
       'Warden blood costs currently use an approximate progression curve.',
       'Blood-bond costs currently use formula estimates.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
+      'Helper snapshot imports are reference data, not game-server verification.',
     ],
   };
 }
