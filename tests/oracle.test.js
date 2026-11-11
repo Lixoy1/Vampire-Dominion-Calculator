@@ -342,4 +342,41 @@ function walkNumbers(value, path = 'root') {
   assert.ok(imported.warnings.length > 0);
 }
 
+
+{
+  const purchasableSkin = GAME_DB.wardens.flatMap(item => item.skins || []).find(item => item.quality === 'a' && item.purchasable);
+  assert.ok(purchasableSkin);
+  const account = makeAccount();
+  account.bag[4421] = 50;
+  const plan = makePlan();
+  plan.skins = { [purchasableSkin.id]: 1 };
+  const preview = calculateOracle({ account, plan });
+  assert.equal(preview.skinUpgrade.bySkin[purchasableSkin.id].fabric, 50);
+  assert.equal(preview.report.spent.skinFabric[4421], 50);
+  const committed = commitOraclePlan({ account, plan });
+  assert.equal(committed.ok, true, 'skin upgrade can be committed using matching fabric');
+  assert.equal(committed.account.skins[purchasableSkin.id], 1);
+  assert.equal(committed.account.bag[4421], 0);
+  assert.equal(committed.account.skinStoreExp, purchasableSkin.store_exp);
+  assert.equal(account.bag[4421], 50, 'skin commit does not mutate submitted profile');
+
+  const cardAccount = makeAccount();
+  cardAccount.bag[purchasableSkin.id] = 1;
+  const cardCommit = commitOraclePlan({
+    account: cardAccount,
+    plan: { ...makePlan(), skins: { [purchasableSkin.id]: 1 } },
+  });
+  assert.equal(cardCommit.ok, true, 'skin card is used without fabric');
+  assert.equal(cardCommit.account.bag[purchasableSkin.id], 0);
+
+  const cardOnlySkin = GAME_DB.wardens.flatMap(item => item.skins || []).find(item => !item.purchasable);
+  assert.ok(cardOnlySkin);
+  const blocked = commitOraclePlan({
+    account: makeAccount(),
+    plan: { ...makePlan(), skins: { [cardOnlySkin.id]: 1 } },
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.error.code, 'SKIN_NOT_PURCHASABLE');
+}
+
 console.log('PASS unified server Oracle tests');
