@@ -115,6 +115,7 @@ function normalizeAccount(input = {}) {
       nextLevelExp: nonNegative(guild.nextLevelExp ?? guild.next_level_exp),
     },
     skins: record(account.skins),
+    skinStoreExp: nonNegative(account.skinStoreExp),
     skinOwnership: record(account.skinOwnership),
   };
 }
@@ -128,7 +129,16 @@ function normalizePlan(input = {}, account) {
     levels: {},
     promotes: {},
     bonds: {},
-    skins: record(source.skins),
+    skins: Object.fromEntries(Object.entries(record(source.skins)).filter(([id]) => {
+      const skinId = Number(id);
+      return db.wardens.some(item => (item.skins || []).some(skin => skin.id === skinId))
+        || db.lovers.some(item => (item.skins || []).some(skin => skin.id === skinId));
+    }).map(([id, target]) => {
+      const skinId = Number(id);
+      const skin = [...db.wardens, ...db.lovers].flatMap(item => item.skins || []).find(item => item.id === skinId);
+      const current = Math.max(0, Math.min(skin?.max_lvl || 10, Math.round(numeric(account.skins[id]))));
+      return [id, Math.max(current, Math.min(skin?.max_lvl || 10, Math.round(numeric(target, current))))];
+    })),
     summons: {
       wardens: Array.isArray(record(source.summons).wardens) ? source.summons.wardens.map(Number).filter(Number.isSafeInteger).slice(0, db.wardens.length) : [],
       lovers: Array.isArray(record(source.summons).lovers) ? source.summons.lovers.map(Number).filter(Number.isSafeInteger).slice(0, db.lovers.length) : [],
@@ -223,6 +233,34 @@ export function getWardenBaseAttributes(wardenId, accountInput) {
     result[talent.attribute] += level * talent.stars * multiplier;
   });
   return result;
+}
+
+function getSkinPlanUsage(plan, account) {
+  const byItem = {};
+  const byFabric = {};
+  const bySkin = {};
+  let storeExp = 0;
+  for (const [skinId, targetRaw] of Object.entries(record(plan.skins))) {
+    const skinIdNumber = Number(skinId);
+    const owner = db.wardens.find(item => (item.skins || []).some(skin => skin.id === skinIdNumber))
+      || db.lovers.find(item => (item.skins || []).some(skin => skin.id === skinIdNumber));
+    const skin = owner?.skins?.find(item => item.id === skinIdNumber);
+    if (!skin) continue;
+    const current = Math.max(0, Math.min(skin.max_lvl || 10, Math.round(numeric(account.skins[skinId]))));
+    const target = Math.max(current, Math.min(skin.max_lvl || 10, Math.round(numeric(targetRaw, current))));
+    const levels = target - current;
+    if (!levels) continue;
+    const cards = Math.min(levels, nonNegative(account.bag[skinId]));
+    const fabricLevels = levels - cards;
+    const fabricId = ({ a: 4421, s: 4422, ss: 4423 })[skin.quality];
+    const fabricPerLevel = Engine.FABRIC_COST_BY_QUALITY[skin.quality] || 0;
+    const fabric = fabricLevels * fabricPerLevel;
+    byItem[skinId] = cards;
+    if (fabricId && fabric) byFabric[fabricId] = (byFabric[fabricId] || 0) + fabric;
+    bySkin[skinId] = { from: current, to: target, levels, cards, fabric, fabricItemId: fabricId };
+    storeExp += levels * nonNegative(skin.store_exp);
+  }
+  return { byItem, byFabric, bySkin, storeExp };
 }
 
 function makeWarnings(account, plan) {
@@ -419,6 +457,7 @@ export function calculateOracle(input = {}) {
   const plan = normalizePlan(raw.plan, account);
   const report = Engine.calculateTotalDominanceReport({ db, account, plan });
   const talentUsage = getTalentPlanUsage(plan, account.ownedWardens);
+  const skinUsage = getSkinPlanUsage(plan, account);
   const talentGain = calculateTalentGain(account, plan);
   report.gain.talents = talentGain;
   report.gain.total += talentGain;
@@ -426,6 +465,9 @@ export function calculateOracle(input = {}) {
   report.spent.talentScrolls = talentUsage.scrollLevels;
   report.spent.talentScripts = talentUsage.scriptLevels;
   report.spent.talentItems = talentUsage.byItem;
+  report.spent.skinCards = skinUsage.byItem;
+  report.spent.skinFabric = skinUsage.byFabric;
+  report.skinUpgrade = skinUsage;
 
   const conclaveBranches = {};
   for (const attribute of ATTRIBUTES) {
@@ -610,6 +652,7 @@ export function calculateOracle(input = {}) {
     eventCalculators,
     guildProgress: account.guildProgress,
     skins,
+    skinUpgrade: skinUsage,
     conclaveBranches,
     courtyardUpgrade,
     wardens,
@@ -847,6 +890,22 @@ export function commitOraclePlan(input = {}) {
     }
     draft.bag[itemId] = Math.max(0, available - count);
   }
+
+  const skinUsage = getSkinPlanUsage(plan, draft);
+  for (const [itemId, count] of Object.entries(skinUsage.byItem)) {
+    if ((draft.bag[itemId] || 0) < count) {
+      return { ok: false, error: { code: 'INSUFFICIENT_SKIN_CARDS', itemId: Number(itemId), required: count, available: draft.bag[itemId] || 0, message: 'Недостаточно карточек обликов для выбранного плана.' } };
+    }
+    draft.bag[itemId] -= count;
+  }
+  for (const [itemId, count] of Object.entries(skinUsage.byFabric)) {
+    if ((draft.bag[itemId] || 0) < count) {
+      return { ok: false, error: { code: 'INSUFFICIENT_SKIN_FABRIC', itemId: Number(itemId), required: count, available: draft.bag[itemId] || 0, message: 'Недостаточно ткани для выбранного плана обликов.' } };
+    }
+    draft.bag[itemId] -= count;
+  }
+  for (const [skinId, skin] of Object.entries(skinUsage.bySkin)) draft.skins[skinId] = skin.to;
+  draft.skinStoreExp = nonNegative(draft.skinStoreExp) + skinUsage.storeExp;
 
   const summonIds = [...new Set(plan.summons.wardens.map(Number))];
   const loverSummonIds = [...new Set(plan.summons.lovers.map(Number))];
