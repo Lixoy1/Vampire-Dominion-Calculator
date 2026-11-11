@@ -134,3 +134,16 @@ The plan accepts absolute target levels at `plan.presences[loverId][presenceId]`
 `POST /api/oracle/auto-presences` plans upgrades for owned, updatable presences using the per-level costs in `lover_presence_levels`. The optimizer reserves any already-planned presence costs first, then spends remaining matching tokens on the next affordable level with the greatest summed percentage-point increase per token. The full `/api/oracle/auto-distribute` path runs this same step after Warden, talent and summon reservations. It returns `summary.addedLevels`, `summary.addedPercentPoints` and per-item reservations.
 
 This is a percentage-modifier allocation heuristic, not a dominance-point optimizer. Percent modifiers remain excluded from `report.gain.total` because exact in-game stacking and rounding have not been verified. Aura auto-upgrades are not included: current aura catalogue rows identify the upgrade item and percentage step, but do not provide an authoritative per-level item cost table.
+
+
+## Personal talent EXP allocation
+
+Talent plans may include `plan.talents[wardenId].exp_levels[position]` in addition to scroll and script increments. The allocator spends personal Warden EXP in 200-EXP star-point units, using bounded knapsack to find the largest spendable star-point total within each Warden's remaining level cap. Commit checks each Warden's remaining EXP, deducts it from that Warden, and applies the planned talent level increments. The calculation remains an engine model and is not independently game-server verified.
+
+## Scarlet Bond auto-allocation
+
+`POST /api/oracle/auto-bonds` allocates each owned Lover's remaining Affinity across unlocked flat and percentage branches using marginal estimated gain per Affinity. Branch caps and Closeness unlocks are respected; the preview reports estimated Affinity spend and gain. The existing Bond cost functions are approximate reference-engine formulas, so the result is explicitly marked as estimated. The all-in-one plan runs this after Warden levels and talent targets have been planned, so percentage bonuses use the planned Warden base attributes.
+
+## Shared inventory reservations
+
+The all-in-one planner now reserves manually selected skin cards and fabric after breakthrough materials and before talent, summon and presence allocation. It then carries one remaining-item ledger forward through those branches. Skin auto-ranking itself remains unavailable because the catalogue has no reliable per-level gain values for every skin; aura auto-upgrades remain unavailable because per-level item prices are not present in the supplied catalogue.
