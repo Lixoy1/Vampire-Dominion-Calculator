@@ -969,7 +969,10 @@ function renderTalentsTab(db, oracle) {
               const expLevels = Number(selected.exp_levels?.[index]) || 0;
               const planned = scrolls + scripts + expLevels;
               const target = Math.min(maxTalentLvl, lvl + planned);
-              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" />${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} уровн. за опыт</small>` : ''}</label>`;
+              const apiTalentStep = (oracle.meta.helperApi?.talentSteps || []).find(step =>
+                Number(step.wardenId) === Number(w.id) && Number(step.position) === Number(index)
+              );
+              return `<label class="talent-control"><span>${tName('attribute', talent.attribute)} · ${talent.stars}★ ${apiTalentStep ? `<small class="api-exact-step">API следующий шаг: ${fmt(apiTalentStep.nextCost)} · +${fmt(apiTalentStep.nextGain)}</small>` : ''}</span><input class="input talent-level" type="number" min="1" max="${maxTalentLvl}" step="1" data-wid="${w.id}" data-pos="${index}" value="${lvl}" />${planned ? `<small class="row-sub">Цель: ${target} · +${scrolls} свитки / +${scripts} рукописи / +${expLevels} уровн. за опыт</small>` : ''}</label>`;
             }).join('')}</div>
           </details>` : ''}
         `;
@@ -996,7 +999,10 @@ function renderAurasPresencesTab(db, oracle) {
               const curLvl = state.account.ownedWardens[w.id]?.auras?.[a.id] ?? (a.min_lvl || 0);
               const pct = oracle.wardens[w.id]?.auras?.[a.id]?.percent ?? 0;
               const owned = state.account.ownedWardens[w.id];
-              return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''})
+              const apiAuraStep = (oracle.meta.helperApi?.auraSteps || []).find(step =>
+                Number(step.wardenId) === Number(w.id) && Number(step.auraId) === Number(a.id)
+              );
+              return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''}) ${apiAuraStep ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiAuraStep.nextCost)} предметов · +${fmt(apiAuraStep.nextGain)}</span>` : ''}
                 ${owned ? `<input class="input mini-level aura-level" type="number" min="${a.min_lvl || 0}" max="${a.max_lvl || curLvl}" data-wid="${w.id}" data-aid="${a.id}" value="${curLvl}" aria-label="Уровень вдохновения" />` : '<span class="row-sub">· добавь смотрителя в профиль для редактирования</span>'}
               </div>`;
             }).join('')}
@@ -1021,7 +1027,10 @@ function renderAurasPresencesTab(db, oracle) {
               const owned = state.account.ownedLovers[l.id];
               const targetLvl = state.plan.presences?.[l.id]?.[p.id] ?? curLvl;
               const targetPercs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || percs;
-              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}%
+              const apiPresenceStep = (oracle.meta.helperApi?.presenceSteps || []).find(step =>
+                Number(step.loverId) === Number(l.id) && Number(step.presenceId) === Number(p.id)
+              );
+              return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${targetPercs.strength}% · Хар. ${targetPercs.allure}% · Инт. ${targetPercs.intellect}% · Воля ${targetPercs.spirit}% ${apiPresenceStep ? `<span class="api-exact-step">API следующий шаг: ${fmt(apiPresenceStep.nextCost)} жетонов · +${fmt(apiPresenceStep.nextGain)}</span>` : ''}
                 ${owned ? `<label class="mini-field">Сейчас<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Текущий уровень веяния" /></label>` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
                 ${owned && p.presence_type === 'updatable' ? `<label class="mini-field">Цель<input class="input mini-level presence-target" type="number" min="${curLvl}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${targetLvl}" aria-label="Целевой уровень веяния" /></label>` : ''}
               </div>`;
