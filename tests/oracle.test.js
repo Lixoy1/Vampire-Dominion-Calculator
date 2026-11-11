@@ -160,7 +160,7 @@ function walkNumbers(value, path = 'root') {
   const account = makeAccount();
   const w = GAME_DB.wardens.find(item => item.id === warden.id);
   for (const talent of w.talents) {
-    account.bag[talent.scroll_item_id] = 500;
+    account.bag[talent.scroll_item_id] = 1;
     account.bag[talent.script_item_id] = 500;
   }
   const auto = autoDistributeTalentPlan({ account, plan: makePlan() });
