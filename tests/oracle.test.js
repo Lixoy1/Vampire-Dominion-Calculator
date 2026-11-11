@@ -208,6 +208,13 @@ function walkNumbers(value, path = 'root') {
   const auto = autoDistributeAll({ account, plan: {} });
   assert.ok(auto.plan.summons.wardens.includes(warden.id), 'auto-distribute selects an affordable Warden');
   assert.ok(auto.plan.summons.lovers.includes(lover.id), 'auto-distribute selects the matching Lover after the Warden');
+
+  const committed = commitOraclePlan({ account, plan: auto.plan });
+  assert.equal(committed.ok, true, 'a planned Warden and their Lover can be committed together');
+  assert.ok(committed.account.ownedWardens[warden.id]);
+  assert.ok(committed.account.ownedLovers[lover.id]);
+  assert.equal(committed.account.bag[warden.summon_item_id], 0);
+  assert.equal(committed.account.bag[lover.summon_item_id], 0);
 }
 
 {
