@@ -1,3 +1,5 @@
+import { calculateOracle } from '../oracle.js';
+
 import assert from 'node:assert/strict';
 
 let navButtons = [];
@@ -22,6 +24,15 @@ globalThis.localStorage = {
   removeItem: key => localStore.delete(key),
 };
 globalThis.prompt = () => null;
+globalThis.fetch = async (url, options = {}) => {
+  assert.equal(url, '/api/oracle/calculate', 'the browser requests its calculation from the Oracle API');
+  const input = JSON.parse(options.body || '{}');
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({ ok: true, result: calculateOracle(input) }),
+  };
+};
 globalThis.alert = () => {};
 globalThis.confirm = () => false;
 globalThis.document = {
@@ -32,7 +43,7 @@ globalThis.document = {
 
 await import('../js/app.js');
 assert.equal(typeof readyHandler, 'function', 'app registers DOMContentLoaded');
-readyHandler();
+await readyHandler();
 
 const expectedTabs = ['dominance', 'conclave', 'levels', 'talents', 'auras', 'bonds', 'skins', 'summon', 'bag'];
 for (const expected of expectedTabs) {
@@ -40,6 +51,7 @@ for (const expected of expectedTabs) {
   assert.ok(tab, `tab ${expected} is rendered`);
   assert.equal(typeof tab.handlers.click, 'function', `tab ${expected} has a click handler`);
   tab.handlers.click();
+  await new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(root.innerHTML.includes('Vampire Dominion'), `application shell renders on ${expected}`);
 }
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
