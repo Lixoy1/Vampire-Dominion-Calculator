@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { GAME_DB } from '../js/data.js';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -77,6 +78,24 @@ try {
   assert.ok(calculated.result.report);
   assert.ok(calculated.result.inventory);
   assert.ok(calculated.result.skins);
+
+
+  const sampleLover = GAME_DB.lovers[0];
+  const loverAccount = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {}, ownedLovers: {}, bag: {}, skins: {},
+  };
+  if (sampleLover.summon_item_id && sampleLover.summon_item_count > 0) {
+    loverAccount.bag[sampleLover.summon_item_id] = sampleLover.summon_item_count;
+  }
+  const loverSummonResponse = await post('/api/oracle/summon-lover', {
+    account: loverAccount,
+    loverId: sampleLover.id,
+  });
+  assert.equal(loverSummonResponse.status, 200);
+  const loverSummon = await loverSummonResponse.json();
+  assert.equal(loverSummon.ok, true);
+  assert.ok(loverSummon.result.account.ownedLovers[sampleLover.id]);
 
   const invalidResponse = await post('/api/oracle/calculate', { plan: {} });
   assert.equal(invalidResponse.status, 400);
