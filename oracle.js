@@ -239,6 +239,7 @@ function getSkinPlanUsage(plan, account) {
   const byItem = {};
   const byFabric = {};
   const bySkin = {};
+  const unavailable = {};
   let storeExp = 0;
   for (const [skinId, targetRaw] of Object.entries(record(plan.skins))) {
     const skinIdNumber = Number(skinId);
@@ -252,6 +253,7 @@ function getSkinPlanUsage(plan, account) {
     if (!levels) continue;
     const cards = Math.min(levels, nonNegative(account.bag[skinId]));
     const fabricLevels = levels - cards;
+    if (fabricLevels > 0 && !skin.purchasable) unavailable[skinId] = fabricLevels;
     const fabricId = ({ a: 4421, s: 4422, ss: 4423 })[skin.quality];
     const fabricPerLevel = Engine.FABRIC_COST_BY_QUALITY[skin.quality] || 0;
     const fabric = fabricLevels * fabricPerLevel;
@@ -260,7 +262,7 @@ function getSkinPlanUsage(plan, account) {
     bySkin[skinId] = { from: current, to: target, levels, cards, fabric, fabricItemId: fabricId };
     storeExp += levels * nonNegative(skin.store_exp);
   }
-  return { byItem, byFabric, bySkin, storeExp };
+  return { byItem, byFabric, bySkin, unavailable, storeExp };
 }
 
 function makeWarnings(account, plan) {
@@ -892,6 +894,9 @@ export function commitOraclePlan(input = {}) {
   }
 
   const skinUsage = getSkinPlanUsage(plan, draft);
+  if (Object.keys(skinUsage.unavailable).length) {
+    return { ok: false, error: { code: 'SKIN_NOT_PURCHASABLE', skins: skinUsage.unavailable, message: 'Для выбранного уровня нужны карточки обликов: этот облик нельзя улучшить тканью.' } };
+  }
   for (const [itemId, count] of Object.entries(skinUsage.byItem)) {
     if ((draft.bag[itemId] || 0) < count) {
       return { ok: false, error: { code: 'INSUFFICIENT_SKIN_CARDS', itemId: Number(itemId), required: count, available: draft.bag[itemId] || 0, message: 'Недостаточно карточек обликов для выбранного плана.' } };
