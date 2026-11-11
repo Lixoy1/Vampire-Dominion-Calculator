@@ -147,3 +147,36 @@ Talent plans may include `plan.talents[wardenId].exp_levels[position]` in additi
 ## Shared inventory reservations
 
 The all-in-one planner now reserves manually selected skin cards and fabric after breakthrough materials and before talent, summon and presence allocation. It then carries one remaining-item ledger forward through those branches. Skin auto-ranking itself remains unavailable because the catalogue has no reliable per-level gain values for every skin; aura auto-upgrades remain unavailable because per-level item prices are not present in the supplied catalogue.
+
+
+## Validation matrix — workbook reference vs game verification
+
+The project distinguishes three evidence classes:
+
+1. **Third-party Helper API catalogue** — structured reference data used for IDs, caps and progression curves. It is not an official Game of Vampires server response.
+2. **Legacy Excel/workbook fixtures** — useful regression inputs for reproducing that workbook's formulas. The extracted workbook instruction explicitly warns that most table values no longer match the game screenshots. These fixtures are not game-truth.
+3. **Live-game control observations** — exact values transcribed from the game client with a before/after state, server/region and timestamp. No complete set of such paired observations is currently attached to the project.
+
+### Current measured comparison
+
+| Case | Workbook/reference result | Current Oracle/catalogue | Status |
+|---|---:|---:|---|
+| Conclave sample gain | 4,994,446 | 4,994,446 with the sample's entered attribute totals | Gain formula matches this workbook fixture |
+| Conclave sample cost | 62,440,000 | 62,622,720 from Helper progression rows | Difference 182,720; unresolved, no catalogue overwrite |
+| Rudra level 350 → 375 | 15,426,249.48 dominance; 89,043,997,100 Blood | Not directly comparable: workbook fixture includes inspiration and talent planning; current Blood curve is explicitly approximate | Requires paired in-game measurement |
+| Books | Workbook corrected sample 11,693,185.5 | No applied-book attribute totals in the current account model | Not included in absolute Oracle dominance |
+| Tasting / miscellaneous | Workbook sample 35,800 / 9,104,700 | Not represented as absolute dominance in the current Oracle | Separate calculators still needed |
+
+The Conclave regression test deliberately asserts both the matching gain and the known cost discrepancy. It does not convert the workbook's 62,440,000 into a trusted catalogue value.
+
+### Required format for live-game control observations
+
+For each calculation, retain the exact input and output in the same observation:
+- game server and region;
+- date/time and game version if visible;
+- current level / current values;
+- one changed variable or a clearly enumerated plan;
+- displayed resource cost and displayed dominance/attribute result;
+- screenshot or export evidence.
+
+Until these pairs exist, workbook fixtures may catch code regressions, but they cannot promote `gameVerification.status` from `not-verified`.
