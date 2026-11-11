@@ -8,7 +8,7 @@
 import { GAME_DB } from './js/data.js';
 import * as Engine from './js/engine.js';
 
-export const ORACLE_VERSION = '1.7.0';
+export const ORACLE_VERSION = '1.8.0';
 export const ORACLE_SCHEMA_VERSION = 1;
 
 const CATALOG_PROVENANCE = Object.freeze({
@@ -658,6 +658,30 @@ export function autoDistributeTalentPlan(input = {}) {
   };
 }
 
+function getHelperApiImportSummary(account) {
+  const imported = record(account.helperImport);
+  const observations = record(imported.apiObservations);
+  const wardenSteps = record(observations.wardenSteps);
+  return {
+    source: imported.source || null,
+    sourceLabel: imported.sourceLabel || null,
+    trustLevel: imported.trustLevel || null,
+    importedAt: imported.importedAt || null,
+    observedWardens: Object.keys(record(imported.observedWardenDominance)).length,
+    observedWardenSteps: Object.keys(wardenSteps).length,
+    talentScriptRows: Array.isArray(observations.talentScripts) ? observations.talentScripts.length : 0,
+    auraPathRows: Array.isArray(observations.auraItems)
+      ? observations.auraItems.filter(row => Array.isArray(record(row).bestPath?.cost) || Array.isArray(record(row).bestPath?.gain)).length
+      : 0,
+    bookRows: Array.isArray(observations.bookItems) ? observations.bookItems.length : 0,
+    manuscriptTiers: Array.isArray(observations.manuscriptTiers) ? observations.manuscriptTiers.length : 0,
+    skinSteps: Array.isArray(observations.skinSteps) ? observations.skinSteps.length : 0,
+    presenceSteps: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.length : 0,
+    bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.length : 0,
+    responseCount: Math.max(0, Math.round(numeric(observations.responseCount))),
+  };
+}
+
 export function calculateOracle(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
@@ -912,6 +936,7 @@ export function calculateOracle(input = {}) {
       inputSource: 'player-entered',
       gameConnected: false,
       stateless: true,
+      helperApi: getHelperApiImportSummary(account),
     },
     report,
     inventory,
@@ -1597,6 +1622,7 @@ export function importDhampirSnapshot(input = {}) {
     manuscriptTiers: Array.isArray(previousObservations.manuscriptTiers) ? [...previousObservations.manuscriptTiers] : [],
     skinSteps: Array.isArray(previousObservations.skinSteps) ? [...previousObservations.skinSteps] : [],
     presenceSteps: Array.isArray(previousObservations.presenceSteps) ? [...previousObservations.presenceSteps] : [],
+    bondSteps: Array.isArray(previousObservations.bondSteps) ? [...previousObservations.bondSteps] : [],
     attributes: previousObservations.attributes ?? null,
     conclave: previousObservations.conclave ?? null,
     intimacy: previousObservations.intimacy ?? null,
@@ -1750,7 +1776,7 @@ export function importDhampirSnapshot(input = {}) {
       };
       const step = exactStep(row);
       if (step.nextCost !== null || step.nextGain !== null) {
-        apiObservations.presenceSteps.push({ kind: 'bond', loverId: bondMeta.loverId, attribute: bondMeta.attribute, ...step });
+        apiObservations.bondSteps.push({ loverId: bondMeta.loverId, attribute: bondMeta.attribute, ...step });
       }
       summary.bonds++;
     }
@@ -1873,7 +1899,7 @@ export function importDhampirSnapshot(input = {}) {
           const step = exactStep(level);
           if (step.nextCost !== null || step.nextGain !== null) {
             apiObservations.auraItems.push({
-              itemId: itemId || null, wardenId, auraId: aura?.id ?? auraId || null, ...step,
+              itemId: itemId || null, wardenId, auraId: (aura?.id ?? auraId) || null, ...step,
             });
           }
         }
