@@ -138,7 +138,7 @@ This is a percentage-modifier allocation heuristic, not a dominance-point optimi
 
 ## Personal talent EXP allocation
 
-Talent plans may include `plan.talents[wardenId].exp_levels[position]` in addition to scroll and script increments. The allocator spends personal Warden EXP in 200-EXP star-point units, using bounded knapsack to find the largest spendable star-point total within each Warden's remaining level cap. Commit checks each Warden's remaining EXP, deducts it from that Warden, and applies the planned talent level increments. The calculation remains an engine model and is not independently game-server verified.
+Talent plans may include `plan.talents[wardenId].exp_levels[position]` in addition to scroll and script increments. The allocator spends personal Warden EXP in 200-EXP star-point units, using bounded knapsack to find the largest spendable star-point total within each Warden's remaining level cap. Commit checks each Warden's remaining EXP, deducts it from that Warden, and applies the planned talent level increments. When a Warden level target is also present, the level-gain preview is recalculated against the post-plan talent levels and replaces the previous baseline contribution without double-counting. The calculation remains an engine model and is not independently game-server verified.
 
 ## Scarlet Bond auto-allocation
 
