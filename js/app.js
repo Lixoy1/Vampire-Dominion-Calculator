@@ -100,7 +100,56 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
   };
 }
 
-function normalizeState(parsed = {}) {
+function adaptDhampirSnapshot(parsed = {}) {
+  parsed = adaptDhampirSnapshot(parsed);
+  const source = parsed && typeof parsed === 'object' ? parsed : {};
+  const rows = Array.isArray(source.wardens) ? source.wardens : [];
+  const skinRows = Array.isArray(source.skins) ? source.skins : [];
+  if (!rows.some(row => row && row.template_id != null && row.level != null)
+      && !skinRows.some(row => row && row.template_id != null && row.level != null)
+      && !source.guild && !source.guildProgress) return source;
+
+  const accountSource = { ...(source.account || {}) };
+  const ownedWardens = { ...(accountSource.ownedWardens || {}) };
+  for (const row of rows) {
+    const id = Number(row?.template_id);
+    if (!Number.isSafeInteger(id) || !GAME_DB.wardens.some(item => item.id === id)) continue;
+    ownedWardens[id] = {
+      ...(ownedWardens[id] || {}),
+      level: Math.max(1, Math.min(450, Math.round(Number(row.level) || 1))),
+      promoteId: Math.max(1, Math.min(8, Math.round(Number(row.promote_id) || 1))),
+      exp: Math.max(0, Number(row.talent_exp) || 0),
+      talents: { ...(ownedWardens[id]?.talents || {}) },
+      auras: { ...(ownedWardens[id]?.auras || {}) },
+      observedDominance: Math.max(0, Number(row.dominance) || 0),
+      referenceFilled: Boolean(row.filled),
+    };
+  }
+
+  const skins = { ...(accountSource.skins || {}) };
+  for (const row of skinRows) {
+    const id = Number(row?.template_id);
+    if (!Number.isSafeInteger(id) || row?.kind && !['warden', 'lover'].includes(row.kind)) continue;
+    skins[id] = Math.max(0, Math.min(10, Math.round(Number(row.level) || 0)));
+  }
+
+  const guild = source.guildProgress || source.guild || {};
+  return {
+    ...source,
+    account: {
+      ...accountSource,
+      ownedWardens,
+      skins,
+      guildProgress: {
+        exp: Math.max(0, Number(guild.exp) || 0),
+        level: Math.max(0, Number(guild.level) || 0),
+        nextLevelExp: Math.max(0, Number(guild.nextLevelExp ?? guild.next_level_exp) || 0),
+      },
+    },
+  };
+}
+
+export function normalizeState(parsed = {}) {
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const base = createDefaultState();
   const lang = source.lang || source.settings?.lang || base.lang;
