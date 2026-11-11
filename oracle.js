@@ -1619,6 +1619,8 @@ export function importDhampirSnapshot(input = {}) {
     wardenSteps: { ...record(previousObservations.wardenSteps) },
     talentScripts: Array.isArray(previousObservations.talentScripts) ? [...previousObservations.talentScripts] : [],
     talentScrolls: previousObservations.talentScrolls ?? null,
+    talentScrollsRows: Array.isArray(previousObservations.talentScrollsRows) ? [...previousObservations.talentScrollsRows] : [],
+    talentSteps: Array.isArray(previousObservations.talentSteps) ? [...previousObservations.talentSteps] : [],
     auraItems: Array.isArray(previousObservations.auraItems) ? [...previousObservations.auraItems] : [],
     bookItems: Array.isArray(previousObservations.bookItems) ? [...previousObservations.bookItems] : [],
     manuscriptTiers: Array.isArray(previousObservations.manuscriptTiers) ? [...previousObservations.manuscriptTiers] : [],
@@ -1892,8 +1894,10 @@ export function importDhampirSnapshot(input = {}) {
         const owner = record(ownerRow);
         const wardenId = Math.round(numeric(owner.warden_id ?? owner.owner_id ?? owner.template_id ?? owner.id));
         const warden = knownWardens.get(wardenId);
+        if (!warden) continue;
+        if (owner.owned === true && !account.ownedWardens[wardenId]) ensureWarden(wardenId);
         const owned = account.ownedWardens[wardenId];
-        if (!warden || !owned) continue;
+        if (!owned) continue;
         for (const levelRow of rowsOf(owner.levels)) {
           const level = record(levelRow);
           let auraId = Math.round(numeric(level.aura_id ?? level.template_id ?? level.id));
@@ -2088,7 +2092,7 @@ export function importDhampirSnapshot(input = {}) {
     const importTalentGroups = (groups, category) => {
       for (const item of rowsOf(groups)) {
         setItemCount(item);
-        pushBounded(category === 'scripts' ? apiObservations.talentScripts : apiObservations.talentScrollsRows || (apiObservations.talentScrollsRows = []), [item]);
+        pushBounded(category === 'scripts' ? apiObservations.talentScripts : apiObservations.talentScrollsRows, [item]);
         for (const wardenRowValue of rowsOf(item.wardens)) {
           const wardenRow = record(wardenRowValue);
           const wardenId = Math.round(numeric(wardenRow.warden_id ?? wardenRow.id));
@@ -2100,7 +2104,7 @@ export function importDhampirSnapshot(input = {}) {
               const position = Math.round(numeric(talent.position ?? talent.index, -1));
               if (position < 0 || position >= 50) continue;
               if (talent.level !== undefined) talentLevels[position] = Math.max(1, Math.round(numeric(talent.level, 1)));
-              keepExactStep(apiObservations.talentScripts, talent, {
+              keepExactStep(apiObservations.talentSteps, talent, {
                 wardenId, position, category,
               });
             }
