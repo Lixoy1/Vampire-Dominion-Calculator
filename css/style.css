@@ -411,3 +411,54 @@ html, body {
 @media (max-width: 560px) {
   .profile-avatar-select { flex: 1; max-width: none; }
 }
+
+/* OPTIMIST ORACLE — server snapshot and action route */
+.oracle-toolbar { display:flex; gap:8px; flex-wrap:wrap; }
+.oracle-stamp { margin-top:9px; }
+.oracle-empty { text-align:center; padding:28px 18px; }
+.oracle-emblem {
+  margin:0 auto 12px; width:112px; height:112px; display:grid; place-items:center;
+  border-radius:50%; color:#f1d7a5; font:800 20px Georgia,serif; letter-spacing:.15em;
+  border:1px solid rgba(214,176,109,.55);
+  background:radial-gradient(circle,rgba(160,29,57,.42),rgba(18,7,12,.95) 68%);
+  box-shadow:0 0 28px rgba(201,42,66,.18),inset 0 0 22px rgba(214,176,109,.08);
+}
+.oracle-empty .row-sub { max-width:680px; margin:10px auto; line-height:1.65; }
+.oracle-security {
+  margin-top:12px; padding:10px 12px; border-radius:10px;
+  border:1px solid rgba(214,176,109,.2); background:rgba(255,255,255,.025);
+  color:var(--muted); font-size:12px; line-height:1.55;
+}
+.oracle-summary-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.oracle-total, .oracle-resource {
+  min-width:0; padding:13px; border-radius:12px;
+  border:1px solid var(--line); background:rgba(255,255,255,.025);
+}
+.oracle-big { font-size:clamp(20px,4vw,28px); font-weight:800; font-variant-numeric:tabular-nums; }
+.oracle-positive, .oracle-gain { color:var(--ok); }
+.oracle-resource-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.oracle-value { font-size:18px; font-weight:750; font-variant-numeric:tabular-nums; }
+.oracle-resource .row-sub:last-child { line-height:1.5; }
+.oracle-attributes { display:grid; gap:5px; }
+.oracle-attribute, .oracle-route-row { margin:0; }
+.oracle-step {
+  width:28px; height:28px; flex:0 0 28px; border-radius:9px;
+  display:grid; place-items:center; font-size:11px; font-weight:800;
+  color:#f2dfb7; background:rgba(185,31,59,.2); border:1px solid rgba(214,176,109,.25);
+}
+.oracle-route-row .row-info, .oracle-recommendation-group .row-info { min-width:0; }
+.oracle-more { margin-top:10px; }
+.oracle-more summary { cursor:pointer; padding:10px; color:var(--gold); font-weight:700; }
+.oracle-more .item-row { margin:3px 0; }
+.oracle-recommendation-group { display:grid; gap:5px; margin:12px 0; }
+.oracle-group-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:4px 0; }
+.oracle-gain { font-weight:800; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.oracle-notes .row-sub { margin:6px 0; line-height:1.5; }
+.oracle-warning { border-color:rgba(229,107,85,.4); }
+.oracle-header .badge { white-space:nowrap; }
+.light-theme .oracle-emblem { color:#794c38; background:radial-gradient(circle,#f8d9d8,#fffaf2 68%); }
+@media (max-width:560px) {
+  .oracle-resource-grid, .oracle-summary-grid { grid-template-columns:1fr; }
+  .oracle-empty { padding:22px 12px; }
+  .oracle-toolbar .btn { flex:1 1 100%; }
+}
