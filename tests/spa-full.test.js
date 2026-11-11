@@ -95,7 +95,7 @@ const numericPad = fn('openNumericPad');
 assert.ok(numericPad.includes('parseCompact'), 'numeric keypad parses compact suffix values');
 assert.ok(numericPad.includes('MODE') && numericPad.includes('directInput'), 'numeric keypad supports direct text entry');
 assert.ok(numericPad.includes('KMBT'), 'numeric keypad supports K/M/B/T suffixes');
-assert.ok(html.includes('data-key="MODE"') && html.includes('data-mult="K"') && html.includes('data-mult="T"'), 'keypad markup includes mode and suffix keys');
+assert.ok(html.includes('data-key="MODE"') && html.includes('data-mult="K"') && html.includes('data-mult="T"') && html.includes('inputmode="text"'), 'keypad markup includes mode and suffix keys');
 assert.ok(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'), 'compact keypad uses a four-column layout');
 assert.ok(css.includes('.talent-help-card') && css.includes('.talent-help-list'), 'talent explanations have mobile styling');
 
