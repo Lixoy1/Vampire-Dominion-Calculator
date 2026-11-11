@@ -11,6 +11,7 @@ import {
   commitOraclePlan,
   summonWarden,
   summonLover,
+  importDhampirSnapshot,
   getOracleCapabilities,
 } from '../oracle.js';
 
@@ -218,6 +219,59 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.eventCalculators.guildExp.expected, 2220);
   assert.deepEqual(snapshot.guildProgress, { exp: 0, level: 0, nextLevelExp: 0 });
   assert.equal(snapshot.eventCalculators.guildExp.items.find(item => item.item_id === 4002)?.counted, 1);
+}
+
+{
+  const helperWardenRows = [
+    { template_id: 10170, talent_exp: 45, level: 450, promote_id: 8, filled: true, dominance: '2335120.0000000000' },
+    { template_id: 10270, talent_exp: 0, level: 450, promote_id: 8, filled: true, dominance: '6701429.0000000000' },
+    { template_id: 10280, talent_exp: 0, level: 56, promote_id: 1, filled: false, dominance: '1753603.0000000000' },
+    { template_id: 10530, talent_exp: 0, level: 1, promote_id: 1, filled: false, dominance: '1738764.0000000000' },
+    { template_id: 10540, talent_exp: 45, level: 5, promote_id: 1, filled: true, dominance: '1758651.0000000000' },
+    { template_id: 10660, talent_exp: 56, level: 5, promote_id: 1, filled: true, dominance: '1745845.0000000000' },
+    { template_id: 10670, talent_exp: 0, level: 1, promote_id: 1, filled: true, dominance: '1744134.0000000000' },
+    { template_id: 10940, talent_exp: 0, level: 1, promote_id: 1, filled: false, dominance: '3089022.0000000000' },
+    { template_id: 10950, talent_exp: 0, level: 450, promote_id: 8, filled: true, dominance: '4502756.0000000000' },
+    { template_id: 10960, talent_exp: 0, level: 1, promote_id: 1, filled: false, dominance: '3089022.0000000000' },
+  ];
+  const helperBondRows = [
+    { template_id: 2603, level: 0, percent_level: 0 },
+    { template_id: 2601, level: 0, percent_level: 0 },
+    { template_id: 2604, level: 0, percent_level: 0 },
+    { template_id: 2602, level: 0, percent_level: 0 },
+  ];
+  const helperSkinRows = [
+    { kind: 'warden', owner_id: 10270, template_id: 10273101, level: 8 },
+    { kind: 'warden', owner_id: 10540, template_id: 10544101, level: 10 },
+    { kind: 'lover', owner_id: 20510, template_id: 30514101, level: 4 },
+  ];
+  const imported = importDhampirSnapshot({
+    account: makeAccount(),
+    snapshots: [
+      helperWardenRows,
+      helperBondRows,
+      [{ attribute: 'strength', level: 23 }, { attribute: 'allure', level: 74 }, { attribute: 'intellect', level: 45 }, { attribute: 'spirit', level: 75 }],
+      helperSkinRows,
+      { exp: 6800, level: 11, next_level_exp: 7000 },
+    ],
+  });
+  assert.equal(imported.summary.wardens, 10);
+  assert.equal(imported.account.ownedWardens[10270].level, 450);
+  assert.equal(imported.account.ownedWardens[10270].promoteId, 8);
+  assert.equal(imported.account.ownedWardens[10540].exp, 45);
+  assert.equal(imported.account.ownedWardens[10280].sourceFilled, false);
+  assert.equal(imported.account.helperImport.observedWardenDominance[10270], '6701429.0000000000');
+  assert.equal(imported.summary.bonds, 4);
+  assert.equal(imported.account.ownedLovers[20260].bonds.strength.level, 0);
+  assert.equal(imported.account.ownedLovers[20260].bonds.allure.percentLevel, 0);
+  assert.equal(imported.summary.skins, 3);
+  assert.equal(imported.account.skins[10273101], 8);
+  assert.equal(imported.account.skinOwnership[10273101], true);
+  assert.deepEqual(imported.account.conclave, { strength: 23, allure: 74, intellect: 45, spirit: 75 });
+  assert.deepEqual(imported.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
+  assert.equal(imported.provenance.sourceId, 'dhampir-helper-api');
+  assert.equal(imported.provenance.gameServerVerified, false);
+  assert.ok(imported.warnings.length > 0);
 }
 
 console.log('PASS unified server Oracle tests');
