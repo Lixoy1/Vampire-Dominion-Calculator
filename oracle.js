@@ -2075,9 +2075,6 @@ export function importDhampirSnapshot(input = {}) {
           if (skin.owned === true && kind === 'warden' && knownWardens.has(ownerId)) ensureWarden(ownerId);
           if (skin.owned === true && kind === 'lover' && knownLovers.has(ownerId)) ensureLover(ownerId);
           setSkinRows([{ ...skin, kind, owner_id: ownerId, template_id: skin.skin_id }]);
-          keepExactStep(apiObservations.skinSteps, skin, {
-            skinId: skin.skin_id, ownerType: kind, ownerId,
-          });
         }
       }
     } else if (Array.isArray(object.skins)) {
