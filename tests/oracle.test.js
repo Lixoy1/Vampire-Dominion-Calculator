@@ -379,4 +379,49 @@ function walkNumbers(value, path = 'root') {
   assert.equal(blocked.error.code, 'SKIN_NOT_PURCHASABLE');
 }
 
+
+{
+  const auraWarden = GAME_DB.wardens.find(item => (item.auras || []).length);
+  const presenceLover = GAME_DB.lovers.find(item => (item.presences || []).length);
+  assert.ok(auraWarden && presenceLover, 'catalogue contains aura and presence templates');
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {
+      [auraWarden.id]: { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} },
+    },
+    ownedLovers: {
+      [presenceLover.id]: { affinity: 0, closeness: 0, sex: 'female', presences: {}, bonds: {} },
+    },
+    bag: {}, skins: {},
+  };
+  for (const aura of auraWarden.auras) {
+    account.ownedWardens[auraWarden.id].auras[aura.id] = aura.aura_type === 'not_updatable'
+      ? (aura.min_lvl || 0)
+      : Math.min(aura.max_lvl || 1, Math.max(aura.min_lvl || 0, 2));
+  }
+  for (const presence of presenceLover.presences) {
+    account.ownedLovers[presenceLover.id].presences[presence.id] = Math.min(presence.max_lvl || 1, Math.max(presence.min_lvl || 0, 2));
+  }
+  const result = calculateOracle({ account, plan: makePlan() });
+  assert.ok(result.report.modifiers, 'combined report exposes separate modifiers');
+  const expectedAuraTalent = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
+  const expectedAuraBook = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
+  for (const aura of auraWarden.auras) {
+    const percent = result.wardens[auraWarden.id].auras[aura.id].percent;
+    const bucket = aura.bonus_type === 'book' ? expectedAuraBook : expectedAuraTalent;
+    for (const attr of aura.attributes || []) bucket[attr] += percent;
+  }
+  for (const attr of ['strength', 'allure', 'intellect', 'spirit']) {
+    assert.equal(result.report.modifiers.auras.talent[attr], expectedAuraTalent[attr]);
+    assert.equal(result.report.modifiers.auras.book[attr], expectedAuraBook[attr]);
+  }
+  const expectedPresence = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
+  for (const presence of presenceLover.presences) {
+    const percents = result.lovers[presenceLover.id].presences[presence.id].percents;
+    for (const attr of Object.keys(expectedPresence)) expectedPresence[attr] += percents[attr];
+  }
+  assert.deepEqual(result.report.modifiers.presences, expectedPresence);
+  assert.equal(result.report.gain.total, 0, 'unverified percentage modifiers are not misrepresented as absolute dominance');
+}
+
 console.log('PASS unified server Oracle tests');
