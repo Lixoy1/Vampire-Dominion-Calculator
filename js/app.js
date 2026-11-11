@@ -99,7 +99,6 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
       scrolls: { ...(value?.scrolls || {}) },
       scripts: { ...(value?.scripts || {}) },
       exp_levels: { ...(value?.exp_levels || {}) },
-      exp_levels: { ...(value?.exp_levels || {}) },
     }])),
     skins: { ...(incoming?.skins || {}) },
     summons: {
