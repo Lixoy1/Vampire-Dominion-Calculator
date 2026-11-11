@@ -693,4 +693,136 @@ function walkNumbers(value, path = 'root') {
   assert.equal(oracle.meta.helperApi.attributeBreakdown.strength.total, '346455');
 }
 
+
+{
+  // Shape matching the real combined API payload: nested resource groups,
+  // not flattened demo rows. This guards the exact import path used by the app.
+  const apiWarden = GAME_DB.wardens.find(item =>
+    item.auras?.some(aura => aura.upgrade_item_id) &&
+    item.skins?.length &&
+    item.talents?.some(talent => talent.script_item_id && talent.scroll_item_id)
+  );
+  const scriptTalent = apiWarden.talents.find(talent => talent.script_item_id && talent.scroll_item_id);
+  const aura = apiWarden.auras.find(item => item.upgrade_item_id);
+  const skin = apiWarden.skins[0];
+  const apiLover = GAME_DB.lovers.find(item => item.presences?.some(presence => presence.presence_type === 'updatable')
+    && item.scarlet_bonds?.length);
+  const presence = apiLover.presences.find(item => item.presence_type === 'updatable');
+  const bond = apiLover.scarlet_bonds.find(item => item.attribute === 'strength') || apiLover.scarlet_bonds[0];
+  const fabricId = ({ a: 4421, s: 4422, ss: 4423 })[skin.quality];
+  const bookItem = GAME_DB.items.find(item => item.id === 3144) || GAME_DB.items[0];
+  const imported = importDhampirSnapshot({
+    account: makeAccount(),
+    snapshot: {
+      total: '123456.0000000000',
+      attributes: [{ attribute: 'strength', total: '123456.0000000000' }],
+      conclave: {
+        points: 40, spent: 5, left: 35,
+        attributes: [{ attribute: 'strength', level: 12, target: 13, next_cost: 15, next_gain: 20 }],
+        best_path: { runs: [{ key: 'strength', to: 13 }], end: 'strength' },
+      },
+      levels: {
+        blood: 100000, spent: 10000, left: 90000,
+        items: [{ item_id: fabricId, count: 2 }],
+        wardens: [{ warden_id: apiWarden.id, level: 50, promote_id: 2, talent_exp: 900, next_cost: 1200, next_gain: 500 }],
+        best_path: { runs: [{ key: String(apiWarden.id), to: 55 }], end: String(apiWarden.id) },
+      },
+      bonds: {
+        trust: 20, spent: 3, left: 17,
+        lovers: [{
+          lover_id: apiLover.id, warden_id: apiLover.warden_id, summoned: false, trust: 6,
+          bonds: [{
+            attribute: bond.attribute,
+            level: { level: 2, target: 2, next_cost: 0, next_gain: 25, max_target: 10 },
+            percent: { level: 1, target: 1, next_cost: 20, next_gain: 2, max_target: 10 },
+          }],
+          best_path: { runs: [{ key: bond.attribute, to: 2 }], end: bond.attribute },
+        }],
+      },
+      auras: {
+        gain: '0',
+        items: [{
+          item_id: aura.upgrade_item_id, count: 4, spent: 1, left: 3,
+          best_path: { runs: [{ key: String(apiWarden.id), to: 2 }], end: String(apiWarden.id) },
+          wardens: [{
+            warden_id: apiWarden.id, owned: true,
+            levels: [{ aura_id: aura.id, level: 2, next_cost: 50, next_gain: 5 }],
+          }],
+        }],
+      },
+      presences: {
+        items: [{
+          item_id: presence.upgrade_item_id, count: 9, spent: 2, left: 7,
+          best_path: { runs: [{ key: String(apiLover.id), to: 3 }], end: String(apiLover.id) },
+          lovers: [{
+            lover_id: apiLover.id, owned: true,
+            levels: [{ presence_id: presence.id, level: 3, next_cost: 50, next_gain: 2 }],
+          }],
+        }],
+      },
+      skins: {
+        fabrics: [{
+          quality: skin.quality, item_id: fabricId, count: 2, spent: 0, left: 2,
+          skins: [{
+            skin_id: skin.id, owner: 'warden', owner_id: apiWarden.id, owned: true,
+            quality: skin.quality, level: 4, target: 4, max_level: 10,
+            next_kind: 'fabric', next_cost: 100, next_gain: 250,
+          }],
+        }],
+        store: { exp: 120, exp_after: 120, level: 1, level_after: 1, next_exp: 200 },
+      },
+      talents: {
+        scripts: [{
+          item_id: scriptTalent.script_item_id, count: 12, spent: 2, left: 10,
+          wardens: [{
+            warden_id: apiWarden.id, owned: true,
+            talents: [{ position: 0, attribute: scriptTalent.attribute, stars: scriptTalent.stars,
+              level: 3, cap: 40, next_cost: 3, next_gain: 30 }],
+          }],
+        }],
+        scrolls: [{
+          item_id: scriptTalent.scroll_item_id, count: 7, spent: 1, left: 6,
+          wardens: [{ warden_id: apiWarden.id, owned: true, talents: [] }],
+        }],
+        own_exp: [{
+          warden_id: apiWarden.id, owned: true, exp: 900, promote_exp: 0, level: 50,
+          talents: [{ position: 0, level: 3 }],
+        }],
+      },
+      books: { items: [{ item_id: bookItem.id, count: 8, expected: 80 }] },
+      courtyard: { level: 120, points: 25, spent: 3, left: 22 },
+    },
+  });
+
+  assert.equal(imported.account.blood, 90000, 'Helper remaining Blood is imported');
+  assert.equal(imported.account.conclaveExp, 35, 'remaining Conclave points are imported');
+  assert.equal(imported.account.conclave.strength, 12, 'current Conclave attribute level is imported');
+  assert.equal(imported.account.ownedWardens[apiWarden.id].level, 50, 'nested level Warden row is imported');
+  assert.equal(imported.account.ownedWardens[apiWarden.id].exp, 900, 'Warden personal EXP is imported');
+  assert.equal(imported.account.ownedWardens[apiWarden.id].talents[0], 3, 'nested talent levels are imported');
+  assert.equal(imported.account.ownedWardens[apiWarden.id].auras[aura.id], 2, 'nested aura levels are imported');
+  assert.equal(imported.account.ownedLovers[apiLover.id].affinity, 6, 'per-Lover Trust is imported');
+  assert.equal(imported.account.ownedLovers[apiLover.id].bonds[bond.attribute].level, 2, 'nested Scarlet Bond levels are imported');
+  assert.equal(imported.account.ownedLovers[apiLover.id].bonds[bond.attribute].percentLevel, 1, 'nested Scarlet Bond percent levels are imported');
+  assert.equal(imported.account.ownedLovers[apiLover.id].presences[presence.id], 3, 'nested Presence levels are imported');
+  assert.equal(imported.account.skins[skin.id], 4, 'nested fabric skin level is imported');
+  assert.equal(imported.account.skinStoreExp, 120, 'skin shop experience is imported');
+  assert.equal(imported.account.courtyardLvl, 120, 'Courtyard level is imported');
+  assert.equal(imported.account.courtyardExp, 22, 'remaining Courtyard points are imported');
+  assert.equal(imported.account.bag[scriptTalent.script_item_id], 12, 'manuscript stock is imported');
+  assert.equal(imported.account.bag[scriptTalent.scroll_item_id], 7, 'scroll stock is imported');
+  assert.equal(imported.account.bag[bookItem.id], 8, 'book stock is imported');
+  assert.deepEqual(imported.account.helperImport.apiObservations.bestPaths.levels.runs,
+    [{ key: String(apiWarden.id), to: 55 }], 'exact Helper levels best_path is retained');
+  assert.deepEqual(imported.account.helperImport.apiObservations.bestPaths.bonds[String(apiLover.id)].runs,
+    [{ key: bond.attribute, to: 2 }], 'exact nested bond best_path is retained');
+  assert.equal(imported.account.helperImport.apiObservations.bondSteps.length, 2, 'both nested Bond cost/gain observations are retained');
+  assert.equal(imported.account.helperImport.apiObservations.presenceSteps.length, 1, 'nested Presence next-step data is retained');
+  assert.equal(imported.account.helperImport.apiObservations.skinSteps.length, 1, 'nested Skin next-step data is retained');
+
+  const result = calculateOracle({ account: imported.account, plan: makePlan() });
+  assert.deepEqual(result.meta.helperApi.bestPaths.levels.runs,
+    [{ key: String(apiWarden.id), to: 55 }], 'dashboard metadata exposes retained Helper best paths');
+}
+
 console.log('PASS unified server Oracle tests');
