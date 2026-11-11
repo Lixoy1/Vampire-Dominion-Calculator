@@ -1612,6 +1612,7 @@ export function importDhampirSnapshot(input = {}) {
     }
   }
   const knownItems = new Set(db.items.map(item => item.id));
+  const importedSkinIds = new Set();
   const knownWardens = new Map(db.wardens.map(item => [item.id, item]));
   const knownLovers = new Map(db.lovers.map(item => [item.id, item]));
   const summary = {
@@ -1854,7 +1855,10 @@ export function importDhampirSnapshot(input = {}) {
       if (!skin) { summary.skipped++; continue; }
       account.skins[id] = level;
       account.skinOwnership[id] = true;
-      summary.skins++;
+      if (!importedSkinIds.has(id)) {
+        importedSkinIds.add(id);
+        summary.skins++;
+      }
     }
   };
 
