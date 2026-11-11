@@ -101,7 +101,6 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
 }
 
 function adaptDhampirSnapshot(parsed = {}) {
-  parsed = adaptDhampirSnapshot(parsed);
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const rows = Array.isArray(source.wardens) ? source.wardens : [];
   const skinRows = Array.isArray(source.skins) ? source.skins : [];
@@ -150,6 +149,7 @@ function adaptDhampirSnapshot(parsed = {}) {
 }
 
 export function normalizeState(parsed = {}) {
+  parsed = adaptDhampirSnapshot(parsed);
   const source = parsed && typeof parsed === 'object' ? parsed : {};
   const base = createDefaultState();
   const lang = source.lang || source.settings?.lang || base.lang;
