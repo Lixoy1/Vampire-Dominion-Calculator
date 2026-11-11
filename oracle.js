@@ -669,6 +669,12 @@ function getHelperApiImportSummary(account) {
     importedAt: imported.importedAt || null,
     observedWardens: Object.keys(record(imported.observedWardenDominance)).length,
     observedWardenSteps: Object.keys(wardenSteps).length,
+    wardenSteps,
+    bondSteps: Array.isArray(observations.bondSteps) ? observations.bondSteps.slice(0, 180) : [],
+    presenceSteps: Array.isArray(observations.presenceSteps) ? observations.presenceSteps.slice(0, 180) : [],
+    auraSteps: Array.isArray(observations.auraItems) ? observations.auraItems.filter(row => row && row.nextCost != null).slice(0, 180) : [],
+    skinSteps: Array.isArray(observations.skinSteps) ? observations.skinSteps.slice(0, 180) : [],
+    talentSteps: Array.isArray(observations.talentSteps) ? observations.talentSteps.slice(0, 180) : [],
     talentScriptRows: Array.isArray(observations.talentScripts) ? observations.talentScripts.length : 0,
     auraPathRows: Array.isArray(observations.auraItems)
       ? observations.auraItems.filter(row => Array.isArray(record(row).bestPath?.cost) || Array.isArray(record(row).bestPath?.gain)).length
