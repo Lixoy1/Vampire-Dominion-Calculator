@@ -196,6 +196,24 @@ try {
   assert.ok(autoPresence.result.summary.addedLevels > 0);
   assert.ok(autoPresence.result.plan.presences[presenceLover.id][presence.id] > 0);
 
+
+  const bondLoverApi = GAME_DB.lovers.find(item => item.scarlet_bonds?.length);
+  const bondAutoResponse = await post('/api/oracle/auto-bonds', {
+    account: {
+      blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+      conclave: {}, ownedWardens: {},
+      ownedLovers: {
+        [bondLoverApi.id]: { affinity: 1000, closeness: 200, sex: 'female', presences: {}, bonds: {} },
+      },
+      bag: {}, skins: {},
+    },
+    plan: {},
+  });
+  assert.equal(bondAutoResponse.status, 200);
+  const bondAuto = await bondAutoResponse.json();
+  assert.equal(bondAuto.ok, true);
+  assert.ok(bondAuto.result.summary.addedLevels > 0);
+
   const invalidResponse = await post('/api/oracle/calculate', { plan: {} });
   assert.equal(invalidResponse.status, 400);
   const invalid = await invalidResponse.json();
