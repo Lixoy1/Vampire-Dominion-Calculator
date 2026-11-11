@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/oracle.test.js && node tests/oracle-api.test.js && node tests/app-smoke.test.js && node tests/spa-shell.test.js",
+    "test": "node tests/engine.test.js && node tests/oracle.test.js && node tests/oracle-api.test.js && node tests/app-smoke.test.js && node tests/spa-shell.test.js && node tests/spa-full.test.js",
     "check": "node --check server.js && node --check oracle.js && node --check scripts/app.js && node --check scripts/engine.js && node --check scripts/data.js",
     "verify:icons": "python verify_icons.py"
   },
