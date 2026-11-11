@@ -767,7 +767,7 @@ function renderLoverDetailScreen(db) {
     '<section class="attrs-box"><div class="grid-2">' +
       '<label class="field-stack"><span>Близость / откровенность</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="closeness" value="' + Number(owned.closeness || 0) + '"></label>' +
       '<label class="field-stack"><span>Доверие / влечение</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="affinity" value="' + Number(owned.affinity || 0) + '"></label></div>' +
-      '<label class="field-stack"><span>Пол портрета</span><select class="select" data-lover-sex="' + id + '"><option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option><option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option></select></label></section>' +
+      '<label class="field-stack"><span>Пол портрета</span><select class="select" data-spa-lover-sex="' + id + '"><option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option><option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option></select></label></section>' +
     '<section class="attrs-box"><div class="card-title">Кровные узы · расчёт Oracle</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Прирост отображается как модельная оценка.</div>' +
       '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-bonds">⚡ Распределить Кровные узы</button><button class="btn" id="btn-auto-presences">⚡ Распределить Веяния</button></div>' +
       (result ? '<div class="bond-summary">Потратится: <b>' + fmt(result.spentAffinity || 0) + '</b> · Останется: <b>' + fmt(result.leftAffinity || 0) + '</b> · Прирост: <b>+' + fmt(result.totalGain || 0) + '</b></div>' : '<div class="row-sub">Нет серверного расчёта уз.</div>') +
@@ -997,7 +997,7 @@ function renderHomeScreen() {
       '<div class="profile-main-server">' + escHtml(state.profile.server || 'сервер не указан') + '</div>' +
       '<div class="profile-badge-row"><span class="badge-pill">👑 Локальный профиль · полный набор разделов</span></div></div><div class="card-right">⌄</div>' +
     '</div>' +
-    '<button class="btn btn-gold quick-calc-entry" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button>' +
+    '<div class="quick-calc-launch-row"><button class="btn btn-gold quick-calc-entry" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button><button class="btn" type="button" data-action="auto-all">Авторасчёт</button></div>' +
     '<div class="card-stack">' +
       '<div class="nav-card" data-action="nav" data-screen="resources"><div class="card-icon-box">✎</div><div class="card-body"><div class="card-title">Ресурсы</div><div class="card-subtitle">Смотрители, партнёры, сумка, облики, Конклав</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div><span class="progress-percent">' + progress + '%</span></div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="calculations"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Расчёты</div><div class="card-subtitle">Господство, таланты, близость, влечение, гильдия</div></div><div class="card-right">›</div></div>' +
@@ -1194,7 +1194,7 @@ function renderSettingsScreen() {
       '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
       '<label class="field-stack"><span>Портрет профиля</span><select class="select" id="profile-avatar-select">' + GAME_DB.wardens.map(function (warden) { return '<option value="' + warden.id + '"' + (Number(state.profile.avatarId) === warden.id ? ' selected' : '') + '>' + tName('warden', warden.name) + '</option>'; }).join('') + '</select></label></section>' +
     '<section class="attrs-box"><div class="card-title">Профили</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) { return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>'; }).join('') + '</select>' +
-      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля / JSON API</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
+      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-theme">' + (state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема') + '</button><button class="btn" id="btn-lang">Язык: ' + state.lang.toUpperCase() + '</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля</button><button class="btn" id="btn-import-helper">📥 Импорт JSON API помощника</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
       '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Импорт JSON сохраняет контрольный серверный снимок отдельно от ручного профиля.</div></section>' +
     renderServerSnapshotCard();
 }
@@ -2014,6 +2014,7 @@ function bindSpaEvents(db, report, oracle) {
     button.addEventListener('click', async function () {
       const action = button.dataset.action;
       if (action === 'quick-calc') return openQuickCalculation();
+      if (action === 'auto-all') return runFullAutoDistribute();
       if (action === 'formula-info') return openFormulaInfo();
       if (action === 'nav') return navigate(button.dataset.screen);
       if (action === 'undo') return undoSpa();
@@ -2275,10 +2276,8 @@ function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
   document.getElementById('btn-profile-edit')?.addEventListener('click', editProfile);
   document.getElementById('btn-profile-edit-settings')?.addEventListener('click', editProfile);
-  document.getElementById('profile-avatar-select')?.addEventListener('change', event => { state.profile.avatarId = Number(event.target.value); saveState(); render(); });
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
-  document.getElementById('btn-create-account-settings')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-reset-account')?.addEventListener('click', () => {
     const ok = globalThis.confirm?.('Полностью очистить текущий аккаунт? Будут удалены смотрители, партнёры, уровни, ресурсы, предметы и план прокачки. Экспортируй профиль заранее, если хочешь сохранить копию.') ?? false;
     if (!ok) return;
@@ -2588,8 +2587,8 @@ function bindEvents(db) {
     state.searchQuery = e.target.value;
     const query = state.searchQuery.trim().toLocaleLowerCase();
     let visible = 0;
-    document.querySelectorAll('.bag-item-row').forEach(row => {
-      const title = row.querySelector('.row-name')?.textContent?.toLocaleLowerCase() || '';
+    document.querySelectorAll('.bag-cell, .bag-list-row').forEach(row => {
+      const title = (row.querySelector('.bag-cell-name, .card-title')?.textContent || row.textContent || '').toLocaleLowerCase();
       const show = !query || title.includes(query);
       row.hidden = !show;
       if (show) visible++;
