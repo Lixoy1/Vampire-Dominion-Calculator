@@ -158,6 +158,23 @@ try {
   assert.equal(talentCommitted.ok, true);
   assert.ok(talentCommitted.result.account.ownedWardens[talentWarden.id].talents);
 
+
+  const skin = GAME_DB.wardens.flatMap(item => item.skins || []).find(item => item.quality === 'a' && item.purchasable);
+  const skinAccount = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {}, ownedLovers: {}, bag: { 4421: 50 }, skins: {},
+  };
+  const skinCommitResponse = await post('/api/oracle/commit-plan', {
+    account: skinAccount,
+    plan: { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: { [skin.id]: 1 }, summons: { wardens: [], lovers: [] } },
+  });
+  assert.equal(skinCommitResponse.status, 200);
+  const skinCommit = await skinCommitResponse.json();
+  assert.equal(skinCommit.ok, true);
+  assert.equal(skinCommit.result.account.skins[skin.id], 1);
+  assert.equal(skinCommit.result.account.bag[4421], 0);
+  assert.equal(skinCommit.result.account.skinStoreExp, skin.store_exp);
+
   const invalidResponse = await post('/api/oracle/calculate', { plan: {} });
   assert.equal(invalidResponse.status, 400);
   const invalid = await invalidResponse.json();
