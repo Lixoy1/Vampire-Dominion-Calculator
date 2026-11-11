@@ -458,3 +458,35 @@ html, body {
 .guild-progress-grid .input { min-width:0; padding:7px 6px; }
 .guild-progress-remaining { padding:4px 0 10px; }
 @media(max-width:440px) { .guild-progress-grid { grid-template-columns:1fr; } }
+
+
+/* Exact Helper API observations remain visually distinct from modelled estimates. */
+.api-exact-step {
+  display: inline-block;
+  margin: 3px 4px 2px 0;
+  padding: 3px 7px;
+  border: 1px solid rgba(83, 190, 156, .38);
+  border-radius: 7px;
+  color: var(--ok);
+  background: rgba(39, 156, 123, .09);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.helper-routes {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.helper-route-row {
+  display: grid;
+  grid-template-columns: minmax(110px, 180px) 1fr;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+.helper-route-row strong { color: var(--accent-gold); }
+.helper-route-row span { overflow-wrap: anywhere; color: var(--text); }
+@media (max-width: 560px) {
+  .helper-route-row { grid-template-columns: 1fr; gap: 3px; }
+}
