@@ -104,6 +104,10 @@ assert.ok(fn('renderCalculationsHubScreen').includes('data-screen="warden_exp"')
 assert.ok(fn('renderSpaScreen').includes("case 'warden_exp': return renderWardenExpScreen(db, oracle)"), 'Warden EXP screen has a first-class SPA route');
 assert.ok(fn('renderWardenExpScreen').includes('data-spa-search="warden-exp"'), 'Warden EXP screen has a search field');
 assert.ok(fn('renderWardenExpScreen').includes('data-action="warden-exp-filter"'), 'Warden EXP screen has working filter controls');
+assert.ok(fn('renderWardenExpScreen').includes('Math.floor(exp / 200)'), 'Warden EXP screen calculates each character’s talent points separately');
+assert.ok(fn('renderWardenExpScreen').includes('exp % 200'), 'Warden EXP screen preserves the remainder below 200 EXP');
+assert.ok(fn('bindSpaEvents').includes("root.querySelectorAll('[data-spa-quick-exp]')"), 'Warden EXP inputs are bound');
+assert.ok(fn('bindSpaEvents').includes('if (!existing && exp === 0) return;'), 'empty experience does not add an unowned Warden');
 assert.ok(fn('bindSpaEvents').includes("action === 'warden-exp-filter'"), 'Warden EXP filters are interactive');
 assert.ok(fn('renderTalentsTab').includes('data-screen="warden_exp"'), 'talent planner links to Warden EXP entry');
 
