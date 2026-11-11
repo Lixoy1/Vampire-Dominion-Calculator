@@ -1443,6 +1443,9 @@ function bindNumericPad() {
         state.activeTab = destination === 'home' ? 'dominance'
           : destination === 'resources' ? 'levels'
           : destination === 'calculations' ? 'conclave' : 'settings';
+        document.querySelectorAll('#bottom-nav [data-target]').forEach(item => {
+          item.classList.toggle('active', item === button);
+        });
         saveState();
         render();
       });
