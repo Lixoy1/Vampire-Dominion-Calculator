@@ -376,6 +376,7 @@ async function requestOracle(endpoint, payload) {
 async function render() {
   const root = document.getElementById('app');
   if (!root) return;
+  bindNumericPad();
   const renderId = ++oracleRequestSerial;
   applyTheme();
 
@@ -946,6 +947,107 @@ function renderBagTab(db, report, oracle) {
       }).join('')}
     </section>
   `;
+}
+
+
+let numericPadBound = false;
+function openNumericPad(input) {
+  if (!input || input.disabled || input.readOnly) return;
+  let digits = String(Math.max(0, Math.round(Number(input.value) || 0)));
+  let multiplier = 1;
+  const min = Number.isFinite(Number(input.min)) && input.min !== '' ? Number(input.min) : 0;
+  const max = Number.isFinite(Number(input.max)) && input.max !== '' ? Number(input.max) : 1_000_000_000_000_000;
+  const label = input.getAttribute('aria-label')
+    || input.closest('label')?.querySelector('span')?.textContent
+    || input.closest('.item-row')?.querySelector('.row-name')?.textContent
+    || input.dataset.res
+    || 'Введите значение';
+
+  let sheet = document.getElementById('vd-number-sheet');
+  if (!sheet) {
+    sheet = document.createElement('div');
+    sheet.id = 'vd-number-sheet';
+    sheet.className = 'number-sheet hidden';
+    sheet.innerHTML = `
+      <div class="number-sheet-backdrop" data-np-close></div>
+      <section class="number-sheet-panel" role="dialog" aria-modal="true" aria-label="Ввод значения">
+        <div class="number-sheet-handle"></div>
+        <div class="number-sheet-head">
+          <div><div class="number-sheet-title" id="np-title"></div><div class="number-sheet-subtitle">Точное значение или сокращённая запись</div></div>
+          <button class="number-sheet-close" type="button" data-np-close aria-label="Закрыть">×</button>
+        </div>
+        <output class="number-sheet-display" id="np-display">0</output>
+        <div class="number-sheet-units">
+          <button type="button" data-np-unit="1000">K</button>
+          <button type="button" data-np-unit="1000000">M</button>
+          <button type="button" data-np-unit="1000000000">B</button>
+          <button type="button" data-np-unit="1000000000000">T</button>
+        </div>
+        <div class="number-sheet-keys">
+          ${[7,8,9,4,5,6,1,2,3].map(n => `<button type="button" data-np-digit="${n}">${n}</button>`).join('')}
+          <button type="button" class="np-clear" data-np-clear>Очистить</button>
+          <button type="button" data-np-digit="0">0</button>
+          <button type="button" data-np-back>⌫</button>
+        </div>
+        <div class="number-sheet-actions">
+          <button type="button" class="btn" data-np-close>Отмена</button>
+          <button type="button" class="btn btn-primary" id="np-confirm">Готово</button>
+        </div>
+      </section>`;
+    document.body.appendChild(sheet);
+  }
+
+  const display = sheet.querySelector('#np-display');
+  const update = () => {
+    const value = Math.min(max, Math.max(0, (Number(digits) || 0) * multiplier));
+    display.textContent = value.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+    sheet.querySelectorAll('[data-np-unit]').forEach(button => {
+      button.classList.toggle('active', Number(button.dataset.npUnit) === multiplier);
+    });
+  };
+  sheet.querySelector('#np-title').textContent = label;
+  sheet.classList.remove('hidden');
+  update();
+
+  sheet.onclick = event => {
+    const target = event.target.closest('button,[data-np-close]');
+    if (!target) return;
+    if (target.hasAttribute('data-np-close')) {
+      sheet.classList.add('hidden');
+      return;
+    }
+    if (target.dataset.npDigit !== undefined) {
+      digits = (digits === '0' ? '' : digits) + target.dataset.npDigit;
+    } else if (target.hasAttribute('data-np-clear')) {
+      digits = '0'; multiplier = 1;
+    } else if (target.hasAttribute('data-np-back')) {
+      digits = digits.length > 1 ? digits.slice(0, -1) : '0';
+    } else if (target.dataset.npUnit) {
+      multiplier = Number(target.dataset.npUnit);
+    } else if (target.id === 'np-confirm') {
+      const value = Math.min(max, Math.max(min, (Number(digits) || 0) * multiplier));
+      input.value = String(Math.round(value));
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      sheet.classList.add('hidden');
+      return;
+    }
+    update();
+  };
+}
+
+function bindNumericPad() {
+  if (numericPadBound) return;
+  numericPadBound = true;
+  document.addEventListener('pointerdown', event => {
+    const input = event.target.closest('input[type="number"], input[inputmode="numeric"]');
+    if (!input || input.disabled || input.readOnly || input.id === 'inp-bag-search') return;
+    event.preventDefault();
+    openNumericPad(input);
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') document.getElementById('vd-number-sheet')?.classList.add('hidden');
+  });
 }
 
 function bindEvents(db) {
