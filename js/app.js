@@ -618,7 +618,24 @@ async function render() {
       </nav>
 
       <main id="tab-view">
-        ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Точность расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
+        ${oracle.meta.helperApi?.importedAt ? `
+          <section class="card helper-api-card">
+            <div class="card-head">
+              <div>
+                <div class="card-title">Источник контрольных данных: API «Помощника Дампира»</div>
+                <div class="row-sub">Дамп принят как подтверждённый источник для сверки и воспроизведения расчётов бота.</div>
+              </div>
+              <span class="badge badge-gold">Подтверждён</span>
+            </div>
+            <div class="row-sub">
+              Смотрители ${oracle.meta.helperApi.observedWardens} · шаги ${oracle.meta.helperApi.observedWardenSteps} ·
+              таланты ${oracle.meta.helperApi.talentScriptRows} · пути аур ${oracle.meta.helperApi.auraPathRows} ·
+              книги ${oracle.meta.helperApi.bookRows} · манускрипты ${oracle.meta.helperApi.manuscriptTiers} ·
+              Веяния ${oracle.meta.helperApi.presenceSteps} · узы ${oracle.meta.helperApi.bondSteps} ·
+              облики ${oracle.meta.helperApi.skinSteps}
+            </div>
+          </section>` : ''}
+        ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
         ${renderActiveTab(db, report, oracle)}
       </main>
       <footer class="app-footnote">
@@ -1665,8 +1682,11 @@ function bindEvents(db) {
           'Предметы сумки: ' + (sum.inventory || 0),
           'Атрибуты Конклава: ' + (sum.conclaveAttributes || 0),
           'Опыт Гильдии: ' + (sum.guildProgress ? 'импортирован' : 'без изменений'),
+          'Шаги Warden next_cost/next_gain: ' + (sum.wardenSteps || 0),
+          'Таланты / пути аур / книги: ' + [sum.talentScripts || 0, sum.auraPaths || 0, sum.bookRows || 0].join(' / '),
+          'Манускрипты / Веяния / узы / облики: ' + [sum.manuscriptTiers || 0, sum.presences || 0, sum.bonds || 0, sum.skinSteps || 0].join(' / '),
         ];
-        alert('Импорт завершён.\\n' + lines.join('\\n') + '\\n\\nЗначения стороннего бота сохранены как справочные данные.');
+        alert('Импорт ответов API «Помощника Дампира» завершён.\\n' + lines.join('\\n') + '\\n\\nОтветы сохранены как подтверждённые контрольные данные. Серверные next_cost/next_gain и best_path сохраняются без подмены оценочными формулами.');
       } catch (error) {
         alert(error.message || 'Не удалось прочитать JSON-дамп помощника.');
       }
