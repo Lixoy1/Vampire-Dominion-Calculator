@@ -3,35 +3,12 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
-import {
-  ATTRIBUTES,
-  FABRIC_COST_BY_QUALITY,
-  calcAuraPercent,
-  buildPresenceCurvesMap,
-  calcPresencePercents,
-  calcBagPoints,
-  calcGuildExp,
-  calcWardenBaseTalentStars,
-  calcWardenTalentSum,
-  calcWardenLevelMultiplier,
-  calcLoverBonds,
-  calcPromoteBonusExp,
-  calcAchievableExpTalentPoints,
-  calcConclaveBranch,
-  autoDistributeConclave,
-  calcCourtyardUpgrade,
-  calcMaxCourtyardLevel,
-  calcWardenLevelsUpgrade,
-  getSummonCandidates,
-  summarizeBag,
-  calculateTotalDominanceReport,
-} from './engine.js';
+const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
+const FABRIC_COST_BY_QUALITY = { a: 50, s: 100, ss: 200 };
 
 const STORAGE_KEY = 'vd_crimson_obsidian_v5';
 const tg = globalThis.Telegram?.WebApp ?? null;
 try { tg?.expand(); tg?.ready(); } catch {}
-
-const presenceCurvesMap = buildPresenceCurvesMap(GAME_DB.lover_presence_levels);
 
 function createBlankAccountData() {
   return {
@@ -310,26 +287,11 @@ function getDbContext() {
     promotes: GAME_DB.warden_promotes,
     conclaveLevels: GAME_DB.conclave_levels,
     courtyardLevels: GAME_DB.courtyard_levels,
-    presenceCurvesMap,
   };
-}
-
-function getWardenBaseAttributes(wardenId) {
-  const warden = GAME_DB.wardens.find(w => w.id === Number(wardenId));
-  const owned = state.account.ownedWardens[wardenId];
-  const result = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
-  if (!warden || !owned) return result;
-  const multiplier = calcWardenLevelMultiplier(owned.level || 1);
-  warden.talents.forEach((talent, index) => {
-    const level = Number(owned.talents?.[index] ?? 1);
-    result[talent.attribute] += level * talent.stars * multiplier;
-  });
-  return result;
 }
 
 function getBondPlan(lover, owned) {
   const plan = state.plan.bonds[lover.id] || (state.plan.bonds[lover.id] = {});
-  plan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id);
   for (const bond of lover.scarlet_bonds || []) {
     const current = owned.bonds?.[bond.attribute] || { level: 0, percentLevel: 0 };
     plan[bond.attribute] ||= {
@@ -347,208 +309,102 @@ function getLoverIconPath(lover, owned = null) {
   return sex === 'male' ? (lover.icon_path_male || lover.icon_path_female) : (lover.icon_path_female || lover.icon_path_male);
 }
 
-// Бесплатное автораспределение доступных ресурсов по всем поддерживаемым разделам.
-function runFullAutoDistribute() {
-  const db = getDbContext();
-  const acc = state.account;
-
-  const wardensByAttr = {};
-  for (const attr of ATTRIBUTES) {
-    wardensByAttr[attr] = db.wardens.filter(w => acc.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
+// Автораспределение выполняется только серверным Oracle. Ошибки не подменяются локальными расчётами.
+async function runFullAutoDistribute() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-distribute', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить ресурсы.');
   }
-  state.plan.conclave = autoDistributeConclave(db.conclaveLevels, acc.conclave, acc.conclaveExp, wardensByAttr).levels;
-  state.plan.courtyardToLvl = calcMaxCourtyardLevel(db.courtyardLevels, acc.courtyardLvl, acc.courtyardExp).toLvl;
-
-  // Симулируем каждый уровень и резервируем предметы прорыва в общей временной сумке.
-  let bloodLeft = Math.max(0, Number(acc.blood) || 0);
-  const tempBag = { ...acc.bag };
-  const nextLevels = {};
-  const nextPromotes = {};
-  for (const [id, owned] of Object.entries(acc.ownedWardens)) {
-    nextLevels[id] = Math.max(1, Number(owned.level) || 1);
-    nextPromotes[id] = Math.max(1, Number(owned.promoteId) || 1);
-  }
-
-  while (bloodLeft > 0) {
-    let best = null;
-    let bestEfficiency = 0;
-    for (const [id, owned] of Object.entries(acc.ownedWardens)) {
-      const warden = db.wardens.find(item => item.id === Number(id));
-      if (!warden) continue;
-      const from = nextLevels[id];
-      if (from >= 450) continue;
-      const promoteId = nextPromotes[id];
-      const step = calcWardenLevelsUpgrade(warden, from, from + 1, promoteId, db.promotes, tempBag, owned.talents || {});
-      if (!step.canPromote || step.bloodSpent <= 0 || step.bloodSpent > bloodLeft) continue;
-      const efficiency = step.baseGain / step.bloodSpent;
-      if (efficiency > bestEfficiency) {
-        bestEfficiency = efficiency;
-        best = { id, step, promoteId };
-      }
-    }
-    if (!best) break;
-
-    nextLevels[best.id]++;
-    let resultingPromoteId = best.promoteId;
-    for (const promote of best.step.neededPromotes || []) {
-      resultingPromoteId = Math.max(resultingPromoteId, promote.id);
-      for (const itemId of promote.item_ids || []) {
-        tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - promote.price);
-      }
-    }
-    nextPromotes[best.id] = resultingPromoteId;
-    bloodLeft -= best.step.bloodSpent;
-  }
-  state.plan.levels = nextLevels;
-  state.plan.promotes = nextPromotes;
-
-  // Не призываем всех бесплатных персонажей автоматически; выбираем только платные,
-  // доступные прямо сейчас, чтобы не менять состав аккаунта неожиданно.
-  const candidates = getSummonCandidates(
-    db.wardens,
-    db.lovers,
-    new Set(Object.keys(acc.ownedWardens).map(Number)),
-    new Set(Object.keys(acc.ownedLovers).map(Number)),
-    tempBag,
-  );
-  const summonBag = { ...tempBag };
-  state.plan.summons.wardens = [];
-  for (const candidate of candidates.wardens) {
-    if (!candidate.canSummon || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
-    state.plan.summons.wardens.push(candidate.id);
-  }
-
-  saveState();
-  render();
 }
 
-// Применение плана атомарно: сначала проверяем все ресурсы, потом записываем изменения.
-function commitPlanToAccount() {
-  const db = getDbContext();
-  const account = structuredClone(state.account);
-  const plan = structuredClone(state.plan);
-  for (const [loverId, bondPlan] of Object.entries(plan.bonds || {})) {
-    const lover = db.lovers.find(item => item.id === Number(loverId));
-    if (lover) bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id);
-  }
-  const report = calculateTotalDominanceReport({ db, account, plan });
-  const fail = message => { alert(message); return false; };
-
-  if (report.spent.blood > account.blood) return fail('Недостаточно Крови для выбранного плана.');
-  if (report.spent.conclaveExp > account.conclaveExp) return fail('Недостаточно очков Конклава для выбранного плана.');
-  if (report.spent.courtyardExp > account.courtyardExp) return fail('Недостаточно очков Сада для выбранного плана.');
-
-  // Резервируем предметы прорыва по каждому смотрителю в общей копии сумки.
-  const wardenPromotes = {};
-  for (const [id, targetLevelRaw] of Object.entries(plan.levels || {})) {
-    const owned = account.ownedWardens[id];
-    const warden = db.wardens.find(item => item.id === Number(id));
-    const targetLevel = Math.max(Number(owned?.level) || 1, Number(targetLevelRaw) || 1);
-    if (!owned || !warden || targetLevel <= (Number(owned.level) || 1)) continue;
-    const currentPromoteId = Math.max(1, Number(owned.promoteId) || 1);
-    const upgrade = calcWardenLevelsUpgrade(
-      warden, owned.level, targetLevel, currentPromoteId, db.promotes, account.bag, owned.talents || {}
-    );
-    if (!upgrade.canPromote) {
-      const detail = upgrade.missingItems.map(item => `${tName('item', db.items.find(i => i.id === item.itemId)?.name || item.itemId)}: ещё ${item.need}`).join('\n');
-      return fail(`Нельзя применить уровни ${tName('warden', warden.name)}. Не хватает предметов прорыва:\n${detail}`);
+// Применение плана и проверка ресурсов выполняются серверным Oracle.
+async function commitPlanToAccount() {
+  try {
+    const result = await requestOracle('/api/oracle/commit-plan', {
+      account: state.account,
+      plan: state.plan,
+    });
+    if (!result.ok) {
+      const detail = result.error?.missingItems?.map(item => {
+        const itemName = tName('item', GAME_DB.items.find(entry => entry.id === item.itemId)?.name || item.itemId);
+        return `${itemName}: ещё ${item.need}`;
+      }).join('\\n');
+      alert(detail ? `${result.error.message}\\n${detail}` : (result.error?.message || 'Oracle отклонил план.'));
+      return;
     }
-    let nextPromoteId = currentPromoteId;
-    for (const promote of upgrade.neededPromotes || []) {
-      nextPromoteId = Math.max(nextPromoteId, promote.id);
-      for (const itemId of promote.item_ids || []) {
-        const cost = Number(promote.price) || 0;
-        if ((account.bag[itemId] || 0) < cost) {
-          const itemName = tName('item', db.items.find(i => i.id === itemId)?.name || itemId);
-          return fail(`Недостаточно предметов для прорыва ${tName('warden', warden.name)}: ${itemName}.`);
-        }
-        account.bag[itemId] = Math.max(0, (account.bag[itemId] || 0) - cost);
-      }
-    }
-    wardenPromotes[id] = nextPromoteId;
+
+    state.account = normalizeAccountData(result.account);
+    state.plan = createBlankPlan(state.account);
+    saveState();
+    await render();
+    alert('План проверен Oracle и применён. Ресурсы и предметы списаны из профиля.');
+  } catch (error) {
+    alert(error.message || 'Oracle не смог применить план. Данные профиля не изменены.');
   }
-
-  // Проверяем и резервируем стоимость всех выбранных призывов.
-  const summonCandidates = getSummonCandidates(
-    db.wardens, db.lovers,
-    new Set(Object.keys(account.ownedWardens).map(Number)),
-    new Set(Object.keys(account.ownedLovers).map(Number)),
-    account.bag,
-  );
-  const summonIds = [...new Set((plan.summons?.wardens || []).map(Number))];
-  for (const id of summonIds) {
-    const candidate = summonCandidates.wardens.find(item => item.id === id);
-    if (!candidate || !candidate.canSummon) return fail(`Призыв ${candidate ? tName('warden', candidate.name) : id} недоступен: проверь предметы в сумке.`);
-    if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
-  }
-
-  // Проверяем очки доверия по каждому партнёру отдельно и фиксируем уровни.
-  const bondUpdates = {};
-  for (const [id, bondPlan] of Object.entries(plan.bonds || {})) {
-    const owned = account.ownedLovers[id];
-    const lover = db.lovers.find(item => item.id === Number(id));
-    if (!owned || !lover) continue;
-    const result = calcLoverBonds(lover, owned.affinity || 0, bondPlan, bondPlan.wardenBaseAttrs, owned.closeness || 0);
-    if (result.spentAffinity > (owned.affinity || 0)) {
-      return fail(`Недостаточно очков Доверия у ${tName('lover', lover.name)}: нужно ${fmt(result.spentAffinity)}, есть ${fmt(owned.affinity || 0)}.`);
-    }
-    bondUpdates[id] = { spent: result.spentAffinity, states: bondPlan };
-  }
-
-  // Все проверки пройдены — применяем изменения к копии аккаунта.
-  account.conclave = { ...account.conclave, ...plan.conclave };
-  account.conclaveExp = Math.max(0, account.conclaveExp - report.spent.conclaveExp);
-  account.courtyardLvl = Math.max(account.courtyardLvl, Number(plan.courtyardToLvl) || account.courtyardLvl);
-  account.courtyardExp = Math.max(0, account.courtyardExp - report.spent.courtyardExp);
-  account.blood = Math.max(0, account.blood - report.spent.blood);
-
-  for (const [id, targetLevel] of Object.entries(plan.levels || {})) {
-    const owned = account.ownedWardens[id];
-    if (!owned) continue;
-    owned.level = Math.max(owned.level || 1, Number(targetLevel) || 1);
-    owned.promoteId = wardenPromotes[id] || plan.promotes?.[id] || owned.promoteId || 1;
-  }
-
-  for (const [id, update] of Object.entries(bondUpdates)) {
-    const owned = account.ownedLovers[id];
-    const lover = db.lovers.find(item => item.id === Number(id));
-    owned.affinity = Math.max(0, (owned.affinity || 0) - update.spent);
-    owned.bonds ||= {};
-    for (const bond of lover?.scarlet_bonds || []) {
-      const target = update.states[bond.attribute];
-      if (!target) continue;
-      owned.bonds[bond.attribute] = {
-        level: Number(target.targetLevel ?? target.level ?? 0),
-        percentLevel: Number(target.targetPercentLevel ?? target.percentLevel ?? 0),
-      };
-    }
-  }
-
-  for (const id of summonIds) {
-    account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
-  }
-
-  state.account = account;
-  state.plan = createBlankPlan(account);
-  saveState();
-  render();
-  alert('План применён. Ресурсы и предметы списаны из копии аккаунта.');
 }
 
 function explainGameConnection() {
-  alert('Прямая синхронизация с Game of Vampires пока не подключена: приложенный проект не содержит авторизации или игрового API. Не вводи здесь пароль от игры. Сейчас можно вести профиль вручную и переносить его через JSON. Для автоматической синхронизации нужен официальный API или поддерживаемый разработчиком экспорт.');
+  alert('Калькулятор не подключается к игровому аккаунту. Вручную внеси значения из игры — кровь, очки, уровни, таланты и предметы. Render Oracle рассчитает план на сервере и вернёт результат. Пароль от игры не нужен.');
 }
 
-// Главный рендер вкладок
-function render() {
+// Единая точка вызова Oracle. При ошибке сети серверный расчёт не подменяется локальным.
+let oracleSnapshot = null;
+let oracleRequestSerial = 0;
+
+async function requestOracle(endpoint, payload) {
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    cache: 'no-store',
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.ok) {
+    throw new Error(body?.error?.message || `Oracle недоступен (HTTP ${response.status}).`);
+  }
+  return body.result;
+}
+
+// Главный рендер вкладок: сначала серверный расчёт, затем отображение ответа Oracle.
+async function render() {
   const root = document.getElementById('app');
   if (!root) return;
+  const renderId = ++oracleRequestSerial;
   applyTheme();
 
+  let oracle;
+  try {
+    oracle = await requestOracle('/api/oracle/calculate', {
+      account: state.account,
+      plan: state.plan,
+    });
+  } catch (error) {
+    if (renderId !== oracleRequestSerial) return;
+    oracleSnapshot = null;
+    root.innerHTML = `
+      <div class="app-shell">
+        <section class="card card-gold">
+          <div class="card-title">Oracle временно недоступен</div>
+          <p class="row-sub">${String(error.message || 'Не удалось получить серверный расчёт.').replace(/</g, '&lt;')}</p>
+          <p class="row-sub">Локальный fallback отключён: неподтверждённые цифры не будут показаны как результат Oracle.</p>
+          <button class="btn btn-primary" id="oracle-retry">Повторить запрос</button>
+        </section>
+      </div>`;
+    root.querySelector('#oracle-retry')?.addEventListener('click', render);
+    return;
+  }
+  if (renderId !== oracleRequestSerial) return;
+  oracleSnapshot = oracle;
+
   const db = getDbContext();
-  const report = calculateTotalDominanceReport({ db, account: state.account, plan: state.plan });
+  const report = oracle.report;
 
   const tabs = [
     ['dominance', '👑 Господство'],
@@ -569,7 +425,7 @@ function render() {
           <div class="brand-crest">VD</div>
           <div>
             <div class="brand-title">Vampire Dominion</div>
-            <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
+            <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · ручной профиль · Oracle v${oracle.meta.oracleVersion}</div>
           </div>
         </div>
         <div class="top-actions">
@@ -598,10 +454,11 @@ function render() {
       </nav>
 
       <main id="tab-view">
-        ${renderActiveTab(db, report)}
+        ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Точность расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
+        ${renderActiveTab(db, report, oracle)}
       </main>
       <footer class="app-footnote">
-        <span>CRIMSON OBSIDIAN</span><span>Локальный помощник · без VIP-ограничений</span>
+        <span>CRIMSON OBSIDIAN</span><span>Server Oracle · ручной ввод данных · без связи с игровым аккаунтом</span>
       </footer>
     </div>
   `;
@@ -609,17 +466,17 @@ function render() {
   bindEvents(db);
 }
 
-function renderActiveTab(db, report) {
+function renderActiveTab(db, report, oracle) {
   switch (state.activeTab) {
     case 'dominance': return renderDominanceTab(db, report);
-    case 'conclave': return renderConclaveGardenTab(db, report);
-    case 'levels': return renderLevelsTab(db, report);
-    case 'talents': return renderTalentsTab(db);
-    case 'auras': return renderAurasPresencesTab(db);
-    case 'bonds': return renderBondsTab(db);
+    case 'conclave': return renderConclaveGardenTab(db, report, oracle);
+    case 'levels': return renderLevelsTab(db, report, oracle);
+    case 'talents': return renderTalentsTab(db, oracle);
+    case 'auras': return renderAurasPresencesTab(db, oracle);
+    case 'bonds': return renderBondsTab(db, oracle);
     case 'skins': return renderSkinsTab(db);
-    case 'summon': return renderSummonTab(db);
-    case 'bag': return renderBagTab(db, report);
+    case 'summon': return renderSummonTab(db, oracle);
+    case 'bag': return renderBagTab(db, report, oracle);
     default: return renderDominanceTab(db, report);
   }
 }
@@ -648,8 +505,8 @@ function renderDominanceTab(db, report) {
           <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.levels)}</div>
         </div>
         <div class="card" style="margin:0; padding:10px;">
-          <div class="row-sub">Кровные узы и Призыв</div>
-          <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds + report.gain.summon)}</div>
+          <div class="row-sub">Кровные узы</div>
+          <div class="row-name" style="color:var(--ok)">+${fmt(report.gain.bonds)}</div>
         </div>
       </div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -727,8 +584,8 @@ function renderDominanceTab(db, report) {
   `;
 }
 
-function renderConclaveGardenTab(db, report) {
-  const courtUpgrade = calcCourtyardUpgrade(db.courtyardLevels, state.account.courtyardLvl, state.plan.courtyardToLvl);
+function renderConclaveGardenTab(db, report, oracle) {
+  const courtUpgrade = oracle.courtyardUpgrade;
   return `
     <section class="card card-gold">
       <div class="card-head">
@@ -742,7 +599,7 @@ function renderConclaveGardenTab(db, report) {
         const cur = state.account.conclave[attr] ?? 0;
         const tgt = Math.max(cur, state.plan.conclave[attr] ?? cur);
         const wCount = db.wardens.filter(w => state.account.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
-        const br = calcConclaveBranch(db.conclaveLevels, cur, tgt, wCount);
+        const br = oracle.conclaveBranches[attr];
         return `
           <div class="item-row">
             <span class="dot ${attr}" style="width:14px;height:14px;"></span>
@@ -777,7 +634,7 @@ function renderConclaveGardenTab(db, report) {
   `;
 }
 
-function renderLevelsTab(db, report) {
+function renderLevelsTab(db, report, oracle) {
   const ownedIds = Object.keys(state.account.ownedWardens).map(Number);
   return `
     <section class="card card-gold">
@@ -791,7 +648,7 @@ function renderLevelsTab(db, report) {
       ${db.wardens.filter(w => state.account.ownedWardens[w.id]).map(w => {
         const ow = state.account.ownedWardens[w.id];
         const tgt = Math.max(ow.level, state.plan.levels[w.id] ?? ow.level);
-        const upg = calcWardenLevelsUpgrade(w, ow.level, tgt, ow.promoteId || 1, db.promotes, state.account.bag, ow.talents);
+        const upg = oracle.wardens[w.id]?.levelUpgrade;
         const prom = db.promotes.find(p => p.id === (ow.promoteId || 1));
         return `
           <div class="item-row">
@@ -817,7 +674,7 @@ function renderLevelsTab(db, report) {
   `;
 }
 
-function renderTalentsTab(db) {
+function renderTalentsTab(db, oracle) {
   return `
     <section class="card card-gold">
       <div class="card-head">
@@ -829,14 +686,13 @@ function renderTalentsTab(db) {
       ${db.wardens.map(w => {
         const isOwned = !!state.account.ownedWardens[w.id];
         const owned = state.account.ownedWardens[w.id];
-        const baseStars = calcWardenBaseTalentStars(w);
-        const promId = owned?.promoteId || 1;
-        const bonusExp = calcPromoteBonusExp(db.promotes, promId);
-        const personalExp = Math.max(0, Number(owned?.exp) || 0);
-        const totalTalentExp = bonusExp + personalExp;
-        const maxTalentLvl = db.promotes.find(p => p.id === promId)?.max_talent_lvl ?? 40;
-        const dpPoints = calcAchievableExpTalentPoints(w, maxTalentLvl, totalTalentExp);
-        const trainedStars = owned ? calcWardenTalentSum(w, owned.talents || {}) : 0;
+        const talentResult = oracle.wardens[w.id];
+        const baseStars = talentResult.baseTalentStars;
+        const bonusExp = talentResult.promotionExp;
+        const personalExp = talentResult.personalExp;
+        const maxTalentLvl = talentResult.maxTalentLevel;
+        const dpPoints = talentResult.talentPointsAvailable;
+        const trainedStars = talentResult.talentSum;
         return `
           <div class="item-row">
             <img class="avatar" src="${getIconUrl(w.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
@@ -863,7 +719,7 @@ function renderTalentsTab(db) {
   `;
 }
 
-function renderAurasPresencesTab(db) {
+function renderAurasPresencesTab(db, oracle) {
   const wardensWithAuras = db.wardens.filter(w => w.auras && w.auras.length > 0);
   const loversWithPresences = db.lovers.filter(l => l.presences && l.presences.length > 0);
 
@@ -879,7 +735,7 @@ function renderAurasPresencesTab(db) {
             <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
             ${w.auras.map(a => {
               const curLvl = state.account.ownedWardens[w.id]?.auras?.[a.id] ?? (a.min_lvl || 0);
-              const pct = calcAuraPercent(a, curLvl);
+              const pct = oracle.wardens[w.id]?.auras?.[a.id]?.percent ?? 0;
               const owned = state.account.ownedWardens[w.id];
               return `<div class="row-sub aura-row">• [${a.aura_type}] Бонус (${a.bonus_type}): <b>${pct.toFixed(1)}%</b> (ур. ${curLvl}${a.max_lvl ? '/' + a.max_lvl : ''})
                 ${owned ? `<input class="input mini-level aura-level" type="number" min="${a.min_lvl || 0}" max="${a.max_lvl || curLvl}" data-wid="${w.id}" data-aid="${a.id}" value="${curLvl}" aria-label="Уровень вдохновения" />` : '<span class="row-sub">· добавь смотрителя в профиль для редактирования</span>'}
@@ -901,7 +757,7 @@ function renderAurasPresencesTab(db) {
             <div class="row-name">${tName('lover', l.name)} ${attrDotsHtml(l.attributes)}</div>
             ${l.presences.map(p => {
               const curLvl = state.account.ownedLovers[l.id]?.presences?.[p.id] ?? (p.min_lvl || 0);
-              const percs = calcPresencePercents(p, curLvl, presenceCurvesMap);
+              const percs = oracle.lovers[l.id]?.presences?.[p.id]?.percents || { strength: 0, allure: 0, intellect: 0, spirit: 0 };
               const owned = state.account.ownedLovers[l.id];
               return `<div class="row-sub presence-row">• [${p.presence_type}] Ур. ${curLvl}/${p.max_lvl}: Сила ${percs.strength}% · Хар. ${percs.allure}% · Инт. ${percs.intellect}% · Воля ${percs.spirit}%
                 ${owned ? `<input class="input mini-level presence-level" type="number" min="${p.min_lvl || 0}" max="${p.max_lvl || curLvl}" data-lid="${l.id}" data-pid="${p.id}" value="${curLvl}" aria-label="Уровень веяния" />` : '<button class="btn btn-sm toggle-owned-lover" data-lid="' + l.id + '">Добавить партнёра</button>'}
@@ -914,7 +770,7 @@ function renderAurasPresencesTab(db) {
   `;
 }
 
-function renderBondsTab(db) {
+function renderBondsTab(db, oracle) {
   const owned = state.account.ownedLovers;
   const ownedCount = Object.keys(owned).length;
   return `
@@ -922,7 +778,7 @@ function renderBondsTab(db) {
       <div class="card-head">
         <div>
           <div class="card-title">🔗 Кровные узы и спутники (${ownedCount} в профиле)</div>
-          <div class="row-sub">Близость открывает ветви уз; очки Доверия расходуются на уровни. План считается локально.</div>
+          <div class="row-sub">Близость открывает ветви уз; очки Доверия расходуются на уровни. Расчёт выполняет Server Oracle.</div>
         </div>
       </div>
       ${db.lovers.map(l => {
@@ -933,8 +789,8 @@ function renderBondsTab(db) {
             <div class="row-info"><div class="row-name">${tName('lover', l.name)}</div><div class="row-sub">${tName('warden', db.wardens.find(w => w.id === l.warden_id)?.name || '—')} · Не добавлен в профиль</div></div>
             <button class="btn btn-sm toggle-owned-lover" data-lid="${l.id}">Добавить</button>
           </div>`;
-        const bondPlan = getBondPlan(l, current);
-        const result = calcLoverBonds(l, current.affinity || 0, bondPlan, bondPlan.wardenBaseAttrs, current.closeness || 0);
+        const bondPlan = oracle.lovers[l.id]?.bondPlan || getBondPlan(l, current);
+        const result = oracle.lovers[l.id]?.bondResult;
         const warden = db.wardens.find(w => w.id === l.warden_id);
         return `
           <details class="lover-panel" open>
@@ -1000,13 +856,8 @@ function renderSkinsTab(db) {
   `;
 }
 
-function renderSummonTab(db) {
-  const cands = getSummonCandidates(
-    db.wardens,
-    db.lovers,
-    new Set(Object.keys(state.account.ownedWardens).map(Number)),    new Set(Object.keys(state.account.ownedLovers).map(Number)),
-    state.account.bag
-  );
+function renderSummonTab(db, oracle) {
+  const cands = oracle.summonCandidates;
 
   return `
     <section class="card card-gold">
@@ -1033,8 +884,7 @@ function renderSummonTab(db) {
   `;
 }
 
-function renderBagTab(db, report) {
-  const categories = summarizeBag(db.items, state.account.bag);
+function renderBagTab(db, report, oracle) {
   const catNames = {
     all: 'Все (237)',
     coins: 'Печати и Жетоны',
@@ -1125,14 +975,11 @@ function bindEvents(db) {
   });
 
   document.getElementById('btn-auto-conclave')?.addEventListener('click', () => {
-    const wardensByAttr = {};
-    for (const attr of ATTRIBUTES) {
-      wardensByAttr[attr] = db.wardens.filter(w => state.account.ownedWardens[w.id] && w.attributes.includes(attr)).length || 1;
-    }
-    const res = autoDistributeConclave(db.conclaveLevels, state.account.conclave, state.account.conclaveExp, wardensByAttr);
-    state.plan.conclave = res.levels;
-    saveState();
-    render();
+    requestOracle('/api/oracle/auto-conclave', { account: state.account, plan: state.plan }).then(res => {
+      state.plan.conclave = res.levels;
+      saveState();
+      render();
+    }).catch(error => alert(error.message || 'Oracle не смог распределить Конклав.'));
   });
 
   document.querySelectorAll('.res-input').forEach(inp => {
@@ -1259,10 +1106,7 @@ function bindEvents(db) {
   document.querySelectorAll('.summon-warden').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = Number(btn.dataset.wid);
-      const candidate = getSummonCandidates(db.wardens, db.lovers,
-        new Set(Object.keys(state.account.ownedWardens).map(Number)),
-        new Set(Object.keys(state.account.ownedLovers).map(Number)), state.account.bag
-      ).wardens.find(item => item.id === id);
+      const candidate = oracle.summonCandidates.wardens.find(item => item.id === id);
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       if (candidate.itemId && candidate.cost > 0) state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
       state.account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
