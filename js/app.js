@@ -535,6 +535,33 @@ async function requestOracle(endpoint, payload) {
 }
 
 // Главный рендер вкладок: сначала серверный расчёт, затем отображение ответа Oracle.
+function renderHelperApiPaths(helperApi) {
+  const paths = helperApi?.bestPaths || {};
+  const rows = [];
+  const add = (label, value) => {
+    const path = value && typeof value === 'object' ? value : null;
+    const runs = Array.isArray(path?.runs) ? path.runs : [];
+    if (!runs.length) return;
+    const sequence = runs.slice(0, 16).map(run => {
+      const key = String(run?.key ?? '—').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+      const to = String(run?.to ?? '—').replace(/[&<>"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+      return key + ' → ' + to;
+    }).join(' · ');
+    rows.push('<div class="helper-route-row"><strong>' + label + '</strong><span>' + sequence + '</span></div>');
+  };
+  add('Уровни смотрителей', paths.levels);
+  add('Конклав', paths.conclave);
+  add('Сад', paths.courtyard);
+  for (const [id, path] of Object.entries(paths.bonds || {})) add('Кровные узы · ' + id, path);
+  for (const [id, path] of Object.entries(paths.auras || {})) add('Вдохновение · ' + id, path);
+  for (const [id, path] of Object.entries(paths.presences || {})) add('Веяние · ' + id, path);
+  for (const [id, path] of Object.entries(paths.skins || {})) add('Облик · ' + id, path);
+  for (const [id, path] of Object.entries(paths.talents || {})) add('Таланты · ' + id, path);
+  if (!rows.length) return '';
+  return '<section class="helper-routes"><div class="row-name">Маршруты, полученные от API «Помощника Дампира»</div>' + rows.join('') +
+    '<div class="row-sub">Порядок шагов сохранён из исходного ответа, не пересчитывался локально.</div></section>';
+}
+
 async function render() {
   const root = document.getElementById('app');
   if (!root) return;
@@ -623,9 +650,9 @@ async function render() {
             <div class="card-head">
               <div>
                 <div class="card-title">Источник контрольных данных: API «Помощника Дампира»</div>
-                <div class="row-sub">Дамп принят как подтверждённый источник для сверки и воспроизведения расчётов бота.</div>
+                <div class="row-sub">Это данные стороннего API-помощника; они используются как контрольный источник, а не как подтверждение от сервера игры.</div>
               </div>
-              <span class="badge badge-gold">Подтверждён</span>
+              <span class="badge badge-gold">API-источник</span>
             </div>
             <div class="row-sub">
               Смотрители ${oracle.meta.helperApi.observedWardens} · шаги ${oracle.meta.helperApi.observedWardenSteps} ·
@@ -646,6 +673,7 @@ async function render() {
                   }).join('')}
                 </div>
               </div>` : ''}
+            ${renderHelperApiPaths(oracle.meta.helperApi)}
           </section>` : ''}
         ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
         ${renderActiveTab(db, report, oracle)}
