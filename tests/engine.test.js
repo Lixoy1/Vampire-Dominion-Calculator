@@ -21,6 +21,27 @@ test('database tables have expected cardinality', () => {
   for (const [key, count] of Object.entries(expectedCounts)) assert.equal(GAME_DB[key]?.length, count, key);
 });
 
+test('Helper API presence curves include the complete 781 curve', () => {
+  const curve = GAME_DB.lover_presence_levels.filter(row => row.curve === 781);
+  assert.equal(curve.length, 31);
+  assert.deepEqual(
+    [curve[0].id, curve[0].lvl, curve[0].cost],
+    [7810000, 0, 100]
+  );
+  assert.deepEqual(
+    [curve.at(-1).id, curve.at(-1).lvl, curve.at(-1).strength_percent, curve.at(-1).allure_percent, curve.at(-1).intellect_percent, curve.at(-1).spirit_percent],
+    [7810030, 30, '108.00', '108.00', '108.00', '108.00']
+  );
+  assert.equal(GAME_DB.lover_presence_levels.length, 155);
+});
+
+test('promotion caps match the eight reference stages', () => {
+  assert.deepEqual(
+    GAME_DB.warden_promotes.map(row => [row.id, row.max_warden_lvl, row.max_talent_lvl]),
+    [[1,100,40],[2,150,80],[3,200,120],[4,250,160],[5,300,200],[6,350,240],[7,400,280],[8,450,320]]
+  );
+});
+
 test('primary entity IDs are unique', () => {
   for (const key of ['wardens', 'lovers', 'items', 'conclave_levels', 'courtyard_levels']) {
     const ids = GAME_DB[key].map(x => x.id);
@@ -182,5 +203,7 @@ test('breakthrough reservation accumulates repeated item costs across tiers', ()
   assert.deepEqual(result.missingItems, [{ promoteId: 3, itemId: 990001, need: 1 }]);
   assert.deepEqual(oneSeal, { 990001: 1 }, 'checks must not mutate inventory');
 });
+
+
 
 console.log(`\n${passed} test groups passed.`);
