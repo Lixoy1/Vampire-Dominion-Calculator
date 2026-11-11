@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { GAME_DB } from '../js/data.js';
+import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap } from '../js/engine.js';
+
+function EngineFabricCost(quality) { return EngineFabricCostMap[quality] ?? null; }
 import {
   ORACLE_VERSION,
   calculateOracle,
@@ -73,6 +76,23 @@ function walkNumbers(value, path = 'root') {
   assert.ok(snapshot.lovers[lover.id]);
   assert.ok(snapshot.lovers[lover.id].bondResult);
   assert.ok(snapshot.summonCandidates);
+  assert.ok(snapshot.inventory);
+  const firstInventoryItem = GAME_DB.items.find(item => item.category && snapshot.inventory[item.category]?.items.some(row => row.id === item.id));
+  assert.ok(firstInventoryItem, 'inventory categories are returned by Oracle');
+  assert.equal(
+    snapshot.inventory[firstInventoryItem.category].items.find(row => row.id === firstInventoryItem.id).count,
+    account.bag[firstInventoryItem.id] || 0
+  );
+  const catalogSkins = [
+    ...GAME_DB.wardens.flatMap(item => item.skins || []),
+    ...GAME_DB.lovers.flatMap(item => item.skins || []),
+  ];
+  assert.equal(Object.keys(snapshot.skins).length, catalogSkins.length, 'every skin has a server result');
+  if (catalogSkins.length) {
+    const firstSkin = catalogSkins[0];
+    assert.equal(snapshot.skins[firstSkin.id].level, 0);
+    assert.equal(snapshot.skins[firstSkin.id].fabricPerLevel, EngineFabricCost(firstSkin.quality));
+  }
   assert.deepEqual(account, original, 'calculation does not mutate player input');
   walkNumbers(snapshot);
 
