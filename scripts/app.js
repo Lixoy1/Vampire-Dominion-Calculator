@@ -924,6 +924,11 @@ function createOwnedLover(lover) {
 
 function navigate(screen, params) {
   Object.assign(state, params || {});
+  if (screen === 'lover-detail') {
+    const lover = GAME_DB.lovers.find(item => item.id === Number(state.currentLoverId));
+    const owned = state.account.ownedLovers?.[Number(state.currentLoverId)];
+    if (lover && owned) getBondPlan(lover, owned);
+  }
   state.screen = screen;
   saveState();
   try { window.scrollTo({ top: 0, behavior: 'instant' }); } catch (error) {}
@@ -969,7 +974,7 @@ function renderSubToolbar(backTarget, title) {
   return '<div class="spa-screen-toolbar">' +
     '<button type="button" class="back-pill" data-action="nav" data-screen="' + backTarget + '">← Назад</button>' +
     '<div class="spa-screen-title">' + title + '</div>' +
-    '<div class="spa-toolbar-actions">' +
+    '<div class="spa-toolbar-actions"><button class="icon-btn" type="button" data-action="formula-info" aria-label="Пояснение формул">ⓘ</button>' +
       '<button type="button" class="icon-btn" data-action="undo" ' + (state.history && state.history.length ? '' : 'disabled') + '>↶</button>' +
       '<button type="button" class="icon-btn" data-action="redo" ' + (state.future && state.future.length ? '' : 'disabled') + '>↷</button>' +
     '</div></div>';
