@@ -87,8 +87,8 @@ assert.ok(fn('renderResourcesScreen').includes("data-screen=\"summon\""), 'resou
 const talentScreen = fn('renderTalentsTab');
 assert.ok(fn('renderSpaScreen').includes("case 'calc_talents': return renderSubToolbar('calculations', 'Таланты и опыт') + renderTalentsTab(db, oracle)"), 'talent route passes the Oracle snapshot and does not crash');
 assert.ok(talentScreen.includes('oracle = oracle || {}'), 'talent renderer safely handles a missing snapshot');
-assert.ok(talentScreen.includes('Как работает расчёт талантов'), 'talent screen contains contextual explanations');
-assert.ok(talentScreen.includes('200 EXP'), 'talent screen explains the experience conversion');
+assert.ok(talentScreen.includes('Как считаются таланты и опыт'), 'talent screen contains contextual explanations');
+assert.ok(talentScreen.includes('200 опыта'), 'talent screen explains the experience conversion');
 assert.ok(talentScreen.includes('btn-auto-talents') && talentScreen.includes('btn-commit-plan') && talentScreen.includes('btn-reset-plan'), 'talent plan can be calculated, applied or cancelled');
 
 const numericPad = fn('openNumericPad');
