@@ -10,6 +10,7 @@ import {
   autoDistributeConclave,
   autoDistributeTalentPlan,
   autoDistributePresencePlan,
+  autoDistributeBondPlan,
   commitOraclePlan,
   summonWarden,
   summonLover,
@@ -489,6 +490,56 @@ function walkNumbers(value, path = 'root') {
   const afterReserved = autoDistributePresencePlan({ account, plan: reservedPlan });
   assert.equal(afterReserved.plan.presences[loverTemplate.id][presence.id], 3);
   assert.equal(afterReserved.summary.addedLevels, 1, 'existing planned levels reserve tokens before auto allocation');
+}
+
+
+{
+  const expWarden = GAME_DB.wardens.find(item => item.talents?.some(t => t.stars === 1) && item.talents?.some(t => t.stars === 2));
+  assert.ok(expWarden, 'catalogue has a Warden with a combination of talent star weights');
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {
+      [expWarden.id]: { level: 20, promoteId: 1, exp: 600, talents: {}, auras: {} },
+    },
+    ownedLovers: {}, bag: {}, skins: {},
+  };
+  const automatic = autoDistributeTalentPlan({ account, plan: makePlan() });
+  assert.equal(automatic.summary.expSpentTotal, 600, 'bounded allocator finds an exact 3-star-point spend from 600 EXP');
+  assert.ok(automatic.summary.expLevels > 0);
+  assert.ok(automatic.plan.talents[expWarden.id].exp_levels);
+
+  const committed = commitOraclePlan({ account, plan: automatic.plan });
+  assert.equal(committed.ok, true, 'personal talent EXP can be committed');
+  assert.equal(committed.account.ownedWardens[expWarden.id].exp, 0);
+  assert.ok(Object.values(committed.account.ownedWardens[expWarden.id].talents).some(level => level > 1));
+  assert.equal(account.ownedWardens[expWarden.id].exp, 600, 'commit does not mutate the source account');
+
+  const insufficient = commitOraclePlan({
+    account: { ...account, ownedWardens: { [expWarden.id]: { ...account.ownedWardens[expWarden.id], exp: 0 } } },
+    plan: { ...makePlan(), talents: { [expWarden.id]: { exp_levels: { 0: 1 } } } },
+  });
+  assert.equal(insufficient.ok, false);
+  assert.equal(insufficient.error.code, 'INSUFFICIENT_TALENT_EXP');
+}
+
+{
+  const bondLover = GAME_DB.lovers.find(item => item.scarlet_bonds?.length);
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {},
+    ownedLovers: {
+      [bondLover.id]: { affinity: 1000, closeness: 200, sex: 'female', presences: {}, bonds: {} },
+    },
+    bag: {}, skins: {},
+  };
+  const automatic = autoDistributeBondPlan({ account, plan: makePlan() });
+  assert.ok(automatic.summary.addedLevels > 0, 'Bond allocator spends available Affinity on unlocked branches');
+  assert.ok(automatic.summary.estimatedAffinity <= 1000);
+  assert.ok(automatic.plan.bonds[bondLover.id]);
+  const committed = commitOraclePlan({ account, plan: automatic.plan });
+  assert.equal(committed.ok, true);
+  assert.ok(committed.account.ownedLovers[bondLover.id].affinity < 1000);
+  assert.equal(account.ownedLovers[bondLover.id].affinity, 1000, 'bond commit leaves original profile untouched');
 }
 
 console.log('PASS unified server Oracle tests');
