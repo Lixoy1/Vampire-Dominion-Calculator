@@ -69,26 +69,25 @@ try {
   const sourceWardens = await sourceDataResponse.json();
   assert.equal(sourceWardens.length, 68, 'served Warden source table has all 68 entries');
 
-  const art1000 = await fetch(`${baseUrl}/1000021575.png`);
-  assert.equal(art1000.status, 200, 'root artwork 1000021575.png is served');
-  assert.match(art1000.headers.get('content-type') || '', /image\\/png/, 'root artwork 1000021575.png has PNG content type');
-  assert.ok(Number(art1000.headers.get('content-length')) > 100000, 'root artwork 1000021575.png is not empty');
+  const artHero = await fetch(`${baseUrl}/1000021575.png`);
+  assert.equal(artHero.status, 200, 'root artwork 1000021575.png is served');
+  assert.ok((artHero.headers.get('content-type') || '').startsWith('image/png'), 'root artwork 1000021575.png has PNG content type');
+  assert.ok(Number(artHero.headers.get('content-length')) > 100000, 'root artwork 1000021575.png is not empty');
 
-  const art1000 = await fetch(`${baseUrl}/1000024449.png`);
-  assert.equal(art1000.status, 200, 'root artwork 1000024449.png is served');
-  assert.match(art1000.headers.get('content-type') || '', /image\\/png/, 'root artwork 1000024449.png has PNG content type');
-  assert.ok(Number(art1000.headers.get('content-length')) > 100000, 'root artwork 1000024449.png is not empty');
+  const artWarden = await fetch(`${baseUrl}/1000024449.png`);
+  assert.equal(artWarden.status, 200, 'root artwork 1000024449.png is served');
+  assert.ok((artWarden.headers.get('content-type') || '').startsWith('image/png'), 'root artwork 1000024449.png has PNG content type');
+  assert.ok(Number(artWarden.headers.get('content-length')) > 100000, 'root artwork 1000024449.png is not empty');
 
-  const art1000 = await fetch(`${baseUrl}/1000024228.png`);
-  assert.equal(art1000.status, 200, 'root artwork 1000024228.png is served');
-  assert.match(art1000.headers.get('content-type') || '', /image\\/png/, 'root artwork 1000024228.png has PNG content type');
-  assert.ok(Number(art1000.headers.get('content-length')) > 100000, 'root artwork 1000024228.png is not empty');
+  const artCalculations = await fetch(`${baseUrl}/1000024228.png`);
+  assert.equal(artCalculations.status, 200, 'root artwork 1000024228.png is served');
+  assert.ok((artCalculations.headers.get('content-type') || '').startsWith('image/png'), 'root artwork 1000024228.png has PNG content type');
+  assert.ok(Number(artCalculations.headers.get('content-length')) > 100000, 'root artwork 1000024228.png is not empty');
 
-  const art1000 = await fetch(`${baseUrl}/1000019874.png`);
-  assert.equal(art1000.status, 200, 'root artwork 1000019874.png is served');
-  assert.match(art1000.headers.get('content-type') || '', /image\\/png/, 'root artwork 1000019874.png has PNG content type');
-  assert.ok(Number(art1000.headers.get('content-length')) > 100000, 'root artwork 1000019874.png is not empty');
-
+  const artSummon = await fetch(`${baseUrl}/1000019874.png`);
+  assert.equal(artSummon.status, 200, 'root artwork 1000019874.png is served');
+  assert.ok((artSummon.headers.get('content-type') || '').startsWith('image/png'), 'root artwork 1000019874.png has PNG content type');
+  assert.ok(Number(artSummon.headers.get('content-length')) > 100000, 'root artwork 1000019874.png is not empty');
 
   const healthResponse = await fetch(`${baseUrl}/api/health`);
   assert.equal(healthResponse.status, 200);
