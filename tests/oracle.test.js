@@ -75,7 +75,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.meta.stateless, true);
   assert.equal(snapshot.meta.catalogProvenance.sourceId, 'dhampir-helper-api');
   assert.equal(snapshot.meta.catalogProvenance.gameServerVerified, false);
-  assert.equal(snapshot.meta.gameVerification.status, 'not-verified');
+  assert.equal(snapshot.meta.gameVerification.status, 'helper-api-confirmed');
   assert.ok(snapshot.report);
   assert.ok(snapshot.conclaveBranches.strength);
   assert.ok(snapshot.courtyardUpgrade);
