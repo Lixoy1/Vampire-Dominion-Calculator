@@ -1,0 +1,1552 @@
+[
+  {
+    "id": 10000,
+    "curve": 1,
+    "lvl": 0,
+    "strength_percent": "0.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 10001,
+    "curve": 1,
+    "lvl": 1,
+    "strength_percent": "2.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 10002,
+    "curve": 1,
+    "lvl": 2,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 10003,
+    "curve": 1,
+    "lvl": 3,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 10004,
+    "curve": 1,
+    "lvl": 4,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 100
+  },
+  {
+    "id": 10005,
+    "curve": 1,
+    "lvl": 5,
+    "strength_percent": "10.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 10006,
+    "curve": 1,
+    "lvl": 6,
+    "strength_percent": "12.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 10007,
+    "curve": 1,
+    "lvl": 7,
+    "strength_percent": "12.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 10008,
+    "curve": 1,
+    "lvl": 8,
+    "strength_percent": "12.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 10009,
+    "curve": 1,
+    "lvl": 9,
+    "strength_percent": "12.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 150
+  },
+  {
+    "id": 10010,
+    "curve": 1,
+    "lvl": 10,
+    "strength_percent": "24.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 10011,
+    "curve": 1,
+    "lvl": 11,
+    "strength_percent": "26.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 10012,
+    "curve": 1,
+    "lvl": 12,
+    "strength_percent": "26.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 10013,
+    "curve": 1,
+    "lvl": 13,
+    "strength_percent": "26.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 10014,
+    "curve": 1,
+    "lvl": 14,
+    "strength_percent": "26.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 200
+  },
+  {
+    "id": 10015,
+    "curve": 1,
+    "lvl": 15,
+    "strength_percent": "34.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 10016,
+    "curve": 1,
+    "lvl": 16,
+    "strength_percent": "36.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 10017,
+    "curve": 1,
+    "lvl": 17,
+    "strength_percent": "36.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 10018,
+    "curve": 1,
+    "lvl": 18,
+    "strength_percent": "36.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 10019,
+    "curve": 1,
+    "lvl": 19,
+    "strength_percent": "36.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 450
+  },
+  {
+    "id": 10020,
+    "curve": 1,
+    "lvl": 20,
+    "strength_percent": "48.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 10021,
+    "curve": 1,
+    "lvl": 21,
+    "strength_percent": "50.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 10022,
+    "curve": 1,
+    "lvl": 22,
+    "strength_percent": "50.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 10023,
+    "curve": 1,
+    "lvl": 23,
+    "strength_percent": "50.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 10024,
+    "curve": 1,
+    "lvl": 24,
+    "strength_percent": "50.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 400
+  },
+  {
+    "id": 10025,
+    "curve": 1,
+    "lvl": 25,
+    "strength_percent": "58.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 10026,
+    "curve": 1,
+    "lvl": 26,
+    "strength_percent": "60.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 10027,
+    "curve": 1,
+    "lvl": 27,
+    "strength_percent": "60.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 10028,
+    "curve": 1,
+    "lvl": 28,
+    "strength_percent": "60.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 10029,
+    "curve": 1,
+    "lvl": 29,
+    "strength_percent": "60.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "12.00",
+    "cost": 600
+  },
+  {
+    "id": 10030,
+    "curve": 1,
+    "lvl": 30,
+    "strength_percent": "72.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "12.00",
+    "cost": 0
+  },
+  {
+    "id": 20000,
+    "curve": 2,
+    "lvl": 0,
+    "strength_percent": "0.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 20001,
+    "curve": 2,
+    "lvl": 1,
+    "strength_percent": "2.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 20002,
+    "curve": 2,
+    "lvl": 2,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 20003,
+    "curve": 2,
+    "lvl": 3,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 20004,
+    "curve": 2,
+    "lvl": 4,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 100
+  },
+  {
+    "id": 20005,
+    "curve": 2,
+    "lvl": 5,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "10.00",
+    "cost": 50
+  },
+  {
+    "id": 20006,
+    "curve": 2,
+    "lvl": 6,
+    "strength_percent": "4.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "10.00",
+    "cost": 50
+  },
+  {
+    "id": 20007,
+    "curve": 2,
+    "lvl": 7,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "10.00",
+    "cost": 50
+  },
+  {
+    "id": 20008,
+    "curve": 2,
+    "lvl": 8,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "10.00",
+    "cost": 50
+  },
+  {
+    "id": 20009,
+    "curve": 2,
+    "lvl": 9,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "12.00",
+    "cost": 150
+  },
+  {
+    "id": 20010,
+    "curve": 2,
+    "lvl": 10,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "24.00",
+    "cost": 100
+  },
+  {
+    "id": 20011,
+    "curve": 2,
+    "lvl": 11,
+    "strength_percent": "6.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "24.00",
+    "cost": 100
+  },
+  {
+    "id": 20012,
+    "curve": 2,
+    "lvl": 12,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "24.00",
+    "cost": 100
+  },
+  {
+    "id": 20013,
+    "curve": 2,
+    "lvl": 13,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "24.00",
+    "cost": 100
+  },
+  {
+    "id": 20014,
+    "curve": 2,
+    "lvl": 14,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "26.00",
+    "cost": 200
+  },
+  {
+    "id": 20015,
+    "curve": 2,
+    "lvl": 15,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "34.00",
+    "cost": 150
+  },
+  {
+    "id": 20016,
+    "curve": 2,
+    "lvl": 16,
+    "strength_percent": "8.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "34.00",
+    "cost": 150
+  },
+  {
+    "id": 20017,
+    "curve": 2,
+    "lvl": 17,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "34.00",
+    "cost": 150
+  },
+  {
+    "id": 20018,
+    "curve": 2,
+    "lvl": 18,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "34.00",
+    "cost": 150
+  },
+  {
+    "id": 20019,
+    "curve": 2,
+    "lvl": 19,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "36.00",
+    "cost": 450
+  },
+  {
+    "id": 20020,
+    "curve": 2,
+    "lvl": 20,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "48.00",
+    "cost": 200
+  },
+  {
+    "id": 20021,
+    "curve": 2,
+    "lvl": 21,
+    "strength_percent": "10.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "48.00",
+    "cost": 200
+  },
+  {
+    "id": 20022,
+    "curve": 2,
+    "lvl": 22,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "48.00",
+    "cost": 200
+  },
+  {
+    "id": 20023,
+    "curve": 2,
+    "lvl": 23,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "48.00",
+    "cost": 200
+  },
+  {
+    "id": 20024,
+    "curve": 2,
+    "lvl": 24,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "50.00",
+    "cost": 400
+  },
+  {
+    "id": 20025,
+    "curve": 2,
+    "lvl": 25,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "58.00",
+    "cost": 200
+  },
+  {
+    "id": 20026,
+    "curve": 2,
+    "lvl": 26,
+    "strength_percent": "12.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "58.00",
+    "cost": 200
+  },
+  {
+    "id": 20027,
+    "curve": 2,
+    "lvl": 27,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "58.00",
+    "cost": 200
+  },
+  {
+    "id": 20028,
+    "curve": 2,
+    "lvl": 28,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "58.00",
+    "cost": 200
+  },
+  {
+    "id": 20029,
+    "curve": 2,
+    "lvl": 29,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "60.00",
+    "cost": 600
+  },
+  {
+    "id": 20030,
+    "curve": 2,
+    "lvl": 30,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "72.00",
+    "cost": 0
+  },
+  {
+    "id": 30000,
+    "curve": 3,
+    "lvl": 0,
+    "strength_percent": "0.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 30001,
+    "curve": 3,
+    "lvl": 1,
+    "strength_percent": "2.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 30002,
+    "curve": 3,
+    "lvl": 2,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 30003,
+    "curve": 3,
+    "lvl": 3,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 30004,
+    "curve": 3,
+    "lvl": 4,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 100
+  },
+  {
+    "id": 30005,
+    "curve": 3,
+    "lvl": 5,
+    "strength_percent": "2.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 30006,
+    "curve": 3,
+    "lvl": 6,
+    "strength_percent": "4.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 30007,
+    "curve": 3,
+    "lvl": 7,
+    "strength_percent": "4.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 30008,
+    "curve": 3,
+    "lvl": 8,
+    "strength_percent": "4.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 30009,
+    "curve": 3,
+    "lvl": 9,
+    "strength_percent": "4.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 150
+  },
+  {
+    "id": 30010,
+    "curve": 3,
+    "lvl": 10,
+    "strength_percent": "4.00",
+    "allure_percent": "24.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 30011,
+    "curve": 3,
+    "lvl": 11,
+    "strength_percent": "6.00",
+    "allure_percent": "24.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 30012,
+    "curve": 3,
+    "lvl": 12,
+    "strength_percent": "6.00",
+    "allure_percent": "26.00",
+    "intellect_percent": "4.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 30013,
+    "curve": 3,
+    "lvl": 13,
+    "strength_percent": "6.00",
+    "allure_percent": "26.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 30014,
+    "curve": 3,
+    "lvl": 14,
+    "strength_percent": "6.00",
+    "allure_percent": "26.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 200
+  },
+  {
+    "id": 30015,
+    "curve": 3,
+    "lvl": 15,
+    "strength_percent": "6.00",
+    "allure_percent": "34.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 30016,
+    "curve": 3,
+    "lvl": 16,
+    "strength_percent": "8.00",
+    "allure_percent": "34.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 30017,
+    "curve": 3,
+    "lvl": 17,
+    "strength_percent": "8.00",
+    "allure_percent": "36.00",
+    "intellect_percent": "6.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 30018,
+    "curve": 3,
+    "lvl": 18,
+    "strength_percent": "8.00",
+    "allure_percent": "36.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 30019,
+    "curve": 3,
+    "lvl": 19,
+    "strength_percent": "8.00",
+    "allure_percent": "36.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 450
+  },
+  {
+    "id": 30020,
+    "curve": 3,
+    "lvl": 20,
+    "strength_percent": "8.00",
+    "allure_percent": "48.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 30021,
+    "curve": 3,
+    "lvl": 21,
+    "strength_percent": "10.00",
+    "allure_percent": "48.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 30022,
+    "curve": 3,
+    "lvl": 22,
+    "strength_percent": "10.00",
+    "allure_percent": "50.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 30023,
+    "curve": 3,
+    "lvl": 23,
+    "strength_percent": "10.00",
+    "allure_percent": "50.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 30024,
+    "curve": 3,
+    "lvl": 24,
+    "strength_percent": "10.00",
+    "allure_percent": "50.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 400
+  },
+  {
+    "id": 30025,
+    "curve": 3,
+    "lvl": 25,
+    "strength_percent": "10.00",
+    "allure_percent": "58.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 30026,
+    "curve": 3,
+    "lvl": 26,
+    "strength_percent": "12.00",
+    "allure_percent": "58.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 30027,
+    "curve": 3,
+    "lvl": 27,
+    "strength_percent": "12.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 30028,
+    "curve": 3,
+    "lvl": 28,
+    "strength_percent": "12.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 30029,
+    "curve": 3,
+    "lvl": 29,
+    "strength_percent": "12.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "12.00",
+    "cost": 600
+  },
+  {
+    "id": 30030,
+    "curve": 3,
+    "lvl": 30,
+    "strength_percent": "12.00",
+    "allure_percent": "72.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "12.00",
+    "cost": 0
+  },
+  {
+    "id": 40000,
+    "curve": 4,
+    "lvl": 0,
+    "strength_percent": "0.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 40001,
+    "curve": 4,
+    "lvl": 1,
+    "strength_percent": "2.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 40002,
+    "curve": 4,
+    "lvl": 2,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 40003,
+    "curve": 4,
+    "lvl": 3,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "0.00",
+    "cost": 50
+  },
+  {
+    "id": 40004,
+    "curve": 4,
+    "lvl": 4,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "2.00",
+    "spirit_percent": "2.00",
+    "cost": 100
+  },
+  {
+    "id": 40005,
+    "curve": 4,
+    "lvl": 5,
+    "strength_percent": "2.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 40006,
+    "curve": 4,
+    "lvl": 6,
+    "strength_percent": "4.00",
+    "allure_percent": "2.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 40007,
+    "curve": 4,
+    "lvl": 7,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "10.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 40008,
+    "curve": 4,
+    "lvl": 8,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "2.00",
+    "cost": 50
+  },
+  {
+    "id": 40009,
+    "curve": 4,
+    "lvl": 9,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "12.00",
+    "spirit_percent": "4.00",
+    "cost": 150
+  },
+  {
+    "id": 40010,
+    "curve": 4,
+    "lvl": 10,
+    "strength_percent": "4.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "24.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 40011,
+    "curve": 4,
+    "lvl": 11,
+    "strength_percent": "6.00",
+    "allure_percent": "4.00",
+    "intellect_percent": "24.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 40012,
+    "curve": 4,
+    "lvl": 12,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "24.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 40013,
+    "curve": 4,
+    "lvl": 13,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "26.00",
+    "spirit_percent": "4.00",
+    "cost": 100
+  },
+  {
+    "id": 40014,
+    "curve": 4,
+    "lvl": 14,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "26.00",
+    "spirit_percent": "6.00",
+    "cost": 200
+  },
+  {
+    "id": 40015,
+    "curve": 4,
+    "lvl": 15,
+    "strength_percent": "6.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "34.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 40016,
+    "curve": 4,
+    "lvl": 16,
+    "strength_percent": "8.00",
+    "allure_percent": "6.00",
+    "intellect_percent": "34.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 40017,
+    "curve": 4,
+    "lvl": 17,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "34.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 40018,
+    "curve": 4,
+    "lvl": 18,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "36.00",
+    "spirit_percent": "6.00",
+    "cost": 150
+  },
+  {
+    "id": 40019,
+    "curve": 4,
+    "lvl": 19,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "36.00",
+    "spirit_percent": "8.00",
+    "cost": 450
+  },
+  {
+    "id": 40020,
+    "curve": 4,
+    "lvl": 20,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "48.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 40021,
+    "curve": 4,
+    "lvl": 21,
+    "strength_percent": "10.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "48.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 40022,
+    "curve": 4,
+    "lvl": 22,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "48.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 40023,
+    "curve": 4,
+    "lvl": 23,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "50.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 40024,
+    "curve": 4,
+    "lvl": 24,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "50.00",
+    "spirit_percent": "10.00",
+    "cost": 400
+  },
+  {
+    "id": 40025,
+    "curve": 4,
+    "lvl": 25,
+    "strength_percent": "10.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "58.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 40026,
+    "curve": 4,
+    "lvl": 26,
+    "strength_percent": "12.00",
+    "allure_percent": "10.00",
+    "intellect_percent": "58.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 40027,
+    "curve": 4,
+    "lvl": 27,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "58.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 40028,
+    "curve": 4,
+    "lvl": 28,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "60.00",
+    "spirit_percent": "10.00",
+    "cost": 200
+  },
+  {
+    "id": 40029,
+    "curve": 4,
+    "lvl": 29,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "60.00",
+    "spirit_percent": "12.00",
+    "cost": 600
+  },
+  {
+    "id": 40030,
+    "curve": 4,
+    "lvl": 30,
+    "strength_percent": "12.00",
+    "allure_percent": "12.00",
+    "intellect_percent": "72.00",
+    "spirit_percent": "12.00",
+    "cost": 0
+  },
+  {
+    "id": 7810000,
+    "curve": 781,
+    "lvl": 0,
+    "strength_percent": "0.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 100
+  },
+  {
+    "id": 7810001,
+    "curve": 781,
+    "lvl": 1,
+    "strength_percent": "8.00",
+    "allure_percent": "0.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 100
+  },
+  {
+    "id": 7810002,
+    "curve": 781,
+    "lvl": 2,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "0.00",
+    "spirit_percent": "0.00",
+    "cost": 100
+  },
+  {
+    "id": 7810003,
+    "curve": 781,
+    "lvl": 3,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "0.00",
+    "cost": 100
+  },
+  {
+    "id": 7810004,
+    "curve": 781,
+    "lvl": 4,
+    "strength_percent": "8.00",
+    "allure_percent": "8.00",
+    "intellect_percent": "8.00",
+    "spirit_percent": "8.00",
+    "cost": 200
+  },
+  {
+    "id": 7810005,
+    "curve": 781,
+    "lvl": 5,
+    "strength_percent": "16.00",
+    "allure_percent": "16.00",
+    "intellect_percent": "16.00",
+    "spirit_percent": "16.00",
+    "cost": 100
+  },
+  {
+    "id": 7810006,
+    "curve": 781,
+    "lvl": 6,
+    "strength_percent": "24.00",
+    "allure_percent": "16.00",
+    "intellect_percent": "16.00",
+    "spirit_percent": "16.00",
+    "cost": 100
+  },
+  {
+    "id": 7810007,
+    "curve": 781,
+    "lvl": 7,
+    "strength_percent": "24.00",
+    "allure_percent": "24.00",
+    "intellect_percent": "16.00",
+    "spirit_percent": "16.00",
+    "cost": 100
+  },
+  {
+    "id": 7810008,
+    "curve": 781,
+    "lvl": 8,
+    "strength_percent": "24.00",
+    "allure_percent": "24.00",
+    "intellect_percent": "24.00",
+    "spirit_percent": "16.00",
+    "cost": 100
+  },
+  {
+    "id": 7810009,
+    "curve": 781,
+    "lvl": 9,
+    "strength_percent": "24.00",
+    "allure_percent": "24.00",
+    "intellect_percent": "24.00",
+    "spirit_percent": "24.00",
+    "cost": 300
+  },
+  {
+    "id": 7810010,
+    "curve": 781,
+    "lvl": 10,
+    "strength_percent": "36.00",
+    "allure_percent": "36.00",
+    "intellect_percent": "36.00",
+    "spirit_percent": "36.00",
+    "cost": 200
+  },
+  {
+    "id": 7810011,
+    "curve": 781,
+    "lvl": 11,
+    "strength_percent": "44.00",
+    "allure_percent": "36.00",
+    "intellect_percent": "36.00",
+    "spirit_percent": "36.00",
+    "cost": 200
+  },
+  {
+    "id": 7810012,
+    "curve": 781,
+    "lvl": 12,
+    "strength_percent": "44.00",
+    "allure_percent": "44.00",
+    "intellect_percent": "36.00",
+    "spirit_percent": "36.00",
+    "cost": 200
+  },
+  {
+    "id": 7810013,
+    "curve": 781,
+    "lvl": 13,
+    "strength_percent": "44.00",
+    "allure_percent": "44.00",
+    "intellect_percent": "44.00",
+    "spirit_percent": "36.00",
+    "cost": 200
+  },
+  {
+    "id": 7810014,
+    "curve": 781,
+    "lvl": 14,
+    "strength_percent": "44.00",
+    "allure_percent": "44.00",
+    "intellect_percent": "44.00",
+    "spirit_percent": "44.00",
+    "cost": 400
+  },
+  {
+    "id": 7810015,
+    "curve": 781,
+    "lvl": 15,
+    "strength_percent": "52.00",
+    "allure_percent": "52.00",
+    "intellect_percent": "52.00",
+    "spirit_percent": "52.00",
+    "cost": 300
+  },
+  {
+    "id": 7810016,
+    "curve": 781,
+    "lvl": 16,
+    "strength_percent": "60.00",
+    "allure_percent": "52.00",
+    "intellect_percent": "52.00",
+    "spirit_percent": "52.00",
+    "cost": 300
+  },
+  {
+    "id": 7810017,
+    "curve": 781,
+    "lvl": 17,
+    "strength_percent": "60.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "52.00",
+    "spirit_percent": "52.00",
+    "cost": 300
+  },
+  {
+    "id": 7810018,
+    "curve": 781,
+    "lvl": 18,
+    "strength_percent": "60.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "60.00",
+    "spirit_percent": "52.00",
+    "cost": 300
+  },
+  {
+    "id": 7810019,
+    "curve": 781,
+    "lvl": 19,
+    "strength_percent": "60.00",
+    "allure_percent": "60.00",
+    "intellect_percent": "60.00",
+    "spirit_percent": "60.00",
+    "cost": 900
+  },
+  {
+    "id": 7810020,
+    "curve": 781,
+    "lvl": 20,
+    "strength_percent": "72.00",
+    "allure_percent": "72.00",
+    "intellect_percent": "72.00",
+    "spirit_percent": "72.00",
+    "cost": 400
+  },
+  {
+    "id": 7810021,
+    "curve": 781,
+    "lvl": 21,
+    "strength_percent": "80.00",
+    "allure_percent": "72.00",
+    "intellect_percent": "72.00",
+    "spirit_percent": "72.00",
+    "cost": 400
+  },
+  {
+    "id": 7810022,
+    "curve": 781,
+    "lvl": 22,
+    "strength_percent": "80.00",
+    "allure_percent": "80.00",
+    "intellect_percent": "72.00",
+    "spirit_percent": "72.00",
+    "cost": 400
+  },
+  {
+    "id": 7810023,
+    "curve": 781,
+    "lvl": 23,
+    "strength_percent": "80.00",
+    "allure_percent": "80.00",
+    "intellect_percent": "80.00",
+    "spirit_percent": "72.00",
+    "cost": 400
+  },
+  {
+    "id": 7810024,
+    "curve": 781,
+    "lvl": 24,
+    "strength_percent": "80.00",
+    "allure_percent": "80.00",
+    "intellect_percent": "80.00",
+    "spirit_percent": "80.00",
+    "cost": 800
+  },
+  {
+    "id": 7810025,
+    "curve": 781,
+    "lvl": 25,
+    "strength_percent": "88.00",
+    "allure_percent": "88.00",
+    "intellect_percent": "88.00",
+    "spirit_percent": "88.00",
+    "cost": 400
+  },
+  {
+    "id": 7810026,
+    "curve": 781,
+    "lvl": 26,
+    "strength_percent": "96.00",
+    "allure_percent": "88.00",
+    "intellect_percent": "88.00",
+    "spirit_percent": "88.00",
+    "cost": 400
+  },
+  {
+    "id": 7810027,
+    "curve": 781,
+    "lvl": 27,
+    "strength_percent": "96.00",
+    "allure_percent": "96.00",
+    "intellect_percent": "88.00",
+    "spirit_percent": "88.00",
+    "cost": 400
+  },
+  {
+    "id": 7810028,
+    "curve": 781,
+    "lvl": 28,
+    "strength_percent": "96.00",
+    "allure_percent": "96.00",
+    "intellect_percent": "96.00",
+    "spirit_percent": "88.00",
+    "cost": 400
+  },
+  {
+    "id": 7810029,
+    "curve": 781,
+    "lvl": 29,
+    "strength_percent": "96.00",
+    "allure_percent": "96.00",
+    "intellect_percent": "96.00",
+    "spirit_percent": "96.00",
+    "cost": 1200
+  },
+  {
+    "id": 7810030,
+    "curve": 781,
+    "lvl": 30,
+    "strength_percent": "108.00",
+    "allure_percent": "108.00",
+    "intellect_percent": "108.00",
+    "spirit_percent": "108.00",
+    "cost": 400
+  }
+]
