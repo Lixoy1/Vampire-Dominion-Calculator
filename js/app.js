@@ -1104,14 +1104,19 @@ function bindEvents(db) {
   });
 
   document.querySelectorAll('.summon-warden').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const id = Number(btn.dataset.wid);
       const candidate = oracle.summonCandidates.wardens.find(item => item.id === id);
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
-      if (candidate.itemId && candidate.cost > 0) state.account.bag[candidate.itemId] = Math.max(0, (state.account.bag[candidate.itemId] || 0) - candidate.cost);
-      state.account.ownedWardens[id] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
-      saveState();
-      render();
+      try {
+        const result = await requestOracle('/api/oracle/summon', { account: state.account, wardenId: id });
+        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        state.account = normalizeAccountData(result.account);
+        saveState();
+        render();
+      } catch (error) {
+        alert(error.message || 'Oracle не смог выполнить призыв.');
+      }
     });
   });
 
