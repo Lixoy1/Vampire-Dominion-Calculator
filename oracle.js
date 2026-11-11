@@ -1522,7 +1522,7 @@ export function getOracleCapabilities() {
     stateless: true,
     sections: [
       'dominance', 'conclave', 'courtyard', 'warden-levels', 'talents',
-      'auras', 'presences', 'blood-bonds', 'skins', 'summons', 'inventory',
+      'auras', 'presences', 'presence-auto-distribution', 'blood-bonds', 'skins', 'summons', 'inventory',
       'intimacy', 'attraction', 'guild-exp', 'helper-snapshot-import',
     ],
     formulaCaveats: [
@@ -1530,6 +1530,7 @@ export function getOracleCapabilities() {
       'Blood-bond costs currently use formula estimates.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Helper snapshot imports are reference data, not game-server verification.',
+      'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
     ],
   };
 }
