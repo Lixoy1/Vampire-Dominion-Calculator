@@ -208,4 +208,15 @@ function walkNumbers(value, path = 'root') {
   assert.ok(committed.account.ownedLovers[lover.id]);
 }
 
+
+{
+  const account = makeAccount();
+  account.bag = { 4230: 2, 4235: 3, 4005: 2, 4002: 4, 4821: 1 };
+  const snapshot = calculateOracle({ account, plan: makePlan() });
+  assert.equal(snapshot.eventCalculators.intimacy.expected, 20);
+  assert.equal(snapshot.eventCalculators.attraction.expected, 30);
+  assert.equal(snapshot.eventCalculators.guildExp.expected, 2220);
+  assert.equal(snapshot.eventCalculators.guildExp.items.find(item => item.item_id === 4002)?.counted, 1);
+}
+
 console.log('PASS unified server Oracle tests');
