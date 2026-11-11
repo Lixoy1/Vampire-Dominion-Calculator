@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { GAME_DB } from '../js/data.js';
+import { GAME_DB } from '../scripts/data.js';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
