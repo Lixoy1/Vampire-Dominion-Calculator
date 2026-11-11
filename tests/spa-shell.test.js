@@ -68,6 +68,7 @@ for (const [file, key] of [
 for (const path of [
   '../scripts/app.js', '../scripts/data.js', '../scripts/engine.js',
   '../assets/css/style.css', '../assets/crest.svg',
+  '../1000021575.png', '../1000024449.png', '../1000024228.png', '../1000019874.png',
 ]) {
   assert.ok(existsSync(new URL(path, import.meta.url)), `required canonical file exists: ${path}`);
 }
