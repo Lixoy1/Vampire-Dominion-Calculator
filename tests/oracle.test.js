@@ -14,7 +14,7 @@ import {
   commitOraclePlan,
   summonWarden,
   summonLover,
-  importDhampirSnapshot,
+  importCommunitySnapshot,
   getOracleCapabilities,
 } from '../oracle.js';
 
@@ -73,9 +73,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(snapshot.meta.inputSource, 'player-entered');
   assert.equal(snapshot.meta.gameConnected, false);
   assert.equal(snapshot.meta.stateless, true);
-  assert.equal(snapshot.meta.catalogProvenance.sourceId, 'dhampir-helper-api');
-  assert.equal(snapshot.meta.catalogProvenance.gameServerVerified, false);
-  assert.equal(snapshot.meta.gameVerification.status, 'not-game-verified');
+  assert.equal(snapshot.meta.project.kind, 'community-project');
   assert.ok(snapshot.report);
   assert.ok(snapshot.conclaveBranches.strength);
   assert.ok(snapshot.courtyardUpgrade);
@@ -106,9 +104,7 @@ function walkNumbers(value, path = 'root') {
 
   const capabilities = getOracleCapabilities();
   assert.equal(capabilities.gameApiConnected, false);
-  assert.equal(capabilities.catalogProvenance.trustLevel, 'helper-api-observation');
-  assert.equal(capabilities.gameVerification.status, 'not-game-verified');
-  assert.equal(capabilities.gameVerification.verifiedAgainstGame, false);
+  assert.equal(capabilities.project.kind, 'community-project');
   assert.ok(capabilities.sections.includes('dominance'));
   assert.ok(capabilities.sections.includes('inventory'));
 }
@@ -320,7 +316,7 @@ function walkNumbers(value, path = 'root') {
     { kind: 'warden', owner_id: 10540, template_id: 10544101, level: 10 },
     { kind: 'lover', owner_id: 20510, template_id: 30514101, level: 4 },
   ];
-  const imported = importDhampirSnapshot({
+  const imported = importCommunitySnapshot({
     account: makeAccount(),
     snapshots: [
       helperWardenRows,
@@ -335,7 +331,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(imported.account.ownedWardens[10270].promoteId, 8);
   assert.equal(imported.account.ownedWardens[10540].exp, 45);
   assert.equal(imported.account.ownedWardens[10280].sourceFilled, false);
-  assert.equal(imported.account.helperImport.observedWardenDominance[10270], '6701429.0000000000');
+  assert.equal(imported.account.communityImport.observedWardenDominance[10270], '6701429.0000000000');
   assert.equal(imported.summary.bonds, 4);
   assert.equal(imported.account.ownedLovers[20260].bonds.strength.level, 0);
   assert.equal(imported.account.ownedLovers[20260].bonds.allure.percentLevel, 0);
@@ -344,10 +340,8 @@ function walkNumbers(value, path = 'root') {
   assert.equal(imported.account.skinOwnership[10273101], true);
   assert.deepEqual(imported.account.conclave, { strength: 23, allure: 74, intellect: 45, spirit: 75 });
   assert.deepEqual(imported.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
-  assert.equal(imported.provenance.sourceId, 'dhampir-helper-api');
-  assert.equal(imported.provenance.gameServerVerified, false);
-  assert.equal(imported.provenance.trustLevel, 'helper-api-observation');
-  assert.equal(imported.account.helperImport.trustLevel, 'helper-api-observation');
+  assert.equal(imported.provenance.kind, 'community-project');
+  assert.equal(imported.account.communityImport.trustLevel, 'community-reference');
   assert.equal(imported.warnings.length, 0);
 }
 
@@ -613,7 +607,7 @@ function walkNumbers(value, path = 'root') {
   const apiLover = GAME_DB.lovers.find(item => (item.presences || []).some(presence => presence.presence_type === 'updatable'));
   const presence = apiLover.presences.find(item => item.presence_type === 'updatable');
   const skin = apiWarden.skins[0];
-  const imported = importDhampirSnapshot({
+  const imported = importCommunitySnapshot({
     account: makeAccount(),
     snapshots: [{
       success: true,
@@ -673,7 +667,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(imported.account.ownedLovers[apiLover.id].presences[presence.id], 3);
   assert.equal(imported.account.skins[skin.id], 4);
 
-  const observations = imported.account.helperImport.apiObservations;
+  const observations = imported.account.communityImport.referenceObservations;
   assert.deepEqual(observations.wardenSteps[apiWarden.id], {
     nextCost: 1234, nextGain: 567, nextKind: 'blood', level: null, dominance: null,
   });
@@ -684,13 +678,8 @@ function walkNumbers(value, path = 'root') {
   assert.equal(observations.presenceSteps[0].nextCost, 50);
 
   const oracle = calculateOracle({ account: imported.account, plan: makePlan() });
-  assert.equal(oracle.meta.helperApi.trustLevel, 'helper-api-observation');
-  assert.equal(oracle.meta.helperApi.observedWardenSteps, 1);
-  assert.equal(oracle.meta.helperApi.talentScriptRows, 1);
-  assert.equal(oracle.meta.helperApi.auraPathRows, 1);
-  assert.equal(oracle.meta.helperApi.bookRows, 1);
-  assert.equal(oracle.meta.helperApi.manuscriptTiers, 1);
-  assert.equal(oracle.meta.helperApi.attributeBreakdown.strength.total, '346455');
+  assert.equal(oracle.meta.project.kind, 'community-project');
+  assert.equal(oracle.meta.referenceData, undefined, 'raw reference snapshots are not exposed in public calculation metadata');
 }
 
 
@@ -711,7 +700,7 @@ function walkNumbers(value, path = 'root') {
   const bond = apiLover.scarlet_bonds.find(item => item.attribute === 'strength') || apiLover.scarlet_bonds[0];
   const fabricId = ({ a: 4421, s: 4422, ss: 4423 })[skin.quality];
   const bookItem = GAME_DB.items.find(item => item.id === 3144) || GAME_DB.items[0];
-  const imported = importDhampirSnapshot({
+  const imported = importCommunitySnapshot({
     account: makeAccount(),
     snapshot: {
       total: '123456.0000000000',
@@ -812,17 +801,16 @@ function walkNumbers(value, path = 'root') {
   assert.equal(imported.account.bag[scriptTalent.script_item_id], 12, 'manuscript stock is imported');
   assert.equal(imported.account.bag[scriptTalent.scroll_item_id], 7, 'scroll stock is imported');
   assert.equal(imported.account.bag[bookItem.id], 8, 'book stock is imported');
-  assert.deepEqual(imported.account.helperImport.apiObservations.bestPaths.levels.runs,
+  assert.deepEqual(imported.account.communityImport.referenceObservations.bestPaths.levels.runs,
     [{ key: String(apiWarden.id), to: 55 }], 'exact Helper levels best_path is retained');
-  assert.deepEqual(imported.account.helperImport.apiObservations.bestPaths.bonds[String(apiLover.id)].runs,
+  assert.deepEqual(imported.account.communityImport.referenceObservations.bestPaths.bonds[String(apiLover.id)].runs,
     [{ key: bond.attribute, to: 2 }], 'exact nested bond best_path is retained');
-  assert.equal(imported.account.helperImport.apiObservations.bondSteps.length, 2, 'both nested Bond cost/gain observations are retained');
-  assert.equal(imported.account.helperImport.apiObservations.presenceSteps.length, 1, 'nested Presence next-step data is retained');
-  assert.equal(imported.account.helperImport.apiObservations.skinSteps.length, 1, 'nested Skin next-step data is retained');
+  assert.equal(imported.account.communityImport.referenceObservations.bondSteps.length, 2, 'both nested Bond cost/gain observations are retained');
+  assert.equal(imported.account.communityImport.referenceObservations.presenceSteps.length, 1, 'nested Presence next-step data is retained');
+  assert.equal(imported.account.communityImport.referenceObservations.skinSteps.length, 1, 'nested Skin next-step data is retained');
 
   const result = calculateOracle({ account: imported.account, plan: makePlan() });
-  assert.deepEqual(result.meta.helperApi.bestPaths.levels.runs,
-    [{ key: String(apiWarden.id), to: 55 }], 'dashboard metadata exposes retained Helper best paths');
+  assert.equal(result.meta.referenceData, undefined, 'public metadata contains no imported raw snapshots');
 }
 
 console.log('PASS unified server Oracle tests');
