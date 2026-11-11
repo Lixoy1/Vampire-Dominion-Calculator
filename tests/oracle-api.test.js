@@ -118,6 +118,46 @@ try {
   assert.deepEqual(helperImport.result.account.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
   assert.equal(helperImport.result.account.helperImport.observedWardenDominance[10270], '6701429.0000000000');
 
+  const talentWarden = GAME_DB.wardens.find(item => item.talents?.length);
+  const talentAccount = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {
+      [talentWarden.id]: { level: 10, promoteId: 1, exp: 0, talents: {}, auras: {} },
+    },
+    ownedLovers: {}, bag: {}, skins: {},
+  };
+  for (const talent of talentWarden.talents) {
+    talentAccount.bag[talent.scroll_item_id] = 500;
+    talentAccount.bag[talent.script_item_id] = 500;
+  }
+  const autoTalentsResponse = await post('/api/oracle/auto-talents', {
+    account: talentAccount,
+    plan: {},
+  });
+  assert.equal(autoTalentsResponse.status, 200);
+  const autoTalents = await autoTalentsResponse.json();
+  assert.equal(autoTalents.ok, true);
+  assert.ok(autoTalents.result.summary.plannedLevels > 0);
+  assert.ok(autoTalents.result.plan.talents[talentWarden.id]);
+
+  const talentCalculateResponse = await post('/api/oracle/calculate', {
+    account: talentAccount,
+    plan: autoTalents.result.plan,
+  });
+  assert.equal(talentCalculateResponse.status, 200);
+  const talentCalculated = await talentCalculateResponse.json();
+  assert.ok(talentCalculated.result.report.gain.talents > 0);
+  assert.equal(talentCalculated.result.talentPlan.plannedLevels, autoTalents.result.summary.plannedLevels);
+
+  const talentCommitResponse = await post('/api/oracle/commit-plan', {
+    account: talentAccount,
+    plan: autoTalents.result.plan,
+  });
+  assert.equal(talentCommitResponse.status, 200);
+  const talentCommitted = await talentCommitResponse.json();
+  assert.equal(talentCommitted.ok, true);
+  assert.ok(talentCommitted.result.account.ownedWardens[talentWarden.id].talents);
+
   const invalidResponse = await post('/api/oracle/calculate', { plan: {} });
   assert.equal(invalidResponse.status, 400);
   const invalid = await invalidResponse.json();
