@@ -1562,7 +1562,9 @@ function renderTalentsTab(db, oracle = oracleSnapshot) {
           <div class="talent-help-item"><b>Только расчёт</b><span>Планирование не списывает ресурсы. Смотритель должен быть добавлен в профиль, чтобы его таланты попали в расчёт.</span></div>
           <div class="talent-help-item"><b>Можно отменить</b><span>План можно сбросить до применения. Изменения профиля можно вернуть кнопками отмены и повтора.</span></div>
         </div>
-      </details>     <div class="talent-actions">
+      </details>
+      <div class="talent-actions talent-actions-three">
+        <button class="btn" data-action="nav" data-screen="warden_exp">⚡ Опыт смотрителей</button>
         <button class="btn" id="btn-reset-plan">↶ Отменить план</button>
         <button class="btn btn-gold" id="btn-commit-plan">✓ Применить изменения</button>
       </div>
@@ -2302,9 +2304,12 @@ function bindSpaEvents(db, report, oracle) {
       const id = Number(input.dataset.spaQuickExp);
       const warden = db.wardens.find(function (item) { return item.id === id; });
       if (!warden) return;
+      const exp = Math.max(0, Number(input.value) || 0);
+      const existing = state.account.ownedWardens[id];
+      if (!existing && exp === 0) return;
       pushUndoSnapshot();
-      if (!state.account.ownedWardens[id]) state.account.ownedWardens[id] = createOwnedWarden(warden);
-      state.account.ownedWardens[id].exp = Math.max(0, Number(input.value) || 0);
+      if (!existing && exp > 0) state.account.ownedWardens[id] = createOwnedWarden(warden);
+      if (state.account.ownedWardens[id]) state.account.ownedWardens[id].exp = exp;
       saveState();
       render();
     });
