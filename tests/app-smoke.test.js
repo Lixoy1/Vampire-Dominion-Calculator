@@ -56,6 +56,9 @@ for (const expected of expectedTabs) {
 }
 assert.ok(root.innerHTML.includes('Инвентарь Сумки'), 'bag tab content rendered');
 assert.ok(root.innerHTML.includes('assets/icons/'), 'local icon URLs are used');
-assert.ok((await import('node:fs')).readFileSync(new URL('../js/app.js', import.meta.url), 'utf8').includes('data-np-unit'), 'touch numeric keypad supports K/M/B/T suffixes');
+const appSource = (await import('node:fs')).readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+assert.ok(appSource.includes('data-np-unit'), 'touch numeric keypad supports K/M/B/T suffixes');
+assert.ok(appSource.includes('wizard-create'), 'new-account flow uses a guided manual profile wizard');
+assert.ok(appSource.includes('Подтянуть из игры') && appSource.includes('Недоступно без игрового подключения'), 'account creation does not pretend to sync with the game');
 assert.ok(localStore.size > 0, 'state is stored locally');
 console.log(`PASS app render smoke: ${expectedTabs.length} tabs`);
