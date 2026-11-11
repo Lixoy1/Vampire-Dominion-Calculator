@@ -725,6 +725,9 @@ export function calculateOracle(input = {}) {
         owned.talents || {}
       )
       : null;
+    if (levelUpgrade && plannedLevelGain.byWarden[warden.id] !== undefined) {
+      levelUpgrade.baseGain = plannedLevelGain.byWarden[warden.id];
+    }
     const auras = {};
     for (const aura of warden.auras || []) {
       const level = owned?.auras?.[aura.id] ?? aura.min_lvl ?? 0;
