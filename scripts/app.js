@@ -1347,6 +1347,7 @@ function renderBagTab(db, report, oracle) {
 
 let numericPadBound = false;
 let modalControlsBound = false;
+let staticNavBound = false;
 
 function openNumericPad(input) {
   if (!input || input.disabled || input.readOnly) return;
@@ -1433,6 +1434,20 @@ function bindNumericPad() {
       if (event.target === event.currentTarget) closeAppModal();
     });
   }
+
+  if (!staticNavBound) {
+    staticNavBound = true;
+    document.querySelectorAll('#bottom-nav [data-target]').forEach(button => {
+      button.addEventListener('click', () => {
+        const destination = button.dataset.target;
+        state.activeTab = destination === 'home' ? 'dominance'
+          : destination === 'resources' ? 'levels'
+          : destination === 'calculations' ? 'conclave' : 'settings';
+        saveState();
+        render();
+      });
+    });
+  }
 }
 
 function bindEvents(db) {
@@ -1452,16 +1467,6 @@ function bindEvents(db) {
   });
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
-  document.querySelectorAll('#bottom-nav [data-target]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const destination = btn.dataset.target;
-      state.activeTab = destination === 'home' ? 'dominance'
-        : destination === 'resources' ? 'levels'
-        : destination === 'calculations' ? 'conclave' : 'settings';
-      saveState();
-      render();
-    });
-  });
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
