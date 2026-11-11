@@ -32,7 +32,7 @@ function numeric(value, fallback = 0) {
 }
 
 function nonNegative(value) {
-  return Math.max(0, numeric(value));
+  return Math.min(1_000_000_000_000_000, Math.max(0, numeric(value)));
 }
 
 function clone(value) {
@@ -47,8 +47,8 @@ function normalizeAccount(input = {}) {
     const warden = record(raw);
     ownedWardens[id] = {
       ...warden,
-      level: Math.max(1, Math.round(numeric(warden.level, 1))),
-      promoteId: Math.max(1, Math.round(numeric(warden.promoteId, 1))),
+      level: Math.max(1, Math.min(500, Math.round(numeric(warden.level, 1)))),
+      promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(warden.promoteId, 1))),
       exp: nonNegative(warden.exp),
       talents: record(warden.talents),
       auras: record(warden.auras),
@@ -62,7 +62,7 @@ function normalizeAccount(input = {}) {
     ownedLovers[id] = {
       ...lover,
       affinity: nonNegative(lover.affinity),
-      closeness: nonNegative(lover.closeness),
+      closeness: Math.min(1_000_000, nonNegative(lover.closeness)),
       presences: record(lover.presences),
       bonds: record(lover.bonds),
     };
@@ -104,8 +104,8 @@ function normalizePlan(input = {}, account) {
     bonds: {},
     skins: record(source.skins),
     summons: {
-      wardens: Array.isArray(record(source.summons).wardens) ? source.summons.wardens.map(Number).filter(Number.isSafeInteger) : [],
-      lovers: Array.isArray(record(source.summons).lovers) ? source.summons.lovers.map(Number).filter(Number.isSafeInteger) : [],
+      wardens: Array.isArray(record(source.summons).wardens) ? source.summons.wardens.map(Number).filter(Number.isSafeInteger).slice(0, db.wardens.length) : [],
+      lovers: Array.isArray(record(source.summons).lovers) ? source.summons.lovers.map(Number).filter(Number.isSafeInteger).slice(0, db.lovers.length) : [],
     },
   };
 
@@ -140,14 +140,14 @@ function normalizePlan(input = {}, account) {
     const bondPlan = record(plan.bonds[id]);
     for (const bond of lover.scarlet_bonds || []) {
       const current = record(owned.bonds[bond.attribute]);
-      const currentLevel = Math.max(0, Math.round(numeric(current.level)));
-      const currentPercentLevel = Math.max(0, Math.round(numeric(current.percentLevel ?? current.pctLevel)));
+      const currentLevel = Math.max(0, Math.min(600, Math.round(numeric(current.level))));
+      const currentPercentLevel = Math.max(0, Math.min(600, Math.round(numeric(current.percentLevel ?? current.pctLevel))));
       const selected = record(bondPlan[bond.attribute]);
       bondPlan[bond.attribute] = {
-        level: Math.max(currentLevel, Math.round(numeric(selected.level, currentLevel))),
-        targetLevel: Math.max(currentLevel, Math.round(numeric(selected.targetLevel, currentLevel))),
-        percentLevel: Math.max(currentPercentLevel, Math.round(numeric(selected.percentLevel, currentPercentLevel))),
-        targetPercentLevel: Math.max(currentPercentLevel, Math.round(numeric(selected.targetPercentLevel, currentPercentLevel))),
+        level: Math.max(currentLevel, Math.min(600, Math.round(numeric(selected.level, currentLevel)))),
+        targetLevel: Math.max(currentLevel, Math.min(600, Math.round(numeric(selected.targetLevel, currentLevel)))),
+        percentLevel: Math.max(currentPercentLevel, Math.min(600, Math.round(numeric(selected.percentLevel, currentPercentLevel)))),
+        targetPercentLevel: Math.max(currentPercentLevel, Math.min(600, Math.round(numeric(selected.targetPercentLevel, currentPercentLevel)))),
       };
     }
     bondPlan.wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account);
@@ -591,6 +591,47 @@ export function commitOraclePlan(input = {}) {
     report,
     warnings: snapshot.warnings,
   };
+}
+
+
+export function summonWarden(input = {}) {
+  const raw = record(input);
+  const account = normalizeAccount(raw.account);
+  const wardenId = Math.round(numeric(raw.wardenId));
+  const warden = db.wardens.find(item => item.id === wardenId);
+  if (!warden) {
+    return { ok: false, error: { code: 'WARDEN_NOT_FOUND', message: 'Смотритель не найден в каталоге.' } };
+  }
+  if (account.ownedWardens[wardenId]) {
+    return { ok: false, error: { code: 'WARDEN_ALREADY_OWNED', message: 'Этот смотритель уже добавлен в профиль.' } };
+  }
+  const candidates = Engine.getSummonCandidates(
+    db.wardens,
+    db.lovers,
+    new Set(Object.keys(account.ownedWardens).map(Number)),
+    new Set(Object.keys(account.ownedLovers).map(Number)),
+    account.bag
+  );
+  const candidate = candidates.wardens.find(item => item.id === wardenId);
+  if (!candidate?.canSummon) {
+    return {
+      ok: false,
+      error: {
+        code: 'SUMMON_UNAVAILABLE',
+        wardenId,
+        itemId: candidate?.itemId ?? null,
+        required: candidate?.cost ?? 0,
+        available: candidate?.have ?? 0,
+        message: 'Недостаточно предметов для призыва этого смотрителя.',
+      },
+    };
+  }
+
+  if (candidate.itemId && candidate.cost > 0) {
+    account.bag[candidate.itemId] = Math.max(0, (account.bag[candidate.itemId] || 0) - candidate.cost);
+  }
+  account.ownedWardens[wardenId] = { level: 1, promoteId: 1, exp: 0, talents: {}, auras: {} };
+  return { ok: true, account, candidate };
 }
 
 export function getOracleCapabilities() {
