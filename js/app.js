@@ -980,7 +980,10 @@ function renderSkinsTab(db, oracle) {
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
             <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
           </div>
-          <div class="row-controls"><input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Уровень облика" /></div>
+          <div class="row-controls skin-controls">
+            <label class="mini-field">Сейчас<input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Текущий уровень облика" /></label>
+            <label class="mini-field">Цель<input class="input stepper-input skin-target" type="number" min="${result.level}" max="${s.max_lvl}" data-skin-id="${s.id}" value="${state.plan.skins?.[s.id] ?? result.level}" aria-label="Целевой уровень облика" /></label>
+          </div>
         </div>
       `;}).join('')}
     </section>
@@ -1358,6 +1361,21 @@ function bindEvents(db) {
       if (!owned || !template) return;
       owned.presences ||= {};
       owned.presences[pid] = Math.min(template.max_lvl ?? 999, Math.max(template.min_lvl || 0, Number(inp.value) || 0));
+      saveState();
+      render();
+    });
+  });
+
+  document.querySelectorAll('.skin-target').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const id = Number(inp.dataset.skinId);
+      const skin = [...db.wardens.flatMap(w => w.skins || []), ...db.lovers.flatMap(l => l.skins || [])].find(item => item.id === id);
+      if (!skin) return;
+      const current = Math.max(0, Number(state.account.skins[id]) || 0);
+      state.plan.skins ||= {};
+      const target = Math.min(skin.max_lvl || 10, Math.max(current, Number(inp.value) || current));
+      if (target > current) state.plan.skins[id] = target;
+      else delete state.plan.skins[id];
       saveState();
       render();
     });
