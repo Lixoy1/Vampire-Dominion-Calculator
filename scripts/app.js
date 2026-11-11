@@ -2011,7 +2011,7 @@ function bindSpaEvents(db, report, oracle) {
   });
 
   root.querySelectorAll('[data-action]').forEach(function (button) {
-    button.addEventListener('click', function () {
+    button.addEventListener('click', async function () {
       const action = button.dataset.action;
       if (action === 'quick-calc') return openQuickCalculation();
       if (action === 'formula-info') return openFormulaInfo();
