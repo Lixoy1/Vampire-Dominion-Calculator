@@ -16,6 +16,7 @@ function createBlankAccountData() {
     conclaveExp: 0,
     courtyardExp: 0,
     courtyardLvl: 0,
+    guildProgress: { level: 0, exp: 0, nextLevelExp: 0 },
     conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
     ownedWardens: {},
     ownedLovers: {},
@@ -68,6 +69,7 @@ function normalizeAccountData(incoming = {}) {
   return {
     ...base,
     ...(incoming || {}),
+    guildProgress: { ...base.guildProgress, ...(incoming?.guildProgress || incoming?.guild || {}) },
     conclave: { ...base.conclave, ...(incoming?.conclave || {}) },
     ownedWardens: { ...(incoming?.ownedWardens || {}) },
     ownedLovers: { ...(incoming?.ownedLovers || {}) },
@@ -530,6 +532,7 @@ async function render() {
           <button class="btn btn-sm" id="btn-lang">${state.lang.toUpperCase()}</button>
           <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
           <button class="btn btn-sm" id="btn-import">📂 Импорт</button>
+          <button class="btn btn-sm" id="btn-import-helper">🧩 Импорт дампа</button>
         </div>
       </header>
 
@@ -635,6 +638,18 @@ function renderDominanceTab(db, report) {
         <div>
           <label class="row-sub">🌿 Текущий уровень Сада (1–210)</label>
           <input type="number" class="input res-input" data-res="courtyardLvl" min="0" max="210" value="${state.account.courtyardLvl}" />
+        </div>
+        <div>
+          <label class="row-sub">🛡 Уровень Гильдии</label>
+          <input type="number" class="input guild-input" data-guild="level" min="0" max="999" value="${state.account.guildProgress?.level || 0}" />
+        </div>
+        <div>
+          <label class="row-sub">🛡 Опыт текущего уровня</label>
+          <input type="number" class="input guild-input" data-guild="exp" min="0" value="${state.account.guildProgress?.exp || 0}" />
+        </div>
+        <div>
+          <label class="row-sub">🛡 Опыт следующего уровня</label>
+          <input type="number" class="input guild-input" data-guild="nextLevelExp" min="0" value="${state.account.guildProgress?.nextLevelExp || 0}" />
         </div>
       </div>
     </section>
@@ -1469,6 +1484,50 @@ function bindEvents(db) {
     };
     inp.click();
   });
+  document.querySelectorAll('.guild-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const key = inp.dataset.guild;
+      if (!['level', 'exp', 'nextLevelExp'].includes(key)) return;
+      state.account.guildProgress ||= { level: 0, exp: 0, nextLevelExp: 0 };
+      state.account.guildProgress[key] = Math.max(0, Number(inp.value) || 0);
+      if (key === 'level') state.account.guildProgress.level = Math.min(999, Math.round(state.account.guildProgress.level));
+      saveState();
+      render();
+    });
+  });
+
+  document.getElementById('btn-import-helper')?.addEventListener('click', () => {
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'application/json,.json';
+    inp.multiple = true;
+    inp.onchange = async () => {
+      const files = [...(inp.files || [])];
+      if (!files.length) return;
+      try {
+        const snapshots = await Promise.all(files.map(async file => JSON.parse(await file.text())));
+        const imported = await requestOracle('/api/oracle/import-helper', { account: state.account, snapshots });
+        state.account = normalizeAccountData(imported.account);
+        state.plan = createBlankPlan(state.account);
+        saveState();
+        await render();
+        const sum = imported.summary || {};
+        const lines = [
+          'Смотрители: ' + (sum.wardens || 0),
+          'Кровные узы: ' + (sum.bonds || 0),
+          'Облики: ' + (sum.skins || 0),
+          'Предметы сумки: ' + (sum.inventory || 0),
+          'Атрибуты Конклава: ' + (sum.conclaveAttributes || 0),
+          'Опыт Гильдии: ' + (sum.guildProgress ? 'импортирован' : 'без изменений'),
+        ];
+        alert('Импорт завершён.\\n' + lines.join('\\n') + '\\n\\nЗначения стороннего бота сохранены как справочные данные.');
+      } catch (error) {
+        alert(error.message || 'Не удалось прочитать JSON-дамп помощника.');
+      }
+    };
+    inp.click();
+  });
+
 }
 
 document.addEventListener('DOMContentLoaded', render);
