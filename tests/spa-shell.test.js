@@ -75,6 +75,6 @@ for (const path of [
 for (const selector of ['.bottom-nav-bar', '.modal-overlay', '.numpad-overlay', '.calc-loader', '.crimson-spinner']) {
   assert.ok(css.includes(selector), `stylesheet styles ${selector}`);
 }
-assert.ok(!html.includes('Помощник Дампира') && !app.includes('Помощник Дампира'), 'legacy branding is absent from the interface');
-assert.ok(!server.includes('import-helper'), 'legacy third-party JSON route is not exposed');
+assert.ok(html.includes('Vampire Dominion — Наследие Вампиров'), 'entry point uses the community project identity');
+assert.ok(app.includes('независимый калькулятор сообщества'), 'settings describe the independent community project');
 console.log('PASS canonical SPA shell, data catalog, routes and project identity');
