@@ -34,6 +34,7 @@ function createBlankPlan(account = createBlankAccountData()) {
     promotes: {},
     talents: {},
     bonds: {},
+    presences: {},
     skins: {},
     summons: { wardens: [], lovers: [] },
   };
@@ -93,6 +94,7 @@ function normalizePlan(incoming = {}, account = createBlankAccountData()) {
     levels: { ...(incoming?.levels || {}) },
     promotes: { ...(incoming?.promotes || {}) },
     bonds: { ...(incoming?.bonds || {}) },
+    presences: Object.fromEntries(Object.entries(incoming?.presences || {}).map(([id, value]) => [id, { ...(value || {}) }])),
     talents: Object.fromEntries(Object.entries(incoming?.talents || {}).map(([id, value]) => [id, {
       scrolls: { ...(value?.scrolls || {}) },
       scripts: { ...(value?.scripts || {}) },
@@ -423,6 +425,26 @@ async function runAutoTalentDistribution() {
   }
 }
 
+async function runAutoPresenceDistribution() {
+  try {
+    const result = await requestOracle('/api/oracle/auto-presences', {
+      account: state.account,
+      plan: state.plan,
+    });
+    state.plan = normalizePlan(result.plan, state.account);
+    saveState();
+    await render();
+    const summary = result.summary || {};
+    alert(
+      'План Веяний рассчитан.\\n' +
+      'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
+      'Прирост модификаторов: +' + (summary.addedPercentPoints || 0) + ' п.п.'
+    );
+  } catch (error) {
+    alert(error.message || 'Oracle не смог распределить жетоны Веяний.');
+  }
+}
+
 async function runFullAutoDistribute() {
   try {
     const result = await requestOracle('/api/oracle/auto-distribute', {
@@ -432,6 +454,8 @@ async function runFullAutoDistribute() {
     state.plan = normalizePlan(result.plan, state.account);
     saveState();
     await render();
+    const added = result.summary?.presences?.addedLevels || 0;
+    if (added) alert('Авторасчёт готов. Дополнительно распределено уровней Веяний: ' + added + '.');
   } catch (error) {
     alert(error.message || 'Oracle не смог распределить ресурсы.');
   }
@@ -892,6 +916,7 @@ function renderAurasPresencesTab(db, oracle) {
     <section class="card">
       <div class="card-head">
         <div class="card-title">💫 Веяния партнёров (${loversWithPresences.length})</div>
+        <button class="btn btn-gold btn-sm" id="btn-auto-presences">⚡ Распределить жетоны</button>
       </div>
       ${loversWithPresences.map(l => `
         <div class="item-row">
@@ -1237,6 +1262,7 @@ function bindEvents(db) {
 
   document.getElementById('btn-auto-all')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-auto-talents')?.addEventListener('click', runAutoTalentDistribution);
+  document.getElementById('btn-auto-presences')?.addEventListener('click', runAutoPresenceDistribution);
   document.getElementById('btn-quick-run')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-commit-plan')?.addEventListener('click', commitPlanToAccount);
 
@@ -1247,6 +1273,7 @@ function bindEvents(db) {
       levels: {},
       talents: {},
       bonds: {},
+      presences: {},
       skins: {},
       summons: { wardens: [], lovers: [] },
     };
