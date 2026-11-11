@@ -1848,10 +1848,11 @@ function openNumericPad(input) {
   const overlay = document.getElementById('numpad-overlay');
   const title = document.getElementById('numpad-title');
   const display = document.getElementById('numpad-display');
-  if (!overlay || !display) return;
+  const resolved = document.getElementById('numpad-resolved');
+  const directInput = document.getElementById('numpad-direct-input');
+  const keypad = overlay?.querySelector('.numpad-grid');
+  if (!overlay || !display || !resolved || !directInput || !keypad) return;
 
-  let digits = String(Math.max(0, Number(input.value) || 0));
-  let multiplier = 1;
   const multipliers = { K: 1e3, M: 1e6, B: 1e9, T: 1e12 };
   const min = input.min !== '' && Number.isFinite(Number(input.min)) ? Number(input.min) : 0;
   const max = input.max !== '' && Number.isFinite(Number(input.max)) ? Number(input.max) : 1e15;
@@ -1860,18 +1861,58 @@ function openNumericPad(input) {
     || input.closest('.item-row')?.querySelector('.row-name')?.textContent
     || input.dataset.res || 'Введите значение';
 
+  function formatNumber(value) {
+    return Math.max(0, Number(value) || 0).toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+  }
+
+  function parseCompact(value) {
+    const match = String(value || '').trim().replace(/\s/g, '').replace(',', '.')
+      .match(/^(\d+(?:\.\d+)?)([KMBT])?$/i);
+    if (!match) return null;
+    const factor = multipliers[String(match[2] || '').toUpperCase()] || 1;
+    const result = Number(match[1]) * factor;
+    return Number.isFinite(result) ? result : null;
+  }
+
+  function compactInitial(value) {
+    const number = Math.max(0, Number(value) || 0);
+    const units = [['T', 1e12], ['B', 1e9], ['M', 1e6], ['K', 1e3]];
+    for (const [suffix, factor] of units) {
+      if (number >= factor) {
+        const amount = Number((number / factor).toFixed(3)).toString();
+        return amount + suffix;
+      }
+    }
+    return String(number);
+  }
+
+  let raw = compactInitial(input.value);
+  let directMode = false;
   if (title) title.textContent = label;
   overlay.classList.remove('hidden');
 
-  const close = () => overlay.classList.add('hidden');
+  const close = () => {
+    overlay.classList.add('hidden');
+    directInput.blur();
+  };
+
   const update = () => {
-    const value = Math.min(max, Math.max(0, (Number(digits) || 0) * multiplier));
-    display.textContent = value.toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
+    const valueText = directMode ? directInput.value : raw;
+    const parsed = parseCompact(valueText);
+    display.textContent = valueText || '0';
+    resolved.textContent = parsed == null ? 'Проверь формат числа' : formatNumber(Math.min(max, Math.max(0, parsed)));
     overlay.querySelectorAll('[data-mult]').forEach(button => {
-      button.classList.toggle('active', multipliers[button.dataset.mult] === multiplier);
+      button.classList.toggle('active', new RegExp('[KMBT]$', 'i').test(valueText)
+        && valueText.slice(-1).toUpperCase() === button.dataset.mult);
     });
   };
+
+  directInput.value = raw;
+  directInput.hidden = true;
+  keypad.hidden = false;
   update();
+
+  directInput.oninput = () => update();
 
   overlay.onclick = event => {
     if (event.target === overlay) { close(); return; }
@@ -1879,23 +1920,52 @@ function openNumericPad(input) {
     if (!button) return;
     const key = button.dataset.key;
     const unit = button.dataset.mult;
-    if (unit && multipliers[unit]) {
-      multiplier = multipliers[unit];
-    } else if (key === 'DONE') {
-      const value = Math.min(max, Math.max(min, (Number(digits) || 0) * multiplier));
+
+    if (key === 'CANCEL') { close(); return; }
+    if (key === 'MODE') {
+      directMode = !directMode;
+      if (directMode) {
+        directInput.value = raw;
+        directInput.hidden = false;
+        display.hidden = true;
+        keypad.hidden = true;
+        directInput.focus();
+      } else {
+        raw = directInput.value.trim();
+        directInput.hidden = true;
+        display.hidden = false;
+        keypad.hidden = false;
+      }
+      update();
+      return;
+    }
+    if (key === 'DONE') {
+      const parsed = parseCompact(directMode ? directInput.value : raw);
+      if (parsed == null) {
+        resolved.textContent = 'Неверный формат. Например: 2.5M';
+        return;
+      }
+      const value = Math.min(max, Math.max(min, parsed));
       input.value = String(Math.round(value));
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
       close();
       return;
-    } else if (key === 'CLEAR') {
-      digits = '0'; multiplier = 1;
+    }
+    if (directMode) return;
+
+    if (unit && multipliers[unit]) {
+      const suffix = new RegExp('[KMBT]$', 'i');
+      raw = suffix.test(raw) ? raw.replace(suffix, unit) : raw + unit;
     } else if (key === 'BACK') {
-      digits = digits.length > 1 ? digits.slice(0, -1) : '0';
-    } else if (key === '.' && !digits.includes('.')) {
-      digits += '.';
-    } else if (/^\\d$/.test(key || '')) {
-      digits = digits === '0' ? key : digits + key;
+      raw = raw.slice(0, -1) || '0';
+    } else if (key === '.') {
+      const numericPart = raw.replace(/[KMBT]$/i, '');
+      if (!numericPart.includes('.')) raw = numericPart + '.' + (raw.match(/[KMBT]$/i)?.[0] || '');
+    } else if (/^\d$/.test(key || '')) {
+      const suffix = raw.match(/[KMBT]$/i)?.[0] || '';
+      const numericPart = raw.replace(/[KMBT]$/i, '');
+      raw = (numericPart === '0' ? key : numericPart + key) + suffix;
     } else {
       return;
     }
