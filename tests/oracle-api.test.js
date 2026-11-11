@@ -43,6 +43,32 @@ async function post(path, body) {
 try {
   await waitForServer();
 
+  const entryResponse = await fetch(`${baseUrl}/`);
+  assert.equal(entryResponse.status, 200, 'SPA entry point is served');
+  const entryHtml = await entryResponse.text();
+  assert.ok(entryHtml.includes('id="screen-container"'), 'served HTML contains the SPA mount point');
+  assert.ok(entryHtml.includes('./scripts/app.js'), 'served HTML loads the canonical client');
+
+  const clientResponse = await fetch(`${baseUrl}/scripts/app.js`);
+  assert.equal(clientResponse.status, 200, 'canonical SPA client is served');
+  assert.ok((await clientResponse.text()).includes('/api/oracle/calculate'), 'served client calls the Oracle');
+
+  const dataModuleResponse = await fetch(`${baseUrl}/scripts/data.js`);
+  assert.equal(dataModuleResponse.status, 200, 'canonical data module is served');
+  assert.ok((await dataModuleResponse.text()).includes('GAME_DB'), 'served data module exposes GAME_DB');
+
+  const engineResponse = await fetch(`${baseUrl}/scripts/engine.js`);
+  assert.equal(engineResponse.status, 200, 'canonical calculation engine is served');
+
+  const stylesheetResponse = await fetch(`${baseUrl}/assets/css/style.css`);
+  assert.equal(stylesheetResponse.status, 200, 'canonical stylesheet is served');
+  assert.ok((await stylesheetResponse.text()).includes('.numpad-overlay'), 'stylesheet includes the static keypad styles');
+
+  const sourceDataResponse = await fetch(`${baseUrl}/data/wardens.json`);
+  assert.equal(sourceDataResponse.status, 200, 'raw source tables are served');
+  const sourceWardens = await sourceDataResponse.json();
+  assert.equal(sourceWardens.length, 68, 'served Warden source table has all 68 entries');
+
   const healthResponse = await fetch(`${baseUrl}/api/health`);
   assert.equal(healthResponse.status, 200);
   const health = await healthResponse.json();
