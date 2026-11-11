@@ -597,7 +597,7 @@ async function render() {
   const db = getDbContext();
   const report = oracle.report;
 
-  const tabs = [
+  const allTabs = [
     ['dominance', '👑 Господство'],
     ['conclave', '🏛 Конклав и Сад'],
     ['levels', '🩸 Уровни и Кровь'],
@@ -608,42 +608,53 @@ async function render() {
     ['summon', '➕ Призыв'],
     ['bag', '🎒 Сумка и Очки'],
   ];
+  const navGroups = {
+    home: ['dominance'],
+    resources: ['levels', 'bag', 'summon'],
+    calculations: ['conclave', 'talents', 'auras', 'bonds', 'skins'],
+    settings: [],
+  };
+  const activeMain = state.activeTab === 'settings' ? 'settings'
+    : navGroups.resources.includes(state.activeTab) ? 'resources'
+    : navGroups.calculations.includes(state.activeTab) ? 'calculations' : 'home';
+  const visibleTabs = allTabs.filter(([id]) => navGroups[activeMain].includes(id));
 
   root.innerHTML = `
     <div class="app-shell">
-      <header class="top-bar">
+
+      <header class="top-bar bloodmoon-topbar">
         <div class="brand-block">
-          <div class="brand-crest">VD</div>
-          <div>
+          <div class="brand-crest"><img src="./assets/crest.svg" alt="VD" /></div>
+          <div class="brand-copy">
             <div class="brand-title">Vampire Dominion</div>
-            <div class="brand-sub">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · ручной профиль · Oracle v${oracle.meta.oracleVersion}</div>
+            <div class="brand-sub">OPTIMIST · ${state.profile.server || 'сервер не указан'} · локальный профиль</div>
           </div>
         </div>
-        <div class="top-actions">
-          <img class="profile-avatar" src="${getIconUrl(GAME_DB.wardens.find(w => w.id === Number(state.profile.avatarId))?.icon_path || GAME_DB.wardens[0]?.icon_path)}" alt="Портрет" />
-          <select class="select profile-avatar-select" id="profile-avatar-select" aria-label="Портрет">
-            ${GAME_DB.wardens.map(w => `<option value="${w.id}" ${Number(state.profile.avatarId) === w.id ? 'selected' : ''}>${tName('warden', w.name)}</option>`).join('')}
-          </select>
-          <button class="btn btn-sm" id="btn-profile-edit">Профиль</button>
+        <div class="profile-controls">
           <select class="select account-switch" id="account-switcher" aria-label="Аккаунт">
-            ${state.accounts.map(a => `<option value="${String(a.id).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" ${String(a.id) === String(state.activeAccountId) ? 'selected' : ''}>${String(a.name || 'Аккаунт').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')} · ${String(a.server || 'сервер не указан').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</option>`).join('')}
+            ${state.accounts.map(a => '<option value="' + String(a.id).replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"' + (String(a.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + String(a.name || 'Аккаунт').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + ' · ' + String(a.server || 'сервер не указан').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</option>').join('')}
           </select>
-          <button class="btn btn-sm" id="btn-new-account">＋ Аккаунт</button>
-          <button class="btn btn-sm" id="btn-game-connect">🔗 Игра</button>
-          <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Авторасчёт</button>
-          <button class="btn btn-sm" id="btn-theme">${state.settings.theme === 'light' ? '☀ Светлая' : '☾ Тёмная'}</button>
-          <button class="btn btn-sm" id="btn-lang">${state.lang.toUpperCase()}</button>
-          <button class="btn btn-sm" id="btn-export">💾 Экспорт</button>
-          <button class="btn btn-sm" id="btn-import">📂 Импорт</button>
-          <button class="btn btn-sm" id="btn-import-helper">🧩 Импорт дампа</button>
-          <button class="btn btn-sm btn-danger" id="btn-reset-account">🧹 Очистить калькулятор</button>
+          <button class="btn btn-sm profile-edit-btn" id="btn-profile-edit">Профиль</button>
+          <button class="btn btn-sm new-account-btn" id="btn-new-account" aria-label="Новый аккаунт">＋</button>
         </div>
       </header>
+      <section class="custom-hero bloodmoon-hero">
+        <div class="hero-crest"><img src="./assets/crest.svg" alt="" /></div>
+        <div class="custom-hero-overlay">
+          <div class="hero-title">OPTIMIST</div>
+          <div class="hero-subtitle">BLOOD MOON · VAMPIRE DOMINION</div>
+          <div class="hero-meta">${state.profile.name} · ${state.profile.server || 'сервер не указан'} · Oracle v${oracle.meta.oracleVersion}</div>
+          <div class="hero-actions">
+            <button class="btn btn-gold btn-sm" id="btn-auto-all">⚡ Авторасчёт</button>
+            <button class="btn btn-sm" id="btn-game-connect">🔗 Игра</button>
+          </div>
+        </div>
+      </section>
 
-      <nav class="nav-tabs">
-        ${tabs.map(([id, label]) => `
-          <button class="tab-btn ${state.activeTab === id ? 'active' : ''}" data-tab="${id}">${label}</button>
-        `).join('')}
+
+
+      <nav class="tabs-scroll bloodmoon-tabs" aria-label="Разделы">
+        ${visibleTabs.map(([id, label]) => '<button class="tab-link ' + (state.activeTab === id ? 'active' : '') + '" data-tab="' + id + '">' + label + '</button>').join('')}
       </nav>
 
       <main id="tab-view">
@@ -680,9 +691,13 @@ async function render() {
         ${oracle.warnings?.length ? `<section class="card"><div class="card-title">Ограничения расчёта</div>${oracle.warnings.map(item => `<div class="row-sub">⚠ ${item.message}</div>`).join('')}</section>` : ''}
         ${renderActiveTab(db, report, oracle)}
       </main>
-      <footer class="app-footnote">
-        <span>CRIMSON OBSIDIAN</span><span>Server Oracle · ручной ввод данных · без связи с игровым аккаунтом</span>
-      </footer>
+
+      <nav class="bottom-nav-bar bloodmoon-bottom-nav" id="bottom-nav" aria-label="Главная навигация">
+        <button class="nav-item ${activeMain === 'home' ? 'active' : ''}" data-main="home"><span class="nav-icon">🏰</span><span>Главная</span></button>
+        <button class="nav-item ${activeMain === 'resources' ? 'active' : ''}" data-main="resources"><span class="nav-icon">🎒</span><span>Ресурсы</span></button>
+        <button class="nav-item ${activeMain === 'calculations' ? 'active' : ''}" data-main="calculations"><span class="nav-icon">⚖️</span><span>Расчёты</span></button>
+        <button class="nav-item ${activeMain === 'settings' ? 'active' : ''}" data-main="settings"><span class="nav-icon">⚙️</span><span>Настройки</span></button>
+      </nav>
     </div>
   `;
 
@@ -691,6 +706,7 @@ async function render() {
 
 function renderActiveTab(db, report, oracle) {
   switch (state.activeTab) {
+    case 'settings': return renderSettingsTab();
     case 'dominance': return renderDominanceTab(db, report);
     case 'conclave': return renderConclaveGardenTab(db, report, oracle);
     case 'levels': return renderLevelsTab(db, report, oracle);
@@ -702,6 +718,47 @@ function renderActiveTab(db, report, oracle) {
     case 'bag': return renderBagTab(db, report, oracle);
     default: return renderDominanceTab(db, report);
   }
+}
+
+
+function renderSettingsTab() {
+  return `
+    <section class="card card-gold settings-card">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Настройки профиля</div>
+          <div class="row-sub">Локальные параметры приложения и аккаунта</div>
+        </div>
+        <span class="badge badge-gold">OPTIMIST</span>
+      </div>
+      <div class="settings-grid">
+        <div>
+          <label class="row-sub" for="profile-avatar-select">Портрет аккаунта</label>
+          <div class="avatar-picker-row">
+            <img class="profile-avatar-large" src="${getIconUrl(GAME_DB.wardens.find(w => w.id === Number(state.profile.avatarId))?.icon_path || GAME_DB.wardens[0]?.icon_path)}" alt="Портрет" />
+            <select class="select" id="profile-avatar-select" aria-label="Портрет">
+              ${GAME_DB.wardens.map(w => '<option value="' + w.id + '"' + (Number(state.profile.avatarId) === w.id ? ' selected' : '') + '>' + tName('warden', w.name) + '</option>').join('')}
+            </select>
+          </div>
+        </div>
+        <div>
+          <div class="row-sub">Текущий профиль</div>
+          <div class="settings-value">${state.profile.name} · ${state.profile.server || 'сервер не указан'}</div>
+          <button class="btn btn-sm" id="btn-profile-edit-settings">Изменить профиль</button>
+        </div>
+      </div>
+      <div class="settings-actions">
+        <button class="btn" id="btn-theme">${state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема'}</button>
+        <button class="btn" id="btn-lang">🌐 ${state.lang.toUpperCase()}</button>
+        <button class="btn" id="btn-export">💾 Экспорт профиля</button>
+        <button class="btn" id="btn-import">📂 Импорт профиля</button>
+        <button class="btn" id="btn-import-helper">🧩 Импорт JSON «Помощника Дампира»</button>
+        <button class="btn" id="btn-game-connect-panel">🔗 Подключение к игре</button>
+        <button class="btn btn-danger" id="btn-reset-account">🧹 Очистить калькулятор</button>
+      </div>
+      <div class="row-sub settings-note">Профиль и введённые значения хранятся локально в браузере. Экспортируй резервную копию перед очисткой или переносом на другое устройство.</div>
+    </section>
+  `;
 }
 
 function renderDominanceTab(db, report) {
@@ -1351,6 +1408,7 @@ function bindNumericPad() {
 function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
   document.getElementById('btn-profile-edit')?.addEventListener('click', editProfile);
+  document.getElementById('btn-profile-edit-settings')?.addEventListener('click', editProfile);
   document.getElementById('profile-avatar-select')?.addEventListener('change', event => { state.profile.avatarId = Number(event.target.value); saveState(); render(); });
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
@@ -1364,6 +1422,16 @@ function bindEvents(db) {
   });
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
+  document.querySelectorAll('[data-main]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const destination = btn.dataset.main;
+      state.activeTab = destination === 'home' ? 'dominance'
+        : destination === 'resources' ? 'levels'
+        : destination === 'calculations' ? 'conclave' : 'settings';
+      saveState();
+      render();
+    });
+  });
   document.querySelectorAll('[data-tab]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.activeTab = btn.dataset.tab;
