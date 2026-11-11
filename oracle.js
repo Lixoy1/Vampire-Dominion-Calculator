@@ -2182,6 +2182,19 @@ export function importDhampirSnapshot(input = {}) {
     if (levels.best_path !== undefined) apiObservations.levelBestPath = clone(levels.best_path);
     if (conclave.best_path !== undefined) apiObservations.conclaveBestPath = clone(conclave.best_path);
     if (object.books !== undefined) apiObservations.books = clone(object.books);
+
+    const guild = record(object.guildProgress ?? object.guild_progress ?? object.guild);
+    const candidate = Object.keys(guild).length ? guild : object;
+    if (candidate.level !== undefined && candidate.exp !== undefined &&
+        (candidate.next_level_exp !== undefined || candidate.nextLevelExp !== undefined ||
+         object.guildProgress !== undefined || object.guild_progress !== undefined || object.guild !== undefined)) {
+      account.guildProgress = {
+        exp: nonNegative(candidate.exp),
+        level: Math.max(0, Math.min(999, Math.round(numeric(candidate.level)))),
+        nextLevelExp: nonNegative(candidate.next_level_exp ?? candidate.nextLevelExp),
+      };
+      summary.guildProgress = true;
+    }
     apiObservations.responseCount++;
   };
 
