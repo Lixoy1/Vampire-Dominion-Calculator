@@ -1926,6 +1926,12 @@ function bindNumericPad() {
   if (!modalControlsBound) {
     modalControlsBound = true;
     document.getElementById('modal-close')?.addEventListener('click', closeAppModal);
+    document.getElementById('modal-body')?.addEventListener('click', event => {
+      const button = event.target.closest('[data-modal-nav]');
+      if (!button) return;
+      closeAppModal();
+      navigate(button.dataset.modalNav);
+    });
     document.getElementById('modal-overlay')?.addEventListener('click', event => {
       if (event.target === event.currentTarget) closeAppModal();
     });
@@ -1936,9 +1942,7 @@ function bindNumericPad() {
     document.querySelectorAll('#bottom-nav [data-target]').forEach(button => {
       button.addEventListener('click', () => {
         const destination = button.dataset.target;
-        state.activeTab = destination === 'home' ? 'dominance'
-          : destination === 'resources' ? 'levels'
-          : destination === 'calculations' ? 'conclave' : 'settings';
+        state.screen = destination;
         document.querySelectorAll('#bottom-nav [data-target]').forEach(item => {
           item.classList.toggle('active', item === button);
         });
@@ -1949,6 +1953,275 @@ function bindNumericPad() {
   }
 }
 
+function bindSpaEvents(db, report, oracle) {
+  const root = document.getElementById('screen-container');
+  if (!root) return;
+
+  root.querySelectorAll('[data-nav]').forEach(function (button) {
+    button.addEventListener('click', async function () { navigate(button.dataset.nav); });
+  });
+
+  root.querySelectorAll('[data-action]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const action = button.dataset.action;
+      if (action === 'quick-calc') return openQuickCalculation();
+      if (action === 'formula-info') return openFormulaInfo();
+      if (action === 'nav') return navigate(button.dataset.screen);
+      if (action === 'undo') return undoSpa();
+      if (action === 'redo') return redoSpa();
+      if (action === 'open-warden') {
+        state.currentWardenId = Number(button.dataset.id);
+        state.wardenTab = 'attributes';
+        return navigate('warden-detail');
+      }
+      if (action === 'open-warden-picker') return navigate('wardens_list');
+      if (action === 'set-warden-tab') { state.wardenTab = button.dataset.tab; return render(); }
+      if (action === 'toggle-attr-detail') { state.expandedAttr = state.expandedAttr === button.dataset.attr ? null : button.dataset.attr; return render(); }
+      if (action === 'toggle-warden-sort') { state.wardenListSort = state.wardenListSort === 'sum' ? 'name' : 'sum'; return render(); }
+      if (action === 'warden-filter') { state.wardenListFilter = button.dataset.val; return render(); }
+      if (action === 'open-add-warden') {
+        const choices = db.wardens.filter(function (warden) { return !state.account.ownedWardens[warden.id]; });
+        const answer = globalThis.prompt('Введите ID смотрителя:\n' + choices.slice(0, 30).map(function (warden) { return warden.id + ' — ' + tName('warden', warden.name); }).join('\n'));
+        const warden = db.wardens.find(function (item) { return item.id === Number(answer); });
+        if (!warden) return;
+        pushUndoSnapshot();
+        state.account.ownedWardens[warden.id] = createOwnedWarden(warden);
+        state.currentWardenId = warden.id;
+        saveState();
+        return navigate('warden-detail');
+      }
+      if (action === 'delete-warden') {
+        if (!globalThis.confirm('Удалить смотрителя из профиля?')) return;
+        pushUndoSnapshot();
+        delete state.account.ownedWardens[Number(button.dataset.id)];
+        saveState();
+        return navigate('wardens_list');
+      }
+      if (action === 'open-lover') { state.currentLoverId = Number(button.dataset.id); return navigate('lover-detail'); }
+      if (action === 'open-add-lover') {
+        const choices = db.lovers.filter(function (lover) { return !state.account.ownedLovers[lover.id]; });
+        const answer = globalThis.prompt('Введите ID партнёра:\n' + choices.slice(0, 30).map(function (lover) { return lover.id + ' — ' + tName('lover', lover.name); }).join('\n'));
+        const lover = db.lovers.find(function (item) { return item.id === Number(answer); });
+        if (!lover) return;
+        pushUndoSnapshot();
+        state.account.ownedLovers[lover.id] = createOwnedLover(lover);
+        state.currentLoverId = lover.id;
+        saveState();
+        return navigate('lover-detail');
+      }
+      if (action === 'add-lover') {
+        const lover = db.lovers.find(function (item) { return item.id === Number(button.dataset.id); });
+        if (!lover) return;
+        pushUndoSnapshot();
+        state.account.ownedLovers[lover.id] = createOwnedLover(lover);
+        state.currentLoverId = lover.id;
+        saveState();
+        return navigate('lover-detail');
+      }
+      if (action === 'skin-step') {
+        const id = Number(button.dataset.skin);
+        const delta = Number(button.dataset.delta);
+        const skin = db.wardens.flatMap(function (warden) { return warden.skins || []; }).concat(db.lovers.flatMap(function (lover) { return lover.skins || []; })).find(function (item) { return item.id === id; });
+        if (!skin) return;
+        pushUndoSnapshot();
+        state.account.skins[id] = Math.min(Number(skin.max_lvl || 10), Math.max(0, Number(state.account.skins[id] || 0) + delta));
+        saveState();
+        return render();
+      }
+      if (action === 'skin-tab') { state.skinTab = button.dataset.tab; return render(); }
+      if (action === 'bag-cat') { state.bagCategory = button.dataset.cat; return render(); }
+      if (action === 'bag-view') { state.bagView = button.dataset.view; return render(); }
+      if (action === 'toggle-bag-all') { state.bagShowAll = !state.bagShowAll; return render(); }
+      if (action === 'edit-bag-item') {
+        const itemId = Number(button.dataset.id);
+        const current = Number(state.account.bag[itemId] || 0);
+        const answer = globalThis.prompt('Количество предмета:', String(current));
+        if (answer == null) return;
+        pushUndoSnapshot();
+        state.account.bag[itemId] = Math.max(0, Number(answer) || 0);
+        saveState();
+        return render();
+      }
+      if (action === 'auto-conclave') {
+        pushUndoSnapshot();
+        try {
+          const result = await requestOracle('/api/oracle/auto-conclave', { account: state.account, plan: state.plan });
+          state.plan.conclave = result.levels || result.plan?.conclave || state.plan.conclave;
+          saveState();
+          return render();
+        } catch (error) {
+          alert(error.message || 'Oracle не смог распределить Конклав.');
+          return;
+        }
+      }
+      if (action === 'reset-account') {
+        if (!globalThis.confirm('Полностью очистить текущий профиль и все его ресурсы?')) return;
+        pushUndoSnapshot();
+        state.account = createBlankAccountData();
+        state.plan = createBlankPlan(state.account);
+        saveState();
+        return navigate('resources');
+      }
+    });
+  });
+
+  root.querySelectorAll('[data-spa-search]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      const key = input.dataset.spaSearch;
+      if (key === 'warden') state.wardenListSearch = input.value;
+      if (key === 'lover') state.loverListSearch = input.value;
+      if (key === 'skin') state.skinSearch = input.value;
+      if (key === 'warden-exp') state.wardenExpSearch = input.value;
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-resource-field]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const key = input.dataset.resourceField;
+      const value = Math.max(0, Number(input.value) || 0);
+      if (key === 'blood' || key === 'conclaveExp' || key === 'courtyardExp') state.account[key] = value;
+      if (key === 'courtyardLvl') state.account.courtyardLvl = Math.min(210, value);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-warden-field]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedWardens[Number(state.currentWardenId)];
+      if (!owned) return;
+      const key = input.dataset.spaWardenField;
+      const value = Math.max(0, Number(input.value) || 0);
+      if (key === 'level') owned.level = Math.min(450, Math.max(1, value));
+      if (key === 'promoteId') owned.promoteId = Math.min(8, Math.max(1, value));
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-conclave-level]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      state.account.conclave[input.dataset.spaConclaveLevel] = Math.min(180, Math.max(0, Number(input.value) || 0));
+      state.plan.conclave[input.dataset.spaConclaveLevel] = state.account.conclave[input.dataset.spaConclaveLevel];
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-warden-book]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedWardens[Number(state.currentWardenId)];
+      if (!owned) return;
+      owned.books = owned.books || {};
+      owned.books[input.dataset.spaWardenBook] = Math.max(0, Number(input.value) || 0);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-warden-talent]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedWardens[Number(state.currentWardenId)];
+      if (!owned) return;
+      owned.talents = owned.talents || {};
+      owned.talents[input.dataset.spaWardenTalent] = Math.max(1, Number(input.value) || 1);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-warden-aura]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedWardens[Number(state.currentWardenId)];
+      if (!owned) return;
+      owned.auras = owned.auras || {};
+      owned.auras[input.dataset.spaWardenAura] = Math.max(0, Number(input.value) || 0);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-warden-exp]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedWardens[Number(input.dataset.wid)];
+      if (!owned) return;
+      owned.exp = Math.max(0, Number(input.value) || 0);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-quick-exp]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      const id = Number(input.dataset.spaQuickExp);
+      const warden = db.wardens.find(function (item) { return item.id === id; });
+      if (!warden) return;
+      pushUndoSnapshot();
+      if (!state.account.ownedWardens[id]) state.account.ownedWardens[id] = createOwnedWarden(warden);
+      state.account.ownedWardens[id].exp = Math.max(0, Number(input.value) || 0);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-lover-sex]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      const owned = state.account.ownedLovers[Number(input.dataset.spaLoverSex)];
+      if (!owned) return;
+      owned.sex = input.value;
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-skin-meta]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      pushUndoSnapshot();
+      state.account[input.dataset.spaSkinMeta] = Math.max(0, Number(input.value) || 0);
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-spa-profile]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      state.profile[input.dataset.spaProfile] = input.value.trim();
+      saveState();
+      render();
+    });
+  });
+
+  root.querySelectorAll('[data-profile-field]').forEach(function (input) {
+    input.addEventListener('change', function () {
+      state.profile[input.dataset.profileField] = input.value.trim();
+      saveState();
+      render();
+    });
+  });
+
+  document.getElementById('btn-create-account-settings')?.addEventListener('click', createNewAccount);
+
+  root.querySelectorAll('#profile-avatar-select').forEach(function (input) {
+    input.addEventListener('change', function () {
+      state.profile.avatarId = Number(input.value) || 10010;
+      saveState();
+      render();
+    });
+  });
+}
+
+// Override the earlier tab renderer: the app now follows the multi-screen SPA flow.
+
 function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
   document.getElementById('btn-profile-edit')?.addEventListener('click', editProfile);
@@ -1956,6 +2229,7 @@ function bindEvents(db) {
   document.getElementById('profile-avatar-select')?.addEventListener('change', event => { state.profile.avatarId = Number(event.target.value); saveState(); render(); });
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
   document.getElementById('btn-new-account')?.addEventListener('click', createNewAccount);
+  document.getElementById('btn-create-account-settings')?.addEventListener('click', createNewAccount);
   document.getElementById('btn-reset-account')?.addEventListener('click', () => {
     const ok = globalThis.confirm?.('Полностью очистить текущий аккаунт? Будут удалены смотрители, партнёры, уровни, ресурсы, предметы и план прокачки. Экспортируй профиль заранее, если хочешь сохранить копию.') ?? false;
     if (!ok) return;
@@ -1966,13 +2240,6 @@ function bindEvents(db) {
   });
   document.getElementById('btn-game-connect')?.addEventListener('click', explainGameConnection);
   document.getElementById('btn-game-connect-panel')?.addEventListener('click', explainGameConnection);
-  document.querySelectorAll('[data-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      state.activeTab = btn.dataset.tab;
-      saveState();
-      render();
-    });
-  });
 
   document.getElementById('btn-lang')?.addEventListener('click', () => {
     state.lang = state.lang === 'ru' ? 'en' : 'ru';
