@@ -107,6 +107,11 @@ function normalizeAccount(input = {}) {
     ownedWardens,
     ownedLovers,
     bag,
+    guildProgress: {
+      exp: nonNegative(record(account.guildProgress || account.guild).exp),
+      level: Math.max(0, Math.min(999, Math.round(numeric(record(account.guildProgress || account.guild).level)))),
+      nextLevelExp: nonNegative(record(account.guildProgress || account.guild).nextLevelExp ?? record(account.guild).next_level_exp),
+    },
     skins: record(account.skins),
   };
 }
@@ -403,6 +408,7 @@ export function calculateOracle(input = {}) {
     report,
     inventory,
     eventCalculators,
+    guildProgress: account.guildProgress,
     skins,
     conclaveBranches,
     courtyardUpgrade,
