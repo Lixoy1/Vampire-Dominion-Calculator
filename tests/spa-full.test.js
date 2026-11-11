@@ -9,7 +9,7 @@ const css = read('../assets/css/style.css');
 function fn(name) {
   const start = new RegExp('^(?:async\\s+)?function\\s+' + name + '\\s*\\(', 'm').exec(app);
   assert.ok(start, 'function ' + name + ' exists');
-  const next = /^(?:async\\s+)?function\\s+[A-Za-z0-9_$]+\\s*\\(/gm;
+  const next = new RegExp('^(?:async\\s+)?function\\s+[A-Za-z0-9_$]+\\s*\\(', 'gm');
   next.lastIndex = start.index + 1;
   const end = next.exec(app);
   return app.slice(start.index, end ? end.index : app.length);
@@ -37,7 +37,7 @@ assert.ok(!wardenStats.includes('calcAuraPercent('), 'Warden details do not calc
 
 const wardenDetail = fn('renderWardenDetailScreen');
 assert.ok(wardenDetail.includes('oracleWarden?.auras'), 'Warden aura values come from Oracle');
-assert.ok(wardenDetail.includes('oracleWarden?.baseAttributes'), 'Warden base attributes are displayed from Oracle');
+assert.ok(wardenStats.includes('server?.baseAttributes'), 'Warden base attributes are read from Oracle');
 assert.ok(!wardenDetail.includes('calcAuraPercent('), 'Warden detail has no local aura formula');
 
 const loverDetail = fn('renderLoverDetailScreen');
