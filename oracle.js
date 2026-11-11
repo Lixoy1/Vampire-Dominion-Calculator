@@ -937,7 +937,7 @@ export function autoDistributeBondPlan(input = {}) {
     let localAddedAffinity = 0;
     let localGain = 0;
 
-    for (let guard = 0; guard < 4 * 600; guard++) {
+    for (let guard = 0; guard < 8 * 600; guard++) {
       if (remaining <= 0) break;
       let best = null;
       for (const bond of lover.scarlet_bonds) {
@@ -1705,6 +1705,8 @@ export function getOracleCapabilities() {
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
       'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula and is not game-server verified.',
+      'Aura levels are manually entered because no complete per-level upgrade-cost table is present in the catalogue.',
+      'Skin auto-ranking is disabled because verified per-level next-gain values are unavailable for all skins.',
     ],
   };
 }
