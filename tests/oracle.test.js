@@ -10,6 +10,7 @@ import {
   autoDistributeConclave,
   commitOraclePlan,
   summonWarden,
+  summonLover,
   getOracleCapabilities,
 } from '../oracle.js';
 
@@ -175,6 +176,31 @@ function walkNumbers(value, path = 'root') {
   const duplicate = summonWarden({ account: summoned.account, wardenId: warden.id });
   assert.equal(duplicate.ok, false);
   assert.equal(duplicate.error.code, 'WARDEN_ALREADY_OWNED');
+}
+
+
+{
+  const account = makeAccount();
+  delete account.ownedLovers[lover.id];
+  const candidate = calculateOracle({ account, plan: makePlan() }).summonCandidates.lovers.find(item => item.id === lover.id);
+  assert.ok(candidate, 'reference lover is available as a summon candidate');
+  if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = candidate.cost;
+
+  const original = structuredClone(account);
+  const summoned = summonLover({ account, loverId: lover.id });
+  assert.equal(summoned.ok, true);
+  assert.ok(summoned.account.ownedLovers[lover.id]);
+  assert.deepEqual(account, original, 'lover summon does not mutate submitted profile');
+
+  const duplicate = summonLover({ account: summoned.account, loverId: lover.id });
+  assert.equal(duplicate.ok, false);
+  assert.equal(duplicate.error.code, 'LOVER_ALREADY_OWNED');
+
+  const plan = makePlan();
+  plan.summons.lovers = [lover.id];
+  const committed = commitOraclePlan({ account, plan });
+  assert.equal(committed.ok, true, 'commit plan applies lover summon');
+  assert.ok(committed.account.ownedLovers[lover.id]);
 }
 
 console.log('PASS unified server Oracle tests');
