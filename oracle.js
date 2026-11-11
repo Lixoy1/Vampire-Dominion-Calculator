@@ -1097,6 +1097,22 @@ export function commitOraclePlan(input = {}) {
   // breakthrough items and summons. Script requirements use expected tries
   // from the reference engine (one try per talent star).
   const talentUsage = getTalentPlanUsage(plan, draft.ownedWardens);
+  for (const [wardenId, count] of Object.entries(talentUsage.expByWarden)) {
+    const available = draft.ownedWardens[wardenId]?.exp || 0;
+    if (available < count) {
+      return {
+        ok: false,
+        error: {
+          code: 'INSUFFICIENT_TALENT_EXP',
+          wardenId: Number(wardenId),
+          required: count,
+          available,
+          message: 'Недостаточно личного опыта талантов у смотрителя для выбранного плана.',
+        },
+      };
+    }
+    draft.ownedWardens[wardenId].exp = available - count;
+  }
   for (const [itemId, count] of Object.entries(talentUsage.byItem)) {
     const available = draft.bag[itemId] || 0;
     if (available < count) {
@@ -1243,7 +1259,8 @@ export function commitOraclePlan(input = {}) {
     const selected = record(selectedRaw);
     for (let position = 0; position < warden.talents.length; position++) {
       const increments = Math.max(0, numeric(record(selected.scrolls)[position]))
-        + Math.max(0, numeric(record(selected.scripts)[position]));
+        + Math.max(0, numeric(record(selected.scripts)[position]))
+        + Math.max(0, numeric(record(selected.exp_levels)[position]));
       if (!increments) continue;
       const cap = db.promotes.find(item => item.id === (wardenPromotes[wardenId] || owned.promoteId || 1))?.max_talent_lvl ?? 40;
       const currentLevel = Math.max(1, numeric(owned.talents[position], 1));
