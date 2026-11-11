@@ -20,7 +20,7 @@ for (const name of [
   'renderWardensListScreen', 'renderWardenDetailScreen', 'renderLoversScreen',
   'renderLoverDetailScreen', 'renderBagScreen', 'renderSkinsScreen',
   'renderConclaveScreen', 'renderWardenExpScreen', 'renderCalculationsHubScreen',
-  'renderDominanceCalcScreen', 'renderIntimacyCalcScreen', 'renderSettingsScreen',
+  'renderDominanceCalcScreen', 'renderTalentsTab', 'renderIntimacyCalcScreen', 'renderSettingsScreen',
   'openQuickCalculation', 'openFormulaInfo', 'bindSpaEvents',
 ]) {
   fn(name);
@@ -65,7 +65,7 @@ assert.ok(events.includes("action === 'formula-info'"), 'formula explanation mod
 
 assert.ok(fn('renderHomeScreen').includes('data-action="quick-calc"'), 'home screen opens Quick Calculation');
 assert.ok(fn('renderSubToolbar').includes('data-action="formula-info"'), 'subscreens expose formula explanations');
-assert.ok(fn('renderSettingsScreen').includes('renderServerSnapshotCard()'), 'settings display the source/verification panel');
+assert.ok(fn('renderSettingsScreen').includes('renderProjectInfoCard()'), 'settings display the community project description');
 assert.ok(app.includes('state.screen = destination;'), 'persistent navigation targets the new SPA screens');
 assert.ok(!app.includes("document.querySelectorAll('[data-tab]')"), 'nested entity tabs do not conflict with a global tab handler');
 
@@ -82,5 +82,23 @@ assert.ok(css.includes('url("../../1000019874.png")'), 'summon and settings refe
 assert.ok(fn('renderSpaScreen').includes("case 'summon':"), 'summon has a first-class SPA route');
 assert.ok(fn('renderResourcesScreen').includes("data-screen=\"summon\""), 'resources screen links to summon');
 
+
+
+const talentScreen = fn('renderTalentsTab');
+assert.ok(fn('renderSpaScreen').includes("case 'calc_talents': return renderSubToolbar('calculations', 'Таланты и опыт') + renderTalentsTab(db, oracle)"), 'talent route passes the Oracle snapshot and does not crash');
+assert.ok(talentScreen.includes('oracle = oracle || {}'), 'talent renderer safely handles a missing snapshot');
+assert.ok(talentScreen.includes('Как работает расчёт талантов'), 'talent screen contains contextual explanations');
+assert.ok(talentScreen.includes('200 EXP'), 'talent screen explains the experience conversion');
+assert.ok(talentScreen.includes('btn-auto-talents') && talentScreen.includes('btn-commit-plan') && talentScreen.includes('btn-reset-plan'), 'talent plan can be calculated, applied or cancelled');
+
+const numericPad = fn('openNumericPad');
+assert.ok(numericPad.includes('parseCompact'), 'numeric keypad parses compact suffix values');
+assert.ok(numericPad.includes('MODE') && numericPad.includes('directInput'), 'numeric keypad supports direct text entry');
+assert.ok(numericPad.includes('KMBT'), 'numeric keypad supports K/M/B/T suffixes');
+assert.ok(html.includes('data-key="MODE"') && html.includes('data-mult="K"') && html.includes('data-mult="T"'), 'keypad markup includes mode and suffix keys');
+assert.ok(css.includes('grid-template-columns:repeat(4,minmax(0,1fr))'), 'compact keypad uses a four-column layout');
+assert.ok(css.includes('.talent-help-card') && css.includes('.talent-help-list'), 'talent explanations have mobile styling');
+assert.ok(!app.includes('Помощник Дампира') && !html.includes('Помощник Дампира'), 'legacy helper branding is absent from the app');
+assert.ok(!app.includes('/api/oracle/import-helper'), 'legacy third-party JSON import is absent from the client');
 
 console.log('PASS full SPA screen routes, Oracle-only detail formulas, and modal actions');
