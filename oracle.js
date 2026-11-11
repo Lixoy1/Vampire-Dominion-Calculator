@@ -565,6 +565,46 @@ export function calculateOracle(input = {}) {
     };
   }
 
+  // Aura percentages modify talent/book efficiency; presence percentages are
+  // separate attribute modifiers. Keep them visible, but outside raw dominance
+  // until the game-side stacking formula is verified.
+  const modifierBreakdown = {
+    auras: { talent: {}, book: {}, totalByAttribute: {} },
+    presences: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    notes: [
+      'Проценты аур показаны как модификаторы эффективности талантов/книг и не прибавляются напрямую к Господству.',
+      'Проценты Веяний показаны отдельно; их преобразование в абсолютное Господство не подтверждено игровым контрольным значением.',
+    ],
+  };
+  for (const attr of ATTRIBUTES) {
+    modifierBreakdown.auras.talent[attr] = 0;
+    modifierBreakdown.auras.book[attr] = 0;
+    modifierBreakdown.auras.totalByAttribute[attr] = 0;
+  }
+  for (const warden of db.wardens) {
+    const owned = account.ownedWardens[warden.id];
+    if (!owned) continue;
+    for (const aura of warden.auras || []) {
+      const level = owned.auras?.[aura.id] ?? aura.min_lvl ?? 0;
+      const percent = Engine.calcAuraPercent(aura, level);
+      const kind = aura.bonus_type === 'book' ? 'book' : 'talent';
+      for (const attr of aura.attributes || []) {
+        if (!ATTRIBUTES.includes(attr)) continue;
+        modifierBreakdown.auras[kind][attr] += percent;
+        modifierBreakdown.auras.totalByAttribute[attr] += percent;
+      }
+    }
+  }
+  for (const lover of db.lovers) {
+    const owned = account.ownedLovers[lover.id];
+    if (!owned) continue;
+    for (const presence of lover.presences || []) {
+      const level = owned.presences?.[presence.id] ?? presence.min_lvl ?? 0;
+      const percents = Engine.calcPresencePercents(presence, level, db.presenceCurvesMap);
+      for (const attr of ATTRIBUTES) modifierBreakdown.presences[attr] += numeric(percents[attr]);
+    }
+  }
+  report.modifiers = modifierBreakdown;
   const inventory = Engine.summarizeBag(db.items, account.bag);
   // Event and guild calculators use the same server-side inventory snapshot.
   // The three-day donation cap is part of the reference helper's calculation.
