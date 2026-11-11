@@ -388,7 +388,7 @@ export function autoDistributeTalents(talentsBlock, currentPlan) {
       const current = Math.max(0, Number(nextPlan[wId]?.exp_levels?.[line.position]) || 0);
       const maxTotal = Math.max(0, Number(line.max_chosen) || 0);
       const room = Math.max(0, Math.min(
-        Number(line.cap) - Number(line.final),
+        getRoom(wId, line.position),
         maxTotal - current
       ));
       return { line, current, room, weight: Math.max(1, Math.round(Number(line.next_cost) || 1)) };
@@ -440,7 +440,6 @@ export function autoDistributeTalents(talentsBlock, currentPlan) {
     for (const [item, count] of selected) {
       const target = item.current + count;
       if (setPlanValue(wId, 'exp_levels', item.line.position, target)) {
-        left > 0;
       }
     }
   }
