@@ -156,6 +156,23 @@ function walkNumbers(value, path = 'root') {
 }
 
 {
+  const warden = GAME_DB.wardens.find(item => item.id === 10510);
+  const lover = GAME_DB.lovers.find(item => item.id === 20510);
+  assert.ok(warden && lover && warden.summon_item_id && lover.summon_item_id);
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {}, ownedLovers: {},
+    bag: {
+      [warden.summon_item_id]: warden.summon_item_count,
+      [lover.summon_item_id]: lover.summon_item_count,
+    },
+  };
+  const auto = autoDistributeAll({ account, plan: {} });
+  assert.ok(auto.plan.summons.wardens.includes(warden.id), 'auto-distribute selects an affordable Warden');
+  assert.ok(auto.plan.summons.lovers.includes(lover.id), 'auto-distribute selects the matching Lover after the Warden');
+}
+
+{
   const account = makeAccount();
   const committed = commitOraclePlan({ account, plan: makePlan() });
   assert.equal(committed.ok, true);
@@ -211,6 +228,12 @@ function walkNumbers(value, path = 'root') {
 
 
 {
+  const snapshotFromLegacyGuild = calculateOracle({
+    account: { guild: { exp: 6800, level: 11, next_level_exp: 7000 } },
+    plan: {},
+  });
+  assert.deepEqual(snapshotFromLegacyGuild.guildProgress, { exp: 6800, level: 11, nextLevelExp: 7000 });
+
   const account = makeAccount();
   account.bag = { 4230: 2, 4235: 3, 4005: 2, 4002: 4, 4821: 1 };
   const snapshot = calculateOracle({ account, plan: makePlan() });
