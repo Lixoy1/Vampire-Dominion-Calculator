@@ -544,14 +544,14 @@ function walkNumbers(value, path = 'root') {
     (calcWardenLevelMultiplier(21) - calcWardenLevelMultiplier(20))
   );
   assert.equal(
-    combinedPreview.report.gain.level,
+    combinedPreview.report.gain.levels,
     expectedCombinedLevelGain,
     'Warden level gain includes the planned talent levels instead of the old talent baseline'
   );
-  assert.ok(combinedPreview.report.gain.level > 0);
+  assert.ok(combinedPreview.report.gain.levels > 0);
   assert.equal(
     combinedPreview.report.gain.total,
-    combinedPreview.report.gain.level + combinedPreview.report.gain.talents,
+    combinedPreview.report.gain.levels + combinedPreview.report.gain.talents,
     'unified dominance total includes both talent and Warden-level interactions'
   );
 
