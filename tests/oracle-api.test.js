@@ -140,6 +140,25 @@ try {
   assert.ok(autoTalents.result.summary.plannedLevels > 0);
   assert.ok(autoTalents.result.plan.talents[talentWarden.id]);
 
+  const expWardenApi = GAME_DB.wardens.find(item =>
+    item.talents?.some(t => t.stars === 1) && item.talents?.some(t => t.stars === 2)
+  );
+  const expOnlyResponse = await post('/api/oracle/auto-talents', {
+    account: {
+      blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+      conclave: {}, ownedWardens: {
+        [expWardenApi.id]: { level: 20, promoteId: 1, exp: 600, talents: {}, auras: {} },
+      },
+      ownedLovers: {}, bag: {}, skins: {},
+    },
+    plan: {},
+  });
+  assert.equal(expOnlyResponse.status, 200);
+  const expOnly = await expOnlyResponse.json();
+  assert.equal(expOnly.ok, true);
+  assert.equal(expOnly.result.summary.expSpentTotal, 600);
+  assert.ok(expOnly.result.plan.talents[expWardenApi.id].exp_levels);
+
   const talentCalculateResponse = await post('/api/oracle/calculate', {
     account: talentAccount,
     plan: autoTalents.result.plan,
