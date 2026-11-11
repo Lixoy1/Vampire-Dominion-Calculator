@@ -149,34 +149,24 @@ Talent plans may include `plan.talents[wardenId].exp_levels[position]` in additi
 The all-in-one planner now reserves manually selected skin cards and fabric after breakthrough materials and before talent, summon and presence allocation. It then carries one remaining-item ledger forward through those branches. Skin auto-ranking itself remains unavailable because the catalogue has no reliable per-level gain values for every skin; aura auto-upgrades remain unavailable because per-level item prices are not present in the supplied catalogue.
 
 
-## Validation matrix — workbook reference vs game verification
 
-The project distinguishes three evidence classes:
+## Helper API source of truth
 
-1. **Third-party Helper API catalogue** — structured reference data used for IDs, caps and progression curves. It is not an official Game of Vampires server response.
-2. **Legacy Excel/workbook fixtures** — useful regression inputs for reproducing that workbook's formulas. The extracted workbook instruction explicitly warns that most table values no longer match the game screenshots. These fixtures are not game-truth.
-3. **Live-game control observations** — exact values transcribed from the game client with a before/after state, server/region and timestamp. No complete set of such paired observations is currently attached to the project.
+The calculation target is parity with the **API responses from «Помощник Дампира»** that the user extracted in developer mode and confirmed as correct. These responses are treated as the project's authoritative reference for reproducing the Helper calculator. No separate in-game screenshot is required to accept a Helper API value.
 
-### Current measured comparison
+The catalogue JSON tables bundled with the project are the source for entity IDs and progression rows: Wardens, Lovers, Items, Warden promotions, Conclave, Courtyard and Presence curves. The user profile can additionally import dynamic API responses. The importer unwraps common `data` / `result` / `response` / `payload` envelopes and reads:
 
-| Case | Workbook/reference result | Current Oracle/catalogue | Status |
-|---|---:|---:|---|
-| Conclave sample gain | 4,994,446 | 4,994,446 with the sample's entered attribute totals | Gain formula matches this workbook fixture |
-| Conclave sample cost | 62,440,000 | 62,622,720 from Helper progression rows | Difference 182,720; unresolved, no catalogue overwrite |
-| Rudra level 350 → 375 | 15,426,249.48 dominance; 89,043,997,100 Blood | Not directly comparable: workbook fixture includes inspiration and talent planning; current Blood curve is explicitly approximate | Requires paired in-game measurement |
-| Books | Workbook corrected sample 11,693,185.5 | No applied-book attribute totals in the current account model | Not included in absolute Oracle dominance |
-| Tasting / miscellaneous | Workbook sample 35,800 / 9,104,700 | Not represented as absolute dominance in the current Oracle | Separate calculators still needed |
+- Warden and Lover rows, including current levels, EXP, Closeness, Affinity, `filled` and source `dominance`;
+- `levels.wardens` next-step values (`next_cost`, `next_gain`, `next_kind`);
+- nested aura levels and `auras.items[].best_path.cost/gain`;
+- `talents.scripts`, `talents.scrolls`, `books.items`, and `manuscripts.tiers`;
+- Lover presence levels, Scarlet Bond levels, skin levels and their available `next_*` fields;
+- inventory, Conclave attributes and Guild progress.
 
-The Conclave regression test deliberately asserts both the matching gain and the known cost discrepancy. It does not convert the workbook's 62,440,000 into a trusted catalogue value.
+Exact API observations are retained under `account.helperImport.apiObservations`; source `dominance` values remain separate from computed gains and are never silently added to the formula. The Oracle exposes an import summary in `meta.helperApi` and the UI identifies the accepted Helper API source.
 
-### Required format for live-game control observations
+### Formula fallbacks
 
-For each calculation, retain the exact input and output in the same observation:
-- game server and region;
-- date/time and game version if visible;
-- current level / current values;
-- one changed variable or a clearly enumerated plan;
-- displayed resource cost and displayed dominance/attribute result;
-- screenshot or export evidence.
+Where an API response provides a usable `next_cost/next_gain` or `best_path`, preserve those values as exact Helper observations and prefer them for the corresponding action once the target/resource mapping is known. Do not infer a resource type from `next_cost` alone: use `next_kind` or the response's owning resource. Where no matching API step/path is present, the current engine fallback remains explicitly marked as estimated; it must never overwrite an observed API value.
 
-Until these pairs exist, workbook fixtures may catch code regressions, but they cannot promote `gameVerification.status` from `not-verified`.
+The source is a Helper bot API, not a direct connection to the official Game of Vampires backend. That distinction describes the integration boundary, not a claim that the user's Helper API dumps are unreliable.
