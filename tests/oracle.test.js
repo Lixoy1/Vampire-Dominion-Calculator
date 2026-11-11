@@ -9,6 +9,7 @@ import {
   autoDistributeAll,
   autoDistributeConclave,
   autoDistributeTalentPlan,
+  autoDistributePresencePlan,
   commitOraclePlan,
   summonWarden,
   summonLover,
@@ -455,6 +456,39 @@ function walkNumbers(value, path = 'root') {
   const insufficient = commitOraclePlan({ account: { ...account, bag: { [presence.upgrade_item_id]: requiredTokens - 1 } }, plan });
   assert.equal(insufficient.ok, false);
   assert.equal(insufficient.error.code, 'INSUFFICIENT_PRESENCE_ITEMS');
+}
+
+
+{
+  const loverTemplate = GAME_DB.lovers.find(item => (item.presences || []).some(p => p.presence_type === 'updatable'));
+  const presence = loverTemplate.presences.find(p => p.presence_type === 'updatable');
+  const account = {
+    blood: 0, conclaveExp: 0, courtyardExp: 0, courtyardLvl: 0,
+    conclave: {}, ownedWardens: {},
+    ownedLovers: {
+      [loverTemplate.id]: {
+        affinity: 0, closeness: 0, sex: 'female',
+        presences: { [presence.id]: 0 }, bonds: {},
+      },
+    },
+    bag: { [presence.upgrade_item_id]: 150 }, skins: {},
+  };
+  const automatic = autoDistributePresencePlan({ account, plan: makePlan() });
+  assert.equal(automatic.summary.addedLevels, 3, 'presence optimiser spends the three affordable 50-token steps');
+  assert.equal(automatic.plan.presences[loverTemplate.id][presence.id], 3);
+  assert.equal(automatic.summary.items[0].count, 150);
+
+  const fullAuto = autoDistributeAll({ account, plan: makePlan() });
+  assert.equal(fullAuto.summary.presences.addedLevels, 3, 'Auto All includes the presence allocator');
+  assert.equal(fullAuto.plan.presences[loverTemplate.id][presence.id], 3);
+
+  const reservedPlan = {
+    ...makePlan(),
+    presences: { [loverTemplate.id]: { [presence.id]: 2 } },
+  };
+  const afterReserved = autoDistributePresencePlan({ account, plan: reservedPlan });
+  assert.equal(afterReserved.plan.presences[loverTemplate.id][presence.id], 3);
+  assert.equal(afterReserved.summary.addedLevels, 1, 'existing planned levels reserve tokens before auto allocation');
 }
 
 console.log('PASS unified server Oracle tests');
