@@ -4,7 +4,7 @@
  * All gameplay calculations and planning run in the browser on the player's
  * device. No server, Oracle API or game connection is required.
  */
-import { GAME_DB } from './data.js';
+import { GAME_DB, CALCULATION_REFERENCE } from './data.js';
 import * as Engine from './engine.js';
 
 export const LOCAL_ENGINE_VERSION = '1.8.0';
@@ -455,7 +455,8 @@ function getTalentPlanUsage(plan, ownedWardens) {
         wardenSummary.itemCosts[talent.scroll_item_id] = (wardenSummary.itemCosts[talent.scroll_item_id] || 0) + scrollCount;
       }
       if (scriptCount && talent.script_item_id) {
-        const scriptCost = Engine.calcScriptExpectedCost({ tries: talent.stars }, scriptCount);
+        const manuscriptRule = CALCULATION_REFERENCE.manuscript_chances.find(row => Number(row.stars) === Number(talent.stars));
+    const scriptCost = Engine.calcScriptExpectedCost({ tries: manuscriptRule?.tries ?? talent.stars }, scriptCount);
         byItem[talent.script_item_id] = (byItem[talent.script_item_id] || 0) + scriptCost;
         wardenSummary.itemCosts[talent.script_item_id] = (wardenSummary.itemCosts[talent.script_item_id] || 0) + scriptCost;
       }
