@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { GAME_DB } from '../scripts/data.js';
+import { GAME_DB, CALCULATION_REFERENCE } from '../scripts/data.js';
 import { FABRIC_COST_BY_QUALITY as EngineFabricCostMap, calcWardenLevelMultiplier, calcWardenTalentSum } from '../scripts/engine.js';
 
 function EngineFabricCost(quality) { return EngineFabricCostMap[quality] ?? null; }
@@ -22,6 +22,18 @@ const warden = GAME_DB.wardens[0];
 const lover = GAME_DB.lovers.find(item => item.warden_id === warden.id);
 assert.ok(warden, 'reference warden exists');
 assert.ok(lover, 'reference lover exists for selected warden');
+assert.deepEqual(CALCULATION_REFERENCE.manuscript_chances, [
+  { stars: 1, chance: 100.0, protection: 0, tries: 1.0 },
+  { stars: 2, chance: 50.0, protection: 3, tries: 2.0 },
+  { stars: 3, chance: 33.3, protection: 4, tries: 3.0 },
+  { stars: 4, chance: 25.0, protection: 6, tries: 4.0 },
+  { stars: 5, chance: 20.0, protection: 8, tries: 5.0 },
+  { stars: 6, chance: 16.6, protection: 10, tries: 6.0 },
+]);
+assert.equal(CALCULATION_REFERENCE.blood_known.samples[0].cost, 36056873);
+assert.equal(CALCULATION_REFERENCE.blood_known.samples[0].warden_id, 10170);
+assert.equal(CALCULATION_REFERENCE.blood_cost_curve.status, 'approximation_only');
+assert.equal(CALCULATION_REFERENCE.exp_per_talent_point, 200);
 
 function makeAccount() {
   return {
