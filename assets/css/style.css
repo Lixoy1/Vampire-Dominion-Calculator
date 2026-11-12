@@ -1229,7 +1229,7 @@ body { overflow-x: hidden; }
 .spa-top-left, .spa-top-actions { display:flex; align-items:center; gap:8px; min-width:0; }
 .spa-language-button, .spa-theme-button { flex:0 0 auto; min-width:38px; min-height:38px; display:inline-flex; align-items:center; justify-content:center; font-weight:800; border:1px solid var(--line-strong); color:var(--gold); background:rgba(20,8,13,.9); }
 .spa-brand { min-width:0; } .spa-brand-copy { min-width:0; } .spa-brand-title { white-space:nowrap; }
-.calc-section-nav { display:flex; align-items:center; gap:8px; width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; touch-action:pan-x; scrollbar-width:none; padding:8px 2px 13px; margin:0 0 10px; }
+.calc-section-nav { display:flex; align-items:center; gap:8px; width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; touch-action:pan-x pan-y; scrollbar-width:none; padding:8px 2px 13px; margin:0 0 10px; }
 .calc-section-nav::-webkit-scrollbar { display:none; }
 .calc-section-link { flex:0 0 auto; min-height:38px; padding:8px 13px; border:1px solid var(--line); border-radius:999px; background:var(--bg-card); color:var(--muted); font:inherit; font-size:12px; font-weight:700; white-space:nowrap; cursor:pointer; }
 .calc-section-link.is-active { color:#fff; background:linear-gradient(135deg,var(--accent),#7f1d2b); border-color:var(--gold); box-shadow:0 3px 12px rgba(0,0,0,.24); }
@@ -1238,3 +1238,6 @@ body { overflow-x: hidden; }
 #screen-container img { pointer-events:none; }
 #screen-container .home-hero::before, #screen-container .home-hero::after, #screen-container .home-sticker, #screen-container .collection-banner::before, #screen-container .collection-banner::after, #screen-container .warden-hero-card::before, #screen-container .warden-hero-card::after { pointer-events:none !important; }
 @media(max-width:390px) { .spa-topbar {gap:5px;} .spa-top-left,.spa-top-actions {gap:5px;} .spa-brand-sub {max-width:142px;overflow:hidden;text-overflow:ellipsis;} }
+
+/* Pseudo-element artwork is decorative: touches always reach real controls. */
+#screen-container *::before, #screen-container *::after { pointer-events:none !important; }
