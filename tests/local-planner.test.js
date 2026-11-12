@@ -67,9 +67,9 @@ function walkNumbers(value, path = 'root') {
 {
   const account = makeAccount();
   const original = structuredClone(account);
-  const snapshot = calculatelocal planner({ account, plan: makePlan() });
+  const snapshot = calculateLocalSnapshot({ account, plan: makePlan() });
 
-  assert.equal(snapshot.meta.localEngineVersion, ORACLE_VERSION);
+  assert.equal(snapshot.meta.localEngineVersion, LOCAL_ENGINE_VERSION);
   assert.equal(snapshot.meta.inputSource, 'player-entered');
   assert.equal(snapshot.meta.gameConnected, false);
   assert.equal(snapshot.meta.stateless, true);
@@ -102,7 +102,7 @@ function walkNumbers(value, path = 'root') {
   assert.deepEqual(account, original, 'calculation does not mutate player input');
   walkNumbers(snapshot);
 
-  const capabilities = getlocal plannerCapabilities();
+  const capabilities = getLocalEngineCapabilities();
   assert.equal(capabilities.gameApiConnected, false);
   assert.equal(capabilities.project.kind, 'community-project');
   assert.ok(capabilities.sections.includes('dominance'));
@@ -116,7 +116,7 @@ function walkNumbers(value, path = 'root') {
   assert.ok(candidate);
   plan.summons.wardens = [candidate.id];
 
-  const snapshot = calculatelocal planner({ account, plan });
+  const snapshot = calculateLocalSnapshot({ account, plan });
   assert.ok(snapshot.report.gain.summon > 0);
   assert.equal(
     snapshot.report.gain.totalWithSummonEstimate,
@@ -131,11 +131,11 @@ function walkNumbers(value, path = 'root') {
   const plan = makePlan();
   plan.levels[warden.id] = 11;
 
-  const snapshot = calculatelocal planner({ account, plan });
+  const snapshot = calculateLocalSnapshot({ account, plan });
   assert.ok(snapshot.report.spent.blood > 0);
   assert.ok(snapshot.warnings.some(item => item.code === 'APPROXIMATE_BLOOD_COST'));
 
-  const blocked = commitlocal plannerPlan({ account, plan });
+  const blocked = commitLocalPlan({ account, plan });
   assert.equal(blocked.ok, false);
   assert.equal(blocked.error.code, 'INSUFFICIENT_BLOOD');
 }
@@ -171,7 +171,7 @@ function walkNumbers(value, path = 'root') {
   assert.ok(auto.summary.scrollLevels > 0, 'scroll groups receive levels');
   assert.ok(auto.summary.scriptLevels > 0, 'script groups receive levels');
   assert.ok(auto.plan.talents[warden.id]);
-  const calculated = calculatelocal planner({ account, plan: auto.plan });
+  const calculated = calculateLocalSnapshot({ account, plan: auto.plan });
   assert.ok(calculated.report.gain.talents > 0, 'talent dominance is included in the combined report');
   assert.equal(calculated.talentPlan.plannedLevels, auto.summary.plannedLevels);
 }
@@ -182,13 +182,13 @@ function walkNumbers(value, path = 'root') {
   account.bag[firstTalent.scroll_item_id] = 1;
   const plan = makePlan();
   plan.talents = { [warden.id]: { scrolls: { 0: 1 }, scripts: {} } };
-  const committed = commitlocal plannerPlan({ account, plan });
+  const committed = commitLocalPlan({ account, plan });
   assert.equal(committed.ok, true);
   assert.equal(committed.account.ownedWardens[warden.id].talents[0], 2);
   assert.equal(committed.account.bag[firstTalent.scroll_item_id], 0);
   assert.equal(account.ownedWardens[warden.id].talents[0] || 1, 1, 'commit does not mutate submitted account');
 
-  const insufficient = commitlocal plannerPlan({
+  const insufficient = commitLocalPlan({
     account: makeAccount(),
     plan,
   });
@@ -212,7 +212,7 @@ function walkNumbers(value, path = 'root') {
   assert.ok(auto.plan.summons.wardens.includes(warden.id), 'auto-distribute selects an affordable Warden');
   assert.ok(auto.plan.summons.lovers.includes(lover.id), 'auto-distribute selects the matching Lover after the Warden');
 
-  const committed = commitlocal plannerPlan({ account, plan: auto.plan });
+  const committed = commitLocalPlan({ account, plan: auto.plan });
   assert.equal(committed.ok, true, 'a planned Warden and their Lover can be committed together');
   assert.ok(committed.account.ownedWardens[warden.id]);
   assert.ok(committed.account.ownedLovers[lover.id]);
@@ -222,7 +222,7 @@ function walkNumbers(value, path = 'root') {
 
 {
   const account = makeAccount();
-  const committed = commitlocal plannerPlan({ account, plan: makePlan() });
+  const committed = commitLocalPlan({ account, plan: makePlan() });
   assert.equal(committed.ok, true);
   assert.ok(committed.account);
   assert.equal(account.blood, 0, 'atomic commit does not mutate the submitted object');
@@ -253,7 +253,7 @@ function walkNumbers(value, path = 'root') {
 {
   const account = makeAccount();
   delete account.ownedLovers[lover.id];
-  const candidate = calculatelocal planner({ account, plan: makePlan() }).summonCandidates.lovers.find(item => item.id === lover.id);
+  const candidate = calculateLocalSnapshot({ account, plan: makePlan() }).summonCandidates.lovers.find(item => item.id === lover.id);
   assert.ok(candidate, 'reference lover is available as a summon candidate');
   if (candidate.itemId && candidate.cost > 0) account.bag[candidate.itemId] = candidate.cost;
 
@@ -269,14 +269,14 @@ function walkNumbers(value, path = 'root') {
 
   const plan = makePlan();
   plan.summons.lovers = [lover.id];
-  const committed = commitlocal plannerPlan({ account, plan });
+  const committed = commitLocalPlan({ account, plan });
   assert.equal(committed.ok, true, 'commit plan applies lover summon');
   assert.ok(committed.account.ownedLovers[lover.id]);
 }
 
 
 {
-  const snapshotFromLegacyGuild = calculatelocal planner({
+  const snapshotFromLegacyGuild = calculateLocalSnapshot({
     account: { guild: { exp: 6800, level: 11, next_level_exp: 7000 } },
     plan: {},
   });
@@ -284,7 +284,7 @@ function walkNumbers(value, path = 'root') {
 
   const account = makeAccount();
   account.bag = { 4230: 2, 4235: 3, 4005: 2, 4002: 4, 4821: 1 };
-  const snapshot = calculatelocal planner({ account, plan: makePlan() });
+  const snapshot = calculateLocalSnapshot({ account, plan: makePlan() });
   assert.equal(snapshot.eventCalculators.intimacy.expected, 20);
   assert.equal(snapshot.eventCalculators.attraction.expected, 30);
   assert.equal(snapshot.eventCalculators.guildExp.expected, 2220);
@@ -353,10 +353,10 @@ function walkNumbers(value, path = 'root') {
   account.bag[4421] = 50;
   const plan = makePlan();
   plan.skins = { [purchasableSkin.id]: 1 };
-  const preview = calculatelocal planner({ account, plan });
+  const preview = calculateLocalSnapshot({ account, plan });
   assert.equal(preview.skinUpgrade.bySkin[purchasableSkin.id].fabric, 50);
   assert.equal(preview.report.spent.skinFabric[4421], 50);
-  const committed = commitlocal plannerPlan({ account, plan });
+  const committed = commitLocalPlan({ account, plan });
   assert.equal(committed.ok, true, 'skin upgrade can be committed using matching fabric');
   assert.equal(committed.account.skins[purchasableSkin.id], 1);
   assert.equal(committed.account.bag[4421], 0);
@@ -365,7 +365,7 @@ function walkNumbers(value, path = 'root') {
 
   const cardAccount = makeAccount();
   cardAccount.bag[purchasableSkin.id] = 1;
-  const cardCommit = commitlocal plannerPlan({
+  const cardCommit = commitLocalPlan({
     account: cardAccount,
     plan: { ...makePlan(), skins: { [purchasableSkin.id]: 1 } },
   });
@@ -374,7 +374,7 @@ function walkNumbers(value, path = 'root') {
 
   const cardOnlySkin = GAME_DB.wardens.flatMap(item => item.skins || []).find(item => !item.purchasable);
   assert.ok(cardOnlySkin);
-  const blocked = commitlocal plannerPlan({
+  const blocked = commitLocalPlan({
     account: makeAccount(),
     plan: { ...makePlan(), skins: { [cardOnlySkin.id]: 1 } },
   });
@@ -405,7 +405,7 @@ function walkNumbers(value, path = 'root') {
   for (const presence of presenceLover.presences) {
     account.ownedLovers[presenceLover.id].presences[presence.id] = Math.min(presence.max_lvl || 1, Math.max(presence.min_lvl || 0, 2));
   }
-  const result = calculatelocal planner({ account, plan: { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: {}, summons: { wardens: [], lovers: [] } } });
+  const result = calculateLocalSnapshot({ account, plan: { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: {}, summons: { wardens: [], lovers: [] } } });
   assert.ok(result.report.modifiers, 'combined report exposes separate modifiers');
   const expectedAuraTalent = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
   const expectedAuraBook = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
@@ -447,17 +447,17 @@ function walkNumbers(value, path = 'root') {
     bag: { [presence.upgrade_item_id]: requiredTokens }, skins: {},
   };
   const plan = { conclave: {}, courtyardToLvl: 0, levels: {}, promotes: {}, bonds: {}, talents: {}, skins: {}, presences: { [loverTemplate.id]: { [presence.id]: targetLevel } }, summons: { wardens: [], lovers: [] } };
-  const preview = calculatelocal planner({ account, plan });
+  const preview = calculateLocalSnapshot({ account, plan });
   assert.equal(preview.report.presenceUpgrade.byItem[presence.upgrade_item_id], requiredTokens);
   assert.equal(preview.lovers[loverTemplate.id].presences[presence.id].level, targetLevel);
   assert.ok(preview.report.modifiers.presences[presence.main_attribute] > 0);
-  const committed = commitlocal plannerPlan({ account, plan });
+  const committed = commitLocalPlan({ account, plan });
   assert.equal(committed.ok, true, 'presence upgrade commits with required curve tokens');
   assert.equal(committed.account.ownedLovers[loverTemplate.id].presences[presence.id], targetLevel);
   assert.equal(committed.account.bag[presence.upgrade_item_id], 0);
   assert.equal(account.bag[presence.upgrade_item_id], requiredTokens, 'presence commit leaves original profile untouched');
 
-  const insufficient = commitlocal plannerPlan({ account: { ...account, bag: { [presence.upgrade_item_id]: requiredTokens - 1 } }, plan });
+  const insufficient = commitLocalPlan({ account: { ...account, bag: { [presence.upgrade_item_id]: requiredTokens - 1 } }, plan });
   assert.equal(insufficient.ok, false);
   assert.equal(insufficient.error.code, 'INSUFFICIENT_PRESENCE_ITEMS');
 }
@@ -515,7 +515,7 @@ function walkNumbers(value, path = 'root') {
   assert.ok(automatic.summary.expLevels > 0);
   assert.ok(automatic.plan.talents[expWarden.id].exp_levels);
 
-  const committed = commitlocal plannerPlan({ account, plan: automatic.plan });
+  const committed = commitLocalPlan({ account, plan: automatic.plan });
   assert.equal(committed.ok, true, 'personal talent EXP can be committed: ' + JSON.stringify(committed.error || null));
   assert.equal(committed.account.ownedWardens[expWarden.id].exp, 0);
   assert.ok(Object.values(committed.account.ownedWardens[expWarden.id].talents).some(level => level > 1));
@@ -527,7 +527,7 @@ function walkNumbers(value, path = 'root') {
     conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
     courtyardToLvl: 0,
   };
-  const combinedPreview = calculatelocal planner({
+  const combinedPreview = calculateLocalSnapshot({
     account: { ...account, blood: 1_000_000 },
     plan: combinedPlan,
   });
@@ -554,7 +554,7 @@ function walkNumbers(value, path = 'root') {
     'unified dominance total includes both talent and Warden-level interactions'
   );
 
-  const insufficient = commitlocal plannerPlan({
+  const insufficient = commitLocalPlan({
     account: { ...account, ownedWardens: { [expWarden.id]: { ...account.ownedWardens[expWarden.id], exp: 0 } } },
     plan: { ...{
     ...makePlan(),
@@ -584,7 +584,7 @@ function walkNumbers(value, path = 'root') {
   assert.ok(automatic.summary.addedLevels > 0, 'Bond allocator spends available Affinity on unlocked branches');
   assert.ok(automatic.summary.estimatedAffinity <= 1000);
   assert.ok(automatic.plan.bonds[bondLover.id]);
-  const committed = commitlocal plannerPlan({ account, plan: automatic.plan });
+  const committed = commitLocalPlan({ account, plan: automatic.plan });
   assert.equal(committed.ok, true);
   assert.ok(committed.account.ownedLovers[bondLover.id].affinity < 1000);
   assert.equal(account.ownedLovers[bondLover.id].affinity, 1000, 'bond commit leaves original profile untouched');
@@ -677,7 +677,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(observations.manuscriptTiers[0].expected, 56);
   assert.equal(observations.presenceSteps[0].nextCost, 50);
 
-  const oracle = calculatelocal planner({ account: imported.account, plan: makePlan() });
+  const oracle = calculateLocalSnapshot({ account: imported.account, plan: makePlan() });
   assert.equal(oracle.meta.project.kind, 'community-project');
   assert.equal(oracle.meta.referenceData, undefined, 'raw reference snapshots are not exposed in public calculation metadata');
 }
@@ -809,7 +809,7 @@ function walkNumbers(value, path = 'root') {
   assert.equal(imported.account.communityImport.referenceObservations.presenceSteps.length, 1, 'nested Presence next-step data is retained');
   assert.equal(imported.account.communityImport.referenceObservations.skinSteps.length, 1, 'nested Skin next-step data is retained');
 
-  const result = calculatelocal planner({ account: imported.account, plan: makePlan() });
+  const result = calculateLocalSnapshot({ account: imported.account, plan: makePlan() });
   assert.equal(result.meta.referenceData, undefined, 'public metadata contains no imported raw snapshots');
 }
 
