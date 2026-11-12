@@ -1,9 +1,8 @@
 /**
  * LOCAL BROWSER CALCULATION PLANNER
  *
- * All gameplay calculations exposed to the browser are executed here on the
- * Render server. The calculator deliberately does not connect to Game of
- * Vampires: players enter their own observed in-game values.
+ * All gameplay calculations and planning run in the browser on the player's
+ * device. No server, Oracle API or game connection is required.
  */
 import { GAME_DB } from './data.js';
 import * as Engine from './engine.js';
