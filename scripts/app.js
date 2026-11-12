@@ -983,7 +983,7 @@ function renderSpaTopbar() {
       '<div class="spa-top-left">',
         '<button class="spa-icon-button spa-language-button" type="button" id="btn-lang" aria-label="Сменить язык">' + state.lang.toUpperCase() + '</button>',
         '<div class="spa-brand">',
-          '<img src="./file_00000000f00c821095b68cab8b8fd574.png" class="spa-crest" alt="Герб «Наследие Вампиров»" width="44" height="44">',
+          '<img src="./file_00000000f00c821095b68cab8b8fd574.png?v=20261112-2" class="spa-crest" alt="Герб «Наследие Вампиров»" width="44" height="44">',
           '<div class="spa-brand-copy">',
             '<div class="spa-brand-title">Vampire Dominion</div>',
             '<div class="spa-brand-sub">OPTIMIST · ' + escHtml(state.profile.server || 'сервер не указан') + ' · локальный профиль</div>',
@@ -1037,7 +1037,7 @@ function renderHomeScreen() {
       '<div class="home-eyebrow">OPTIMIST · ПРОЕКТ СООБЩЕСТВА</div>' +
       '<div class="home-brand-title">Наследие<br>Вампиров</div>' +
       '<div class="home-brand-sub">Vampire Dominion · Blood Moon Edition</div>' +
-      '<img src="./file_00000000f00c821095b68cab8b8fd574.png" class="home-sticker" alt="Герб «Наследие Вампиров»" width="1254" height="1254">' +
+      '<img src="./file_00000000f00c821095b68cab8b8fd574.png?v=20261112-2" class="home-sticker" alt="Герб «Наследие Вампиров»" width="1254" height="1254">' +
     '</div>' +
     '<div class="profile-main-card" data-action="nav" data-screen="settings">' +
       '<img src="' + getIconUrl(avatar.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt="Портрет">' +
