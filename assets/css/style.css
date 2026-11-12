@@ -1123,10 +1123,11 @@ body { overflow-x: hidden; }
 .collection-banner>div {display:flex;flex-direction:column;gap:5px;text-shadow:0 2px 12px #000}
 .collection-banner b {font:800 20px Georgia,serif;letter-spacing:.1em;color:#f1d7b1}
 .collection-banner span {font-size:11px;color:#f5dfe2}
-.partners-banner {background-image:url("../../1000024228.png")}
-.calculations-banner {background-image:url("../../1000024228.png");background-position:center 42%}
-.settings-banner,.summon-banner {background-image:url("../../1000019874.png")}
-.resources-banner {background-image:url("../../1000024228.png");background-position:center 52%}
+.partners-banner {background-image:url("../../vampire_countess_banner.jpg?v=20261112-2")}
+.calculations-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-2");background-position:center 42%}
+.settings-banner {background-image:url("../../vampire_court_banner.jpg?v=20261112-2")}
+.summon-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-2")}
+.resources-banner {background-image:url("../../vampire_treasury_banner.jpg?v=20261112-2");background-position:center 52%}
 .summon-banner {min-height:174px}
 .summon-banner b {font-size:25px}
 @media(max-width:560px) {
