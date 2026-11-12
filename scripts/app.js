@@ -77,6 +77,7 @@ function createDefaultState() {
     lastCalcReport: null,
     history: [],
     future: [],
+    savedCalculations: [],
     lang: 'ru',
     preferLocalIcons: true,
     activeTab: 'dominance',
@@ -449,7 +450,7 @@ async function runAutoTalentDistribution() {
       'За личный опыт: ' + (summary.expLevels || 0) + ' уровн. / ' + (summary.expSpentTotal || 0) + ' EXP'
     );
   } catch (error) {
-    alert(error.message || 'Oracle не смог распределить свитки и рукописи.');
+    alert(error.message || 'Локальный движок не смог распределить свитки и рукописи.');
   }
 }
 
@@ -470,7 +471,7 @@ async function runAutoBondDistribution() {
       'Оценка прироста: +' + (summary.estimatedGain || 0) + ' Господства'
     );
   } catch (error) {
-    alert(error.message || 'Oracle не смог распределить Доверие.');
+    alert(error.message || 'Локальный движок не смог распределить Доверие.');
   }
 }
 
@@ -490,7 +491,7 @@ async function runAutoPresenceDistribution() {
       'Прирост модификаторов: +' + (summary.addedPercentPoints || 0) + ' п.п.'
     );
   } catch (error) {
-    alert(error.message || 'Oracle не смог распределить жетоны Веяний.');
+    alert(error.message || 'Локальный движок не смог распределить жетоны Веяний.');
   }
 }
 
@@ -508,7 +509,7 @@ async function runFullAutoDistribute() {
     const expLevels = result.summary?.talents?.expLevels || 0;
     if (presenceAdded || bondAdded || expLevels) alert('Авторасчёт готов.\\nВеяния: +' + presenceAdded + ' уровн.\\nКровные узы: +' + bondAdded + ' уровн.\\nТаланты за личный опыт: +' + expLevels + ' уровн.');
   } catch (error) {
-    alert(error.message || 'Oracle не смог распределить ресурсы.');
+    alert(error.message || 'Локальный движок не смог распределить ресурсы.');
   }
 }
 
@@ -524,7 +525,7 @@ async function commitPlanToAccount() {
         const itemName = tName('item', GAME_DB.items.find(entry => entry.id === item.itemId)?.name || item.itemId);
         return `${itemName}: ещё ${item.need}`;
       }).join('\\n');
-      alert(detail ? `${result.error.message}\\n${detail}` : (result.error?.message || 'Oracle отклонил план.'));
+      alert(detail ? `${result.error.message}\\n${detail}` : (result.error?.message || 'Локальный движок отклонил план.'));
       return;
     }
 
@@ -532,9 +533,9 @@ async function commitPlanToAccount() {
     state.plan = createBlankPlan(state.account);
     saveState();
     await render();
-    alert('План проверен Oracle и применён. Ресурсы и предметы списаны из профиля.');
+    alert('План проверен локальным движком и применён. Ресурсы и предметы списаны из профиля.');
   } catch (error) {
-    alert(error.message || 'Oracle не смог применить план. Данные профиля не изменены.');
+    alert(error.message || 'Локальный движок не смог применить план. Данные профиля не изменены.');
   }
 }
 
@@ -552,6 +553,59 @@ function openAppModal(title, html) {
 function closeAppModal() {
   document.getElementById('modal-overlay')?.classList.add('hidden');
 }
+
+function exportProfileJson() {
+  try {
+    syncActiveAccountSnapshot();
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'vampire_dominion_profile.json';
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  } catch (error) { alert('Не удалось экспортировать профиль: ' + (error.message || error)); }
+}
+
+function importProfileJson() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.addEventListener('change', async function () {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    try {
+      const parsed = JSON.parse(await file.text());
+      state = normalizeState(parsed);
+      saveState();
+      await render();
+      alert('Профиль успешно импортирован.');
+    } catch (error) { alert('Ошибка чтения JSON файла профиля: ' + (error.message || error)); }
+  });
+  input.click();
+}
+
+function saveCurrentCalculation() {
+  const report = calculationSnapshot && calculationSnapshot.report;
+  if (!report) { alert('Сначала выполните расчёт.'); return; }
+  state.savedCalculations = Array.isArray(state.savedCalculations) ? state.savedCalculations : [];
+  const saved = {
+    id: 'calc-' + Date.now(),
+    savedAt: new Date().toISOString(),
+    profile: { ...state.profile },
+    report: JSON.parse(JSON.stringify(report)),
+    account: JSON.parse(JSON.stringify(state.account)),
+    plan: JSON.parse(JSON.stringify(state.plan))
+  };
+  state.savedCalculations.unshift(saved);
+  state.savedCalculations = state.savedCalculations.slice(0, 30);
+  saveState();
+  openAppModal('Расчёт сохранён', '<p>Снимок сохранён локально на этом устройстве.</p>' +
+    '<div class="item-row"><span>Профиль</span><b>' + escHtml(saved.profile.name || 'Оптимист') + '</b></div>' +
+    '<div class="item-row"><span>Прирост Господства</span><b>+' + fmt(report.gain.total || 0) + '</b></div>' +
+    '<div class="row-sub">Сохранено расчётов: ' + state.savedCalculations.length + '. Для переноса используй экспорт профиля.</div>');
+}
+
 
 function explainGameConnection() {
   const html = '<p>Это независимый проект сообщества энтузиастов и любителей игры «Наследие Вампиров».</p>' +
@@ -632,7 +686,7 @@ function renderWardenDetailScreen(db) {
 
   if (state.wardenTab === 'attributes') {
     const max = Math.max(1, ...ATTRIBUTES.map(attr => stats.values[attr]));
-    body = '<div class="attrs-box"><div class="row-sub">База рассчитана серверным Oracle по текущей модели талантов. Это не подтверждённое игровым сервером абсолютное Господство.</div>' +
+    body = '<div class="attrs-box"><div class="row-sub">База рассчитана локально по модели талантов. Это не подтверждённое игровым сервером абсолютное Господство.</div>' +
       ATTRIBUTES.map(attr => {
         const item = stats.breakdown[attr];
         const pct = Math.min(100, Math.round(item.oracleTalentBase / max * 100));
@@ -821,7 +875,7 @@ function openQuickCalculation() {
   const html = '<section class="quick-calc-summary">' +
     '<div class="card-title">Быстрый подсчёт · Oracle</div>' +
     '<div class="quick-calc-total">+' + fmt(report.gain?.total || 0) + '</div>' +
-    '<div class="row-sub">Расчётный прирост по выбранному плану · ' + escHtml(calculationSnapshot.meta?.localEngineVersion || '') + '</div>' +
+    '<div class="row-sub">Локальный расчёт прироста по выбранному плану · ' + escHtml(calculationSnapshot.meta?.localEngineVersion || '') + '</div>' +
     '<div class="quick-calc-grid">' +
       '<div><span>Кровь</span><b>' + fmt(account.blood || 0) + '</b></div>' +
       '<div><span>Конклав</span><b>' + fmt(account.conclaveExp || 0) + '</b></div>' +
@@ -851,7 +905,7 @@ function openFormulaInfo() {
     return '<div class="formula-status-row"><span>' + (labels[key] || key) + '</span><b>' + status + '</b></div>';
   }).join('');
   const html = '<div class="formula-info-content">' +
-    '<p><strong>Версия Oracle:</strong> ' + escHtml(oracle.meta?.localEngineVersion || '—') + '</p>' +
+    '<p><strong>Локальный движок:</strong> ' + escHtml(oracle.meta?.localEngineVersion || '—') + '</p>' +
     '<p><strong>Каталог:</strong> ' + escHtml(oracle.meta?.dataVersion || '—') + '</p>' +
     '<p><strong>Проект:</strong> независимый калькулятор сообщества любителей игры «Наследие Вампиров».</p>' +
     '<div class="formula-status-list">' + rows + '</div>' +
@@ -926,14 +980,18 @@ function renderSpaTopbar() {
   }) || GAME_DB.wardens[0];
   return [
     '<header class="spa-topbar">',
-      '<div class="spa-brand">',
-        '<img src="./assets/crest.svg" class="spa-crest" alt="VD">',
-        '<div class="spa-brand-copy">',
-          '<div class="spa-brand-title">Vampire Dominion</div>',
-          '<div class="spa-brand-sub">OPTIMIST · ' + escHtml(state.profile.server || 'сервер не указан') + ' · локальный профиль</div>',
+      '<div class="spa-top-left">',
+        '<button class="spa-icon-button spa-language-button" type="button" id="btn-lang" aria-label="Сменить язык">' + state.lang.toUpperCase() + '</button>',
+        '<div class="spa-brand">',
+          '<img src="./assets/crest.svg" class="spa-crest" alt="VD">',
+          '<div class="spa-brand-copy">',
+            '<div class="spa-brand-title">Vampire Dominion</div>',
+            '<div class="spa-brand-sub">OPTIMIST · ' + escHtml(state.profile.server || 'сервер не указан') + ' · локальный профиль</div>',
+          '</div>',
         '</div>',
       '</div>',
       '<div class="spa-top-actions">',
+        '<button class="spa-icon-button spa-theme-button" type="button" id="btn-theme" aria-label="Сменить тему">' + (state.settings.theme === 'light' ? '☀' : '☾') + '</button>',
         '<button class="spa-avatar-button" type="button" data-action="nav" data-screen="settings"><img src="' + getIconUrl(avatar.icon_path, state.preferLocalIcons) + '" alt="Профиль"></button>',
         '<button class="spa-icon-button" type="button" id="btn-new-account" aria-label="Новый аккаунт">＋</button>',
       '</div>',
@@ -941,14 +999,34 @@ function renderSpaTopbar() {
   ].join('');
 }
 
+function renderCalculationNavStrip() {
+  const links = [
+    ['calc_dominance', 'Господство'],
+    ['conclave', 'Конклав и Сад'],
+    ['wardens_list', 'Смотрители'],
+    ['warden_exp', 'Уровни'],
+    ['calc_talents', 'Таланты'],
+    ['lovers', 'Партнёры'],
+    ['calc_intimacy', 'Близость'],
+    ['skins', 'Облики'],
+    ['bag', 'Сумка'],
+  ];
+  return '<nav class="calc-section-nav" aria-label="Разделы калькулятора">' +
+    links.map(function (item) {
+      return '<button type="button" class="calc-section-link ' + (state.screen === item[0] ? 'is-active' : '') + '" data-action="nav" data-screen="' + item[0] + '">' + item[1] + '</button>';
+    }).join('') +
+  '</nav>';
+}
+
 function renderSubToolbar(backTarget, title) {
+  const calcScreens = ['calc_dominance', 'conclave', 'wardens_list', 'warden-detail', 'warden_exp', 'calc_talents', 'lovers', 'lover-detail', 'calc_intimacy', 'skins', 'bag'];
   return '<div class="spa-screen-toolbar">' +
     '<button type="button" class="back-pill" data-action="nav" data-screen="' + backTarget + '">← Назад</button>' +
     '<div class="spa-screen-title">' + title + '</div>' +
     '<div class="spa-toolbar-actions"><button class="icon-btn" type="button" data-action="formula-info" aria-label="Пояснение формул">ⓘ</button>' +
       '<button type="button" class="icon-btn" data-action="undo" ' + (state.history && state.history.length ? '' : 'disabled') + '>↶</button>' +
       '<button type="button" class="icon-btn" data-action="redo" ' + (state.future && state.future.length ? '' : 'disabled') + '>↷</button>' +
-    '</div></div>';
+    '</div></div>' + (calcScreens.includes(state.screen) ? renderCalculationNavStrip() : '');
 }
 
 function renderHomeScreen() {
@@ -967,7 +1045,7 @@ function renderHomeScreen() {
       '<div class="profile-main-server">' + escHtml(state.profile.server || 'сервер не указан') + '</div>' +
       '<div class="profile-badge-row"><span class="badge-pill">👑 Локальный профиль · полный набор разделов</span></div></div><div class="card-right">⌄</div>' +
     '</div>' +
-    '<div class="quick-calc-launch-row"><button class="btn btn-gold quick-calc-entry" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button><button class="btn" type="button" data-action="auto-all">Авторасчёт</button></div>' +
+    '<div class="quick-calc-launch-row"><button class="btn btn-gold quick-calc-entry" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button></div>' +
     '<div class="card-stack">' +
       '<div class="nav-card" data-action="nav" data-screen="resources"><div class="card-icon-box">✎</div><div class="card-body"><div class="card-title">Ресурсы</div><div class="card-subtitle">Смотрители, партнёры, сумка, облики, Конклав</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div><span class="progress-percent">' + progress + '%</span></div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="calculations"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Расчёты</div><div class="card-subtitle">Господство, таланты, близость, влечение, гильдия</div></div><div class="card-right">›</div></div>' +
@@ -1024,7 +1102,7 @@ function renderWardensListScreen(db) {
       return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '">' +
         '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
         '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(function (attr) { return '<span class="dot ' + attr + '"></span>'; }).join(' ') + ' · ур. ' + Number(owned.level || 1) + ' · ' + tName('warden_promote', (db.promotes.find(function (p) { return p.id === Number(owned.promoteId || 1); }) || {}).name || '') + '</div></div>' +
-        '<div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">база Oracle</div>›</div></div>';
+        '<div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">локальная расчётная база</div>›</div></div>';
     }).join('') +
     '<button type="button" class="nav-card add-dashed" data-action="open-add-warden"><strong>＋ Добавить смотрителей (' + ownedIds.length + '/' + db.wardens.length + ')</strong></button></div>' +
     '<details class="attrs-box add-owned-details"><summary>Открыть полный каталог · ' + db.wardens.length + ' смотрителей</summary><div class="grid-2">' +
@@ -1145,7 +1223,7 @@ function renderCalculationsHubScreen() {
     '<div class="calc-hub-card" data-action="nav" data-screen="calc_dominance"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Подсчёт Господства</div><div class="card-subtitle">10 направлений вложения ресурсов и проверка доступности</div></div><div class="card-right">›</div></div>' +
     '<div class="card-stack">' +
       '<div class="nav-card" data-action="nav" data-screen="calc_talents"><div class="card-icon-box">📜</div><div class="card-body"><div class="card-title">Таланты</div><div class="card-subtitle">Свитки, рукописи, звёзды и оптимизация</div></div><div class="card-right">›</div></div>' +
-      '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Личный опыт, очки талантов и остаток EXP</div></div><div class="card-right">›</div></div>'
+      '<div class="nav-card" data-action="nav" data-screen="warden_exp"><div class="card-icon-box">⚡</div><div class="card-body"><div class="card-title">Опыт смотрителей</div><div class="card-subtitle">Личный опыт, очки талантов и остаток EXP</div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="calc_intimacy"><div class="card-icon-box">♡</div><div class="card-body"><div class="card-title">Близость и влечение</div><div class="card-subtitle">Минимум, ожидание и максимум из предметов сумки</div></div><div class="card-right">›</div></div>' +
     '</div>';
 }
@@ -1169,7 +1247,7 @@ function renderCoverageCard(report) {
 
 function renderDominanceCalcScreen(db, report) {
   return renderSubToolbar('calculations', 'Подсчёт Господства') +
-    '<section class="dominance-total-card"><div><div class="card-title">Прирост Господства</div><div class="row-sub">По серверной модели Oracle</div></div><div class="dominance-number">+' + fmt(report.gain.total) + '</div></section>' +
+    '<section class="dominance-total-card"><div><div class="card-title">Прирост Господства</div><div class="row-sub">Локальный расчёт через engine.js</div></div><div class="dominance-number">+' + fmt(report.gain.total) + '</div></section>' +
     renderDominanceTab(db, report) + renderCoverageCard(report);
 }
 
@@ -1221,7 +1299,7 @@ async function render() {
     if (renderId !== renderSerial) return;
     calculationSnapshot = null;
     root.innerHTML = '<section class="card card-gold oracle-unavailable">' +
-      '<div class="card-title">Oracle временно недоступен</div>' +
+      '<div class="card-title">Локальный расчёт не выполнен</div>' +
       '<p class="row-sub">' + escHtml(error.message || 'Не удалось получить серверный расчёт.') + '</p>' +
       '<p class="row-sub">Локальный fallback отключён: неподтверждённые цифры не будут показаны как результат Oracle.</p>' +
       '<button class="btn btn-primary" id="oracle-retry">Повторить запрос</button></section>';
@@ -1288,8 +1366,6 @@ function renderSettingsTab() {
         </div>
       </div>
       <div class="settings-actions">
-        <button class="btn" id="btn-theme">${state.settings.theme === 'light' ? '☀ Светлая тема' : '☾ Тёмная тема'}</button>
-        <button class="btn" id="btn-lang">🌐 ${state.lang.toUpperCase()}</button>
         <button class="btn" id="btn-export">💾 Экспорт профиля</button>
         <button class="btn" id="btn-import">📂 Импорт профиля</button>
         
@@ -1343,10 +1419,11 @@ function renderDominanceTab(db, report) {
         </div>
         <div class="row-sub" style="margin-top:8px;">Ауры: таланты ${Object.values(report.modifiers.auras.talent).reduce((a,b)=>a+b,0).toFixed(1)}% · книги ${Object.values(report.modifiers.auras.book).reduce((a,b)=>a+b,0).toFixed(1)}%</div>
       </div>` : ''}
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn btn-gold" id="btn-quick-run">⚡ Распределить все ресурсы оптимально</button>
-        <button class="btn btn-primary" id="btn-commit-plan">✅ Применить план и списать ресурсы</button>
-        <button class="btn" id="btn-reset-plan">↺ Сбросить план</button>
+      <div class="calc-action-buttons">
+        <button class="btn btn-gold" type="button" data-action="save-calculation">💾 Сохранить расчёт</button>
+        <button class="btn" type="button" data-action="reset-plan">↺ Сбросить план</button>
+        <button class="btn" type="button" data-action="export-profile">⇧ Экспорт профиля</button>
+        <button class="btn" type="button" data-action="import-profile">⇩ Импорт профиля</button>
       </div>
     </section>
 
@@ -2083,7 +2160,16 @@ function bindSpaEvents(db, report, oracle) {
     button.addEventListener('click', async function () {
       const action = button.dataset.action;
       if (action === 'quick-calc') return openQuickCalculation();
-      if (action === 'auto-all') return runFullAutoDistribute();
+      if (action === 'save-calculation') return saveCurrentCalculation();
+      if (action === 'export-profile') return exportProfileJson();
+      if (action === 'import-profile') return importProfileJson();
+      if (action === 'reset-plan') {
+        if (!globalThis.confirm('Сбросить только план? Данные профиля и ресурсы останутся без изменений.')) return;
+        pushUndoSnapshot();
+        state.plan = createBlankPlan(state.account);
+        saveState();
+        return render();
+      }
       if (action === 'formula-info') return openFormulaInfo();
       if (action === 'nav') return navigate(button.dataset.screen);
       if (action === 'undo') return undoSpa();
@@ -2180,7 +2266,7 @@ function bindSpaEvents(db, report, oracle) {
           saveState();
           return render();
         } catch (error) {
-          alert(error.message || 'Oracle не смог распределить Конклав.');
+          alert(error.message || 'Локальный движок не смог распределить Конклав.');
           return;
         }
       }
@@ -2379,12 +2465,9 @@ function bindEvents(db) {
     render();
   });
 
-  document.getElementById('btn-auto-all')?.addEventListener('click', runFullAutoDistribute);
   document.getElementById('btn-auto-talents')?.addEventListener('click', runAutoTalentDistribution);
   document.getElementById('btn-auto-presences')?.addEventListener('click', runAutoPresenceDistribution);
   document.getElementById('btn-auto-bonds')?.addEventListener('click', runAutoBondDistribution);
-  document.getElementById('btn-quick-run')?.addEventListener('click', runFullAutoDistribute);
-  document.getElementById('btn-commit-plan')?.addEventListener('click', commitPlanToAccount);
 
   document.getElementById('btn-reset-plan')?.addEventListener('click', () => {
     state.plan = {
@@ -2406,7 +2489,7 @@ function bindEvents(db) {
       state.plan.conclave = res.levels;
       saveState();
       render();
-    }).catch(error => alert(error.message || 'Oracle не смог распределить Конклав.'));
+    }).catch(error => alert(error.message || 'Локальный движок не смог распределить Конклав.'));
   });
 
   document.querySelectorAll('.guild-progress-input').forEach(inp => {
@@ -2584,12 +2667,12 @@ function bindEvents(db) {
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       try {
         const result = await runLocalAction('summon', { account: state.account, wardenId: id });
-        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        if (!result.ok) { alert(result.error?.message || 'Локальный движок отклонил призыв.'); return; }
         state.account = normalizeAccountData(result.account);
         saveState();
         render();
       } catch (error) {
-        alert(error.message || 'Oracle не смог выполнить призыв.');
+        alert(error.message || 'Локальный движок не смог выполнить призыв.');
       }
     });
   });
@@ -2601,12 +2684,12 @@ function bindEvents(db) {
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       try {
         const result = await runLocalAction('summon-lover', { account: state.account, loverId: id });
-        if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
+        if (!result.ok) { alert(result.error?.message || 'Локальный движок отклонил призыв.'); return; }
         state.account = normalizeAccountData(result.account);
         saveState();
         render();
       } catch (error) {
-        alert(error.message || 'Oracle не смог выполнить призыв.');
+        alert(error.message || 'Локальный движок не смог выполнить призыв.');
       }
     });
   });
@@ -2690,33 +2773,9 @@ function bindEvents(db) {
     });
   });
 
-  // Экспорт и Импорт JSON-профиля
-  document.getElementById('btn-export')?.addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'vampire_dominion_profile.json';
-    a.click();
-  });
-
-  document.getElementById('btn-import')?.addEventListener('click', () => {
-    const inp = document.createElement('input');
-    inp.type = 'file';
-    inp.accept = 'application/json';
-    inp.onchange = async () => {
-      const file = inp.files?.[0];
-      if (!file) return;
-      try {
-        const parsed = JSON.parse(await file.text());
-        state = normalizeState(parsed);
-        saveState();
-        render();
-      } catch (err) {
-        alert('Ошибка чтения JSON файла профиля');
-      }
-    };
-    inp.click();
-  });
+  // Экспорт и импорт выполняются локально, без отправки данных на сервер.
+  document.getElementById('btn-export')?.addEventListener('click', exportProfileJson);
+  document.getElementById('btn-import')?.addEventListener('click', importProfileJson);
   document.querySelectorAll('.guild-input').forEach(inp => {
     inp.addEventListener('change', () => {
       const key = inp.dataset.guild;
