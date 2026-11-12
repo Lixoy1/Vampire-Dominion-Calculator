@@ -1100,7 +1100,14 @@ body { overflow-x: hidden; }
 }
 .home-brand-title {max-width:68%;font-size:clamp(28px,7vw,46px);text-shadow:0 3px 22px #000}
 .home-brand-sub {max-width:64%;color:#f1d8d7;text-shadow:0 2px 8px #000}
-.home-sticker {display:none}
+.home-sticker {
+  display:block;width:clamp(150px,30vw,210px);height:auto;max-height:78%;
+  right:12px;top:50%;transform:translateY(-50%);object-fit:contain;opacity:1;
+  mix-blend-mode:screen;
+  filter:drop-shadow(0 0 12px rgba(174,24,43,.55)) drop-shadow(0 0 26px rgba(0,0,0,.8));
+}
+.home-brand-title {max-width:58%}
+.home-brand-sub {max-width:58%}
 .warden-art-card {
   min-height:116px;position:relative;overflow:hidden;
   background:
@@ -1123,11 +1130,11 @@ body { overflow-x: hidden; }
 .collection-banner>div {display:flex;flex-direction:column;gap:5px;text-shadow:0 2px 12px #000}
 .collection-banner b {font:800 20px Georgia,serif;letter-spacing:.1em;color:#f1d7b1}
 .collection-banner span {font-size:11px;color:#f5dfe2}
-.partners-banner {background-image:url("../../vampire_countess_banner.jpg?v=20261112-2")}
-.calculations-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-2");background-position:center 42%}
-.settings-banner {background-image:url("../../vampire_court_banner.jpg?v=20261112-2")}
-.summon-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-2")}
-.resources-banner {background-image:url("../../vampire_treasury_banner.jpg?v=20261112-2");background-position:center 52%}
+.partners-banner {background-image:url("../../vampire_countess_banner.jpg?v=20261112-3")}
+.calculations-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-3");background-position:center 42%}
+.settings-banner {background-image:url("../../vampire_court_banner.jpg?v=20261112-3")}
+.summon-banner {background-image:url("../../vampire_lord_banner.jpg?v=20261112-3")}
+.resources-banner {background-image:url("../../vampire_treasury_banner.jpg?v=20261112-3");background-position:center 52%}
 .summon-banner {min-height:174px}
 .summon-banner b {font-size:25px}
 @media(max-width:560px) {
@@ -1246,10 +1253,20 @@ body { overflow-x: hidden; }
 
 /* Official Vampire Dominion crest supplied in the repository root. */
 .spa-crest {
-  width:44px;height:44px;flex:0 0 44px;object-fit:contain;
+  width:66px;height:66px;flex:0 0 66px;object-fit:contain;
   mix-blend-mode:screen;
-  filter:drop-shadow(0 0 5px rgba(174,24,43,.62)) drop-shadow(0 0 11px rgba(214,176,109,.24));
+  filter:drop-shadow(0 0 7px rgba(174,24,43,.72)) drop-shadow(0 0 16px rgba(214,176,109,.3));
 }
-@media(max-width:390px) {
-  .spa-crest {width:40px;height:40px;flex-basis:40px;}
+@media(max-width:560px) {
+  .spa-crest {width:58px;height:58px;flex-basis:58px;}
+  .home-sticker {width:clamp(138px,34vw,190px);right:8px;max-height:72%}
+  .home-brand-title,.home-brand-sub {max-width:57%}
 }
+
+
+/* Make the supplied heraldic emblem unmistakable on compact mobile screens. */
+.spa-brand {gap:10px;}
+.spa-brand-title {font-size:15px;}
+.collection-banner {min-height:168px;background-repeat:no-repeat;background-size:cover;}
+.collection-banner:before {background:linear-gradient(90deg,rgba(8,4,8,.68),rgba(8,4,8,.04) 92%);}
+@media(max-width:560px) {.collection-banner {min-height:158px;} .summon-banner {min-height:168px;}}
