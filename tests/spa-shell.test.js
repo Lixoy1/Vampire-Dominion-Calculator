@@ -18,7 +18,7 @@ for (const target of ['home','resources','calculations','settings']) {
 }
 assert.ok(html.includes('./assets/css/style.css'));
 assert.ok(html.includes('./scripts/app.js'));
-assert.ok(html.includes('Все формулы и распределение ресурсов выполняются локально на устройстве'));
+assert.ok(html.includes('Формулы и распределение ресурсов выполняются локально на устройстве'));
 assert.ok(app.includes("import * as LocalPlanner from './local-planner.js';"));
 assert.ok(app.includes("LocalPlanner.calculateLocalSnapshot"));
 assert.ok(!app.includes('/api/oracle/'));
