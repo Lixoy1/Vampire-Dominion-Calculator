@@ -3,6 +3,7 @@
  * Объединяет базу данных (data.js) и расчётное ядро (engine.js) со всеми вкладками.
  */
 import { GAME_DB, getIconUrl } from './data.js';
+import * as LocalPlanner from './local-planner.js';
 const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 const FABRIC_COST_BY_QUALITY = { a: 50, s: 100, ss: 200 };
 
@@ -432,7 +433,7 @@ function getLoverIconPath(lover, owned = null) {
 // Автораспределение выполняется только серверным Oracle. Ошибки не подменяются локальными расчётами.
 async function runAutoTalentDistribution() {
   try {
-    const result = await requestOracle('/api/oracle/auto-talents', {
+    const result = await runLocalAction('auto-talents', {
       account: state.account,
       plan: state.plan,
     });
@@ -454,7 +455,7 @@ async function runAutoTalentDistribution() {
 
 async function runAutoBondDistribution() {
   try {
-    const result = await requestOracle('/api/oracle/auto-bonds', {
+    const result = await runLocalAction('auto-bonds', {
       account: state.account,
       plan: state.plan,
     });
@@ -475,7 +476,7 @@ async function runAutoBondDistribution() {
 
 async function runAutoPresenceDistribution() {
   try {
-    const result = await requestOracle('/api/oracle/auto-presences', {
+    const result = await runLocalAction('auto-presences', {
       account: state.account,
       plan: state.plan,
     });
@@ -495,7 +496,7 @@ async function runAutoPresenceDistribution() {
 
 async function runFullAutoDistribute() {
   try {
-    const result = await requestOracle('/api/oracle/auto-distribute', {
+    const result = await runLocalAction('auto-distribute', {
       account: state.account,
       plan: state.plan,
     });
@@ -514,7 +515,7 @@ async function runFullAutoDistribute() {
 // Применение плана и проверка ресурсов выполняются серверным Oracle.
 async function commitPlanToAccount() {
   try {
-    const result = await requestOracle('/api/oracle/commit-plan', {
+    const result = await runLocalAction('commit-plan', {
       account: state.account,
       plan: state.plan,
     });
@@ -560,43 +561,33 @@ function explainGameConnection() {
 }
 
 // Единая точка вызова Oracle. При ошибке сети серверный расчёт не подменяется локальным.
-let oracleSnapshot = null;
-let oracleRequestSerial = 0;
+let calculationSnapshot = null;
+let renderSerial = 0;
 
-async function requestOracle(endpoint, payload) {
-  const loader = document.getElementById('calc-loader');
-  const loaderText = document.getElementById('calc-loader-text');
-  const showLoader = endpoint !== '/api/oracle/calculate';
-  if (showLoader && loader) {
-    const message = endpoint.includes('bonds') ? 'Скрепляем узы…'
-      : endpoint.includes('summon') ? 'Проверяем призыв…'
-      : endpoint.includes('talents') ? 'Распределяем таланты…'
-      : 'Считаем господство…';
-    if (loaderText) loaderText.textContent = message;
-    loader.classList.remove('hidden');
-  }
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-      body: JSON.stringify(payload),
-    });
-    const body = await response.json().catch(() => null);
-    if (!response.ok || !body?.ok) {
-      throw new Error(body?.error?.message || `Oracle недоступен (HTTP ${response.status}).`);
-    }
-    return body.result;
-  } finally {
-    if (showLoader) loader?.classList.add('hidden');
-  }
+function runLocalAction(action, payload = {}) {
+  const operations = {
+    calculate: LocalPlanner.calculateLocalSnapshot,
+    'auto-talents': LocalPlanner.autoDistributeTalentPlan,
+    'auto-bonds': LocalPlanner.autoDistributeBondPlan,
+    'auto-presences': LocalPlanner.autoDistributePresencePlan,
+    'auto-distribute': LocalPlanner.autoDistributeAll,
+    'auto-conclave': LocalPlanner.autoDistributeConclave,
+    'commit-plan': LocalPlanner.commitLocalPlan,
+    summon: LocalPlanner.summonWarden,
+    'summon-lover': LocalPlanner.summonLover,
+  };
+  const operation = operations[action];
+  if (typeof operation !== 'function') return Promise.reject(new Error('Неизвестная локальная операция: ' + action));
+  try { return Promise.resolve(operation(payload)); }
+  catch (error) { return Promise.reject(error); }
 }
 
+// Calculation and planning run on-device through local-planner.js and engine.js.
 // Главный рендер вкладок: сначала серверный расчёт, затем отображение ответа Oracle.
 function computeWardenDetailedStats(profile, wardenId) {
   const warden = GAME_DB.wardens.find(item => item.id === Number(wardenId));
   const owned = profile.ownedWardens && profile.ownedWardens[wardenId];
-  const server = oracleSnapshot?.wardens?.[wardenId];
+  const server = calculationSnapshot?.wardens?.[wardenId];
   const values = {};
   const breakdown = {};
   for (const attr of ATTRIBUTES) {
@@ -630,7 +621,7 @@ function renderWardenDetailScreen(db) {
   const index = ownedIds.indexOf(id);
   const warden = db.wardens.find(item => item.id === id);
   const owned = state.account.ownedWardens[id];
-  const oracleWarden = oracleSnapshot?.wardens?.[id];
+  const calculationWarden = calculationSnapshot?.wardens?.[id];
   if (!warden || !owned) return renderWardensListScreen(db);
   const stats = computeWardenDetailedStats(state.account, id);
   const prevId = ownedIds[(index - 1 + ownedIds.length) % ownedIds.length];
@@ -676,7 +667,7 @@ function renderWardenDetailScreen(db) {
     const cap = Number((db.promotes.find(p => p.id === Number(owned.promoteId || 1)) || {}).max_talent_lvl || 40);
     const planned = state.plan.talents?.[id] || {};
     body = '<div class="attrs-box"><label class="field-stack"><span>Личный опыт талантов</span><input class="input warden-personal-exp" type="number" min="0" data-wid="' + id + '" data-spa-warden-exp value="' + Number(owned.exp || 0) + '"></label>' +
-      '<div class="row-sub">Доступно очков по модели Oracle: ' + Number(oracleWarden?.talentPointsAvailable || 0) + ' · потолок ' + cap + '</div>' +
+      '<div class="row-sub">Доступно очков по модели Oracle: ' + Number(calculationWarden?.talentPointsAvailable || 0) + ' · потолок ' + cap + '</div>' +
       '<div class="grid-2">' + (warden.talents || []).map((talent, index) => {
         const level = Number(owned.talents?.[index] || 1);
         const scroll = Number(planned.scrolls?.[index] || 0);
@@ -690,7 +681,7 @@ function renderWardenDetailScreen(db) {
   } else if (state.wardenTab === 'auras') {
     body = '<div class="card-stack">' + (warden.auras || []).map(aura => {
       const level = Number(owned.auras?.[aura.id] ?? aura.min_lvl ?? 0);
-      const serverAura = oracleWarden?.auras?.[aura.id];
+      const serverAura = calculationWarden?.auras?.[aura.id];
       return '<div class="nav-card" style="cursor:default"><div class="card-body"><div class="card-title">' + escHtml(aura.name || aura.type || 'Вдохновение') + '</div><div class="card-subtitle">Oracle: +' + Number(serverAura?.percent || 0).toFixed(1) + '% · уровень ' + level + ' · макс. ур. ' + (aura.max_lvl || '—') + '</div></div><input class="input stepper-input" type="number" min="0" max="' + (aura.max_lvl || 30) + '" data-spa-warden-aura="' + aura.id + '" value="' + level + '"></div>';
     }).join('') + '</div>';
   } else {
@@ -717,7 +708,7 @@ function renderLoverDetailScreen(db) {
   if (!lover || !owned) return renderLoversScreen(db);
   const warden = db.wardens.find(item => item.id === lover.warden_id);
   const plan = getBondPlan(lover, owned);
-  const serverLover = oracleSnapshot?.lovers?.[id] || {};
+  const serverLover = calculationSnapshot?.lovers?.[id] || {};
   const result = serverLover.bondResult;
   const presenceHtml = (lover.presences || []).map(presence => {
     const level = Number(owned.presences?.[presence.id] ?? presence.min_lvl ?? 0);
@@ -824,13 +815,13 @@ function renderSpaScreen(db, report, oracle) {
 }
 
 function openQuickCalculation() {
-  const report = oracleSnapshot?.report;
+  const report = calculationSnapshot?.report;
   if (!report) return;
   const account = state.account;
   const html = '<section class="quick-calc-summary">' +
     '<div class="card-title">Быстрый подсчёт · Oracle</div>' +
     '<div class="quick-calc-total">+' + fmt(report.gain?.total || 0) + '</div>' +
-    '<div class="row-sub">Расчётный прирост по выбранному плану · ' + escHtml(oracleSnapshot.meta?.oracleVersion || '') + '</div>' +
+    '<div class="row-sub">Расчётный прирост по выбранному плану · ' + escHtml(calculationSnapshot.meta?.localEngineVersion || '') + '</div>' +
     '<div class="quick-calc-grid">' +
       '<div><span>Кровь</span><b>' + fmt(account.blood || 0) + '</b></div>' +
       '<div><span>Конклав</span><b>' + fmt(account.conclaveExp || 0) + '</b></div>' +
@@ -846,7 +837,7 @@ function openQuickCalculation() {
 }
 
 function openFormulaInfo() {
-  const oracle = oracleSnapshot;
+  const oracle = calculationSnapshot;
   if (!oracle) return;
   const coverage = oracle.report?.coverage || {};
   const labels = {
@@ -860,7 +851,7 @@ function openFormulaInfo() {
     return '<div class="formula-status-row"><span>' + (labels[key] || key) + '</span><b>' + status + '</b></div>';
   }).join('');
   const html = '<div class="formula-info-content">' +
-    '<p><strong>Версия Oracle:</strong> ' + escHtml(oracle.meta?.oracleVersion || '—') + '</p>' +
+    '<p><strong>Версия Oracle:</strong> ' + escHtml(oracle.meta?.localEngineVersion || '—') + '</p>' +
     '<p><strong>Каталог:</strong> ' + escHtml(oracle.meta?.dataVersion || '—') + '</p>' +
     '<p><strong>Проект:</strong> независимый калькулятор сообщества любителей игры «Наследие Вампиров».</p>' +
     '<div class="formula-status-list">' + rows + '</div>' +
@@ -1186,8 +1177,8 @@ function renderProjectInfoCard() {
   return '<section class="attrs-box project-info-card"><div class="card-title">О проекте</div>' +
     '<p class="row-sub">Vampire Dominion — независимый проект энтузиастов и любителей игры «Наследие Вампиров».</p>' +
     '<p class="row-sub">Инструменты для расчётов, планирования развития аккаунта и распределения ресурсов.</p>' +
-    '<div class="item-row"><span>Версия калькулятора</span><b>' + escHtml(oracleSnapshot?.meta?.oracleVersion || '—') + '</b></div>' +
-    '<div class="item-row"><span>Версия каталога</span><b>' + escHtml(oracleSnapshot?.meta?.dataVersion || '—') + '</b></div>' +
+    '<div class="item-row"><span>Версия калькулятора</span><b>' + escHtml(calculationSnapshot?.meta?.localEngineVersion || '—') + '</b></div>' +
+    '<div class="item-row"><span>Версия каталога</span><b>' + escHtml(calculationSnapshot?.meta?.dataVersion || '—') + '</b></div>' +
     '<div class="row-sub">Данные профиля сохраняются локально. Перед применением плана можно проверить затраты и отменить изменения.</div></section>';
 }
 
@@ -1218,17 +1209,17 @@ async function render() {
   const root = document.getElementById('screen-container') || document.getElementById('app');
   if (!root) return;
   bindNumericPad();
-  const renderId = ++oracleRequestSerial;
+  const renderId = ++renderSerial;
   applyTheme();
   let oracle;
   try {
-    oracle = await requestOracle('/api/oracle/calculate', {
+    oracle = await runLocalAction('calculate', {
       account: state.account,
       plan: state.plan,
     });
   } catch (error) {
-    if (renderId !== oracleRequestSerial) return;
-    oracleSnapshot = null;
+    if (renderId !== renderSerial) return;
+    calculationSnapshot = null;
     root.innerHTML = '<section class="card card-gold oracle-unavailable">' +
       '<div class="card-title">Oracle временно недоступен</div>' +
       '<p class="row-sub">' + escHtml(error.message || 'Не удалось получить серверный расчёт.') + '</p>' +
@@ -1238,8 +1229,8 @@ async function render() {
     syncBottomNav(getPrimaryNav(state.screen || 'home'));
     return;
   }
-  if (renderId !== oracleRequestSerial) return;
-  oracleSnapshot = oracle;
+  if (renderId !== renderSerial) return;
+  calculationSnapshot = oracle;
   const db = getDbContext();
   const report = oracle.report;
   const notice = '';
@@ -1529,7 +1520,7 @@ function renderLevelsTab(db, report, oracle) {
   `;
 }
 
-function renderTalentsTab(db, oracle = oracleSnapshot) {
+function renderTalentsTab(db, oracle = calculationSnapshot) {
   oracle = oracle || {};
   const wardenResults = oracle.wardens || {};
   return `
@@ -2184,7 +2175,7 @@ function bindSpaEvents(db, report, oracle) {
       if (action === 'auto-conclave') {
         pushUndoSnapshot();
         try {
-          const result = await requestOracle('/api/oracle/auto-conclave', { account: state.account, plan: state.plan });
+          const result = await runLocalAction('auto-conclave', { account: state.account, plan: state.plan });
           state.plan.conclave = result.levels || result.plan?.conclave || state.plan.conclave;
           saveState();
           return render();
@@ -2411,7 +2402,7 @@ function bindEvents(db) {
   });
 
   document.getElementById('btn-auto-conclave')?.addEventListener('click', () => {
-    requestOracle('/api/oracle/auto-conclave', { account: state.account, plan: state.plan }).then(res => {
+    runLocalAction('auto-conclave', { account: state.account, plan: state.plan }).then(res => {
       state.plan.conclave = res.levels;
       saveState();
       render();
@@ -2592,7 +2583,7 @@ function bindEvents(db) {
       const candidate = oracle.summonCandidates.wardens.find(item => item.id === id);
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       try {
-        const result = await requestOracle('/api/oracle/summon', { account: state.account, wardenId: id });
+        const result = await runLocalAction('summon', { account: state.account, wardenId: id });
         if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
         state.account = normalizeAccountData(result.account);
         saveState();
@@ -2609,7 +2600,7 @@ function bindEvents(db) {
       const candidate = oracle.summonCandidates.lovers.find(item => item.id === id);
       if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
       try {
-        const result = await requestOracle('/api/oracle/summon-lover', { account: state.account, loverId: id });
+        const result = await runLocalAction('summon-lover', { account: state.account, loverId: id });
         if (!result.ok) { alert(result.error?.message || 'Oracle отклонил призыв.'); return; }
         state.account = normalizeAccountData(result.account);
         saveState();
