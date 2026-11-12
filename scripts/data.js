@@ -10,5 +10,5 @@ export const LOCAL_ICON_BASE = './assets/icons/';
 
 export function getIconUrl(iconPath) {
   if (!iconPath) return '';
-  return LOCAL_ICON_BASE + String(iconPath).replace(/^\\/+/, '');
+  return LOCAL_ICON_BASE + String(iconPath).replace(/^\/+/, '');
 }
