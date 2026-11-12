@@ -2,7 +2,7 @@ services:
   - type: web
     name: vampire-dominion-calculator
     runtime: static
-    branch: main
     buildCommand: ""
     staticPublishPath: .
-    pullRequestPreviewsEnabled: true
+    previews:
+      generation: automatic
