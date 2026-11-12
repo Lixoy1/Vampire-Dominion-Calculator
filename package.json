@@ -1,19 +1,13 @@
 {
-  "name": "vampire-dominion-crimson-obsidian",
-  "version": "5.0.0",
+  "name": "vampire-dominion-bloodmoon",
+  "version": "5.1.0",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "scripts": {
-    "start": "node server.js",
-    "test": "node tests/engine.test.js && node tests/oracle.test.js && node tests/oracle-api.test.js && node tests/app-smoke.test.js && node tests/spa-shell.test.js && node tests/spa-full.test.js",
-    "check": "node --check server.js && node --check oracle.js && node --check scripts/app.js && node --check scripts/engine.js && node --check scripts/data.js",
-    "verify:icons": "python verify_icons.py"
-  },
-  "dependencies": {
-    "express": "^5.1.0",
-    "grammy": "^1.38.3"
+    "start": "python3 -m http.server 8080",
+    "test": "node tests/engine.test.js && node tests/local-planner.test.js && node tests/spa-shell.test.js && node tests/spa-full.test.js",
+    "check": "node --check scripts/app.js && node --check scripts/engine.js && node --check scripts/local-planner.js && node --check scripts/data.js && node --check tests/local-planner.test.js",
+    "verify:icons": "python3 verify_icons.py"
   }
 }

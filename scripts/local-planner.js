@@ -1,15 +1,14 @@
 /**
- * UNIFIED SERVER ORACLE
+ * LOCAL BROWSER CALCULATION PLANNER
  *
- * All gameplay calculations exposed to the browser are executed here on the
- * Render server. The calculator deliberately does not connect to Game of
- * Vampires: players enter their own observed in-game values.
+ * All gameplay calculations and planning run in the browser on the player's
+ * device. No server, Oracle API or game connection is required.
  */
-import { GAME_DB } from './scripts/data.js';
-import * as Engine from './scripts/engine.js';
+import { GAME_DB } from './data.js';
+import * as Engine from './engine.js';
 
-export const ORACLE_VERSION = '1.8.0';
-export const ORACLE_SCHEMA_VERSION = 1;
+export const LOCAL_ENGINE_VERSION = '1.8.0';
+export const LOCAL_ENGINE_SCHEMA_VERSION = 1;
 
 const PROJECT_INFO = Object.freeze({
   name: 'Vampire Dominion',
@@ -649,7 +648,7 @@ export function autoDistributeTalentPlan(input = {}) {
   };
 }
 
-export function calculateOracle(input = {}) {
+export function calculateLocalSnapshot(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
@@ -893,8 +892,8 @@ export function calculateOracle(input = {}) {
 
   return {
     meta: {
-      oracleVersion: ORACLE_VERSION,
-      schemaVersion: ORACLE_SCHEMA_VERSION,
+      localEngineVersion: LOCAL_ENGINE_VERSION,
+      schemaVersion: LOCAL_ENGINE_SCHEMA_VERSION,
       engineVersion: '5.0.0',
       dataVersion: 'GAME_DB_v5.0.0',
       project: PROJECT_INFO,
@@ -1184,12 +1183,12 @@ export function autoDistributeAll(input = {}) {
   };
 }
 
-export function commitOraclePlan(input = {}) {
+export function commitLocalPlan(input = {}) {
   const raw = record(input);
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
   const draft = clone(account);
-  const snapshot = calculateOracle({ account: draft, plan });
+  const snapshot = calculateLocalSnapshot({ account: draft, plan });
   const report = snapshot.report;
 
   if (report.spent.blood > draft.blood) {
@@ -2197,10 +2196,10 @@ export function importCommunitySnapshot(input = {}) {
   return { account, summary, warnings, provenance: PROJECT_INFO };
 }
 
-export function getOracleCapabilities() {
+export function getLocalEngineCapabilities() {
   return {
-    oracleVersion: ORACLE_VERSION,
-    schemaVersion: ORACLE_SCHEMA_VERSION,
+    localEngineVersion: LOCAL_ENGINE_VERSION,
+    schemaVersion: LOCAL_ENGINE_SCHEMA_VERSION,
     engineVersion: '5.0.0',
     dataVersion: 'GAME_DB_v5.0.0',
     project: PROJECT_INFO,
