@@ -228,6 +228,8 @@ test('HAR-confirmed early Warden upgrade interval is used by the engine', () => 
   const warden = GAME_DB.wardens.find(item => item.id === 10270);
   const result = E.calcWardenLevelsUpgrade(warden, 1, 3, 1, GAME_DB.warden_promotes, {}, {});
   assert.equal(result.bloodSpent, 384);
+  assert.equal(result.baseGain, 50);
+  assert.equal(result.baseGainConfidence, 'exact_api_interval');
 });
 
 console.log(`\n${passed} test groups passed.`);
