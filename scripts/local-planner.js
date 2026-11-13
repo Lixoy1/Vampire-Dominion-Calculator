@@ -457,7 +457,7 @@ function makeWarnings(account, plan) {
   });
   if (hasEstimatedBloodCost) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Для уровней без подтверждённого серверного значения используется расчётная кривая; такие шаги отмечаются отдельно.',
+    message: 'Для шагов без HAR next_cost используется историческая 500-уровневая таблица Excel. Это более обоснованная оценка, чем прежняя формула, но она не подтверждена как актуальная серверная цена; вне диапазона таблицы остаётся резервная кривая.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
@@ -2354,7 +2354,7 @@ export function getLocalEngineCapabilities() {
       'intimacy', 'attraction', 'guild-exp',
     ],
     formulaCaveats: [
-      'Warden blood costs use exact HAR observations for sampled levels; all unobserved steps still use an approximate curve.',
+      'Warden Blood priority is exact HAR next_cost, then the historical 500-level Excel table, then the legacy fallback curve; workbook rows are estimates, not current-server truth.',
       'Blood-bond totals use saved exact API cost/gain when Lover, Warden level, source level and target all match; otherwise exact sampled costs or estimates are used.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
