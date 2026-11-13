@@ -118,7 +118,8 @@ const protectedResult = autoDistributeQuick({
     },
   },
 });
-assert.equal(protectedResult.plan.levels[wardenId], 1);
+assert.equal(Object.hasOwn(protectedResult.plan.levels, wardenId), false,
+  'unchanged Warden levels must be omitted from the Quick plan');
 assert.deepEqual(account, accountBefore, 'Quick Calculation must not mutate the saved account');
 assert.equal(protectedResult.precision.optimizer, 'deterministic_local_heuristic_not_server_algorithm_clone');
 assert.ok(protectedResult.warnings.some(item => (item.message || String(item)).includes('Вдохновений')));
@@ -129,7 +130,8 @@ const skippedWarden = autoDistributeQuick({
   plan: {},
   settings: { wardens: { [wardenId]: { off: true } }, spend: { blood: true } },
 });
-assert.equal(skippedWarden.plan.levels[wardenId], 1, 'excluded Wardens must not be leveled');
+assert.equal(Object.hasOwn(skippedWarden.plan.levels, wardenId), false,
+  'excluded Wardens must not be leveled or included as unchanged targets');
 
 const cappedWarden = autoDistributeQuick({
   account,
