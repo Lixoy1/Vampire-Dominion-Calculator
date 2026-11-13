@@ -34483,7 +34483,7 @@
     ],
     "blood_known": {
       "status": "partial_exact_api_observation",
-      "note": "Only this complete interval cost is confirmed by the supplied API dump. It is not a complete blood-cost curve.",
+      "note": "Several exact aggregate intervals and next-level costs are confirmed by HAR/API observations. They do not define a complete per-level blood-cost curve; all other steps remain approximation-only.",
       "samples": [
         {
           "source": "conversation PDF, section 6.2",
@@ -34709,7 +34709,7 @@
           "source": "HAR dominance response"
         }
       ],
-      "note": "These values are exact only for the four captured bond template IDs and the first flat level. Higher levels and other bond templates remain unverified."
+      "note": "Values are exact for captured bond templates 1701–1704 through the second flat level (using the API next_gain fields). The percent next_gain values are captured forecasts, not separately exercised applied upgrades. Higher bond levels and other bond templates remain unverified."
     },
     "account_limits": {
       "warden_max_level": 450,
