@@ -787,7 +787,7 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
       totalAttrGain: flatGain + pctGain,
       flatGainConfidence: exactFlatSteps ? 'exact_api_observation' : 'approximation_only',
       flatCostConfidence: observedBond && st.level <= 1 && targetLevel <= 2 ? 'exact_api_observation' : 'approximation_only',
-      percentGainConfidence: exactPercentStep ? 'exact_api_observation' : 'approximation_only',
+      percentGainConfidence: exactPercentStep ? 'exact_api_next_gain' : 'approximation_only',
       percentCostConfidence: observedBond && st.percentLevel === 0 && targetPercentLevel === 1 ? 'exact_api_observation' : 'approximation_only',
     };
   });
