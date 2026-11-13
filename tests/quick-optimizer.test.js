@@ -121,8 +121,8 @@ const protectedResult = autoDistributeQuick({
 assert.equal(protectedResult.plan.levels[wardenId], 1);
 assert.deepEqual(account, accountBefore, 'Quick Calculation must not mutate the saved account');
 assert.equal(protectedResult.precision.optimizer, 'deterministic_local_heuristic_not_server_algorithm_clone');
-assert.ok(protectedResult.warnings.some(message => message.includes('Вдохновений')));
-assert.ok(protectedResult.warnings.some(message => message.includes('Обликов')));
+assert.ok(protectedResult.warnings.some(item => (item.message || String(item)).includes('Вдохновений')));
+assert.ok(protectedResult.warnings.some(item => (item.message || String(item)).includes('Обликов')));
 
 const skippedWarden = autoDistributeQuick({
   account,
