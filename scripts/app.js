@@ -404,6 +404,15 @@ function tName(type, key) {
   return dict?.[type]?.[key] ?? GAME_DB.names_ru?.[type]?.[key] ?? key;
 }
 
+// Каталог содержит технические ID обликов, поэтому показываем человеку понятное имя.
+function skinDisplayName(ownerType, skin, ownerName) {
+  const translatedOwner = tName(ownerType, ownerName || '');
+  const match = String(skin?.name || '').match(/_SKIN_(\\d+)$/i);
+  const index = match ? Number(match[1]) : null;
+  const label = state.lang === 'en' ? 'Outfit' : 'Облик';
+  return translatedOwner ? `${translatedOwner} · ${label}${index ? ` ${index}` : ''}` : `${label}${index ? ` ${index}` : ''}`;
+}
+
 function fmt(num) {
   return Number(num || 0).toLocaleString(state.lang === 'en' ? 'en-US' : 'ru-RU');
 }
@@ -779,7 +788,7 @@ function renderWardenDetailScreen(db) {
   } else {
     body = '<div class="card-stack">' + (warden.skins || []).map(skin => {
       const level = Number(state.account.skins?.[skin.id] || 0);
-      return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg skin-mini-avatar" alt=""><div class="card-body"><div class="card-title">' + tName('warden_skin', skin.name) + '</div><div class="card-subtitle">' + String(skin.quality || '').toUpperCase() + ' · макс. ' + (skin.max_lvl || 10) + ' уровней</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
+      return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg skin-mini-avatar" alt=""><div class="card-body"><div class="card-title">' + skinDisplayName('warden', skin, warden.name) + '</div><div class="card-subtitle">' + String(skin.quality || '').toUpperCase() + ' · макс. ' + (skin.max_lvl || 10) + ' уровней</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
     }).join('') + '</div>';
   }
 
@@ -856,7 +865,7 @@ function renderLoverDetailScreen(db) {
 
   const skinsHtml = (lover.skins || []).map(skin => {
     const level = Number(state.account.skins?.[skin.id] || 0);
-    return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg skin-mini-avatar" alt=""><div class="card-body"><div class="card-title">' + tName('lover_skin', skin.name) + '</div><div class="card-subtitle">' + String(skin.quality || '').toUpperCase() + ' · максимум ' + Number(skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
+    return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg skin-mini-avatar" alt=""><div class="card-body"><div class="card-title">' + skinDisplayName('lover', skin, lover.name) + '</div><div class="card-subtitle">' + String(skin.quality || '').toUpperCase() + ' · максимум ' + Number(skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
   }).join('');
   const skinsSection =
     '<section class="attrs-box"><div class="card-title">Облики партнёра</div>' +
@@ -1379,7 +1388,7 @@ function renderSkinsScreen(db) {
     return '<section class="attrs-box"><div class="section-owner"><img src="' + getIconUrl(entity.icon_path || entity.icon_path_female || entity.icon_path_male, state.preferLocalIcons) + '" alt=""><b>' + ownerName + '</b><span>' + entity.skins.filter(function (skin) { return Number(state.account.skins[skin.id] || 0) > 0; }).length + '/' + entity.skins.length + '</span></div>' +
       entity.skins.map(function (skin) {
         const level = Number(state.account.skins[skin.id] || 0);
-        return '<div class="skin-row"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" alt=""><div class="card-body"><b>' + tName(isWardens ? 'warden_skin' : 'lover_skin', skin.name) + '</b><div class="row-sub">' + String(skin.quality || '').toUpperCase() + ' · макс. ур. ' + (skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
+        return '<div class="skin-row"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" alt=""><div class="card-body"><b>' + skinDisplayName(isWardens ? 'warden' : 'lover', skin, entity.name) + '</b><div class="row-sub">' + String(skin.quality || '').toUpperCase() + ' · макс. ур. ' + (skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
       }).join('') + '</section>';
   }).join('');
   return renderSubToolbar('resources', 'Облики') +
@@ -2037,7 +2046,7 @@ function renderSkinsTab(db, oracle) {
           <img class="avatar" src="${getIconUrl(s.icon_path, state.preferLocalIcons)}" alt="" loading="lazy" />
           <div class="row-info">
             <div class="row-name">${s.ownerName} · <span class="badge badge-gold">${s.quality.toUpperCase()}</span></div>
-            <div class="row-sub">${tName(s.ownerType === 'warden' ? 'warden_skin' : 'lover_skin', s.name)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
+            <div class="row-sub">${skinDisplayName(s.ownerType, s, s.ownerName)} · Опыт магазину: +${result.storeExp} · ${result.fabricPerLevel ?? '—'}/ур. ткани · ${result.purchasable ? `До максимума: ${fmt(result.fabricToMax)} ткани` : 'Нужна карточка'} · Осталось уровней: ${result.levelsRemaining}</div>
           </div>
           <div class="row-controls skin-controls">
             <label class="mini-field">Сейчас<input class="input stepper-input skin-level" type="number" min="0" max="${s.max_lvl}" data-skin-id="${s.id}" value="${result.level}" aria-label="Текущий уровень облика" /></label>
@@ -2371,6 +2380,57 @@ function redoSpa() {
 function bindSpaEvents(db, report, oracle) {
   const root = document.getElementById('screen-container');
   if (!root) return;
+
+  // Делегированный обработчик призыва живёт на постоянном контейнере SPA.
+  // Он не теряется при перерисовке списка и всегда использует актуальный профиль.
+  if (!root.dataset.summonHandlerBound) {
+    root.dataset.summonHandlerBound = '1';
+    root.addEventListener('click', async event => {
+      const button = event.target.closest('button.summon-warden, button.summon-lover');
+      if (!button || !root.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (button.disabled || button.dataset.busy === '1') return;
+
+      const isWarden = button.classList.contains('summon-warden');
+      const id = Number(isWarden ? button.dataset.wid : button.dataset.lid);
+      const candidates = isWarden ? calculationSnapshot?.summonCandidates?.wardens : calculationSnapshot?.summonCandidates?.lovers;
+      const candidate = candidates?.find(item => item.id === id);
+      if (!candidate) {
+        globalThis.alert?.('Не удалось найти персонажа в актуальном списке. Обнови экран и попробуй снова.');
+        return;
+      }
+      if (!candidate.canSummon) {
+        globalThis.alert?.('Недостаточно предметов для призыва. Проверь количество в Сумке.');
+        return;
+      }
+
+      const originalLabel = button.textContent;
+      button.dataset.busy = '1';
+      button.disabled = true;
+      button.textContent = 'Призываем…';
+      try {
+        const result = await runLocalAction(isWarden ? 'summon' : 'summon-lover',
+          isWarden ? { account: state.account, wardenId: id } : { account: state.account, loverId: id });
+        if (!result?.ok) {
+          globalThis.alert?.(result?.error?.message || 'Локальный движок отклонил призыв.');
+          return;
+        }
+        state.account = normalizeAccountData(result.account);
+        saveState();
+        globalThis.alert?.((isWarden ? 'Смотритель' : 'Возлюбленная') + ' успешно добавлен(а) в профиль.');
+        await render();
+      } catch (error) {
+        globalThis.alert?.(error?.message || 'Не удалось выполнить призыв.');
+      } finally {
+        if (button.isConnected) {
+          button.dataset.busy = '0';
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
+      }
+    });
+  }
 
   root.querySelectorAll('[data-nav]').forEach(function (button) {
     button.addEventListener('click', async function () { navigate(button.dataset.nav); });
@@ -2914,40 +2974,6 @@ function bindEvents(db) {
       state.account.skins[id] = Math.min(skin.max_lvl || 10, Math.max(0, Number(inp.value) || 0));
       saveState();
       render();
-    });
-  });
-
-  document.querySelectorAll('.summon-warden').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = Number(btn.dataset.wid);
-      const candidate = oracle.summonCandidates.wardens.find(item => item.id === id);
-      if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
-      try {
-        const result = await runLocalAction('summon', { account: state.account, wardenId: id });
-        if (!result.ok) { alert(result.error?.message || 'Локальный движок отклонил призыв.'); return; }
-        state.account = normalizeAccountData(result.account);
-        saveState();
-        render();
-      } catch (error) {
-        alert(error.message || 'Локальный движок не смог выполнить призыв.');
-      }
-    });
-  });
-
-  document.querySelectorAll('.summon-lover').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = Number(btn.dataset.lid);
-      const candidate = oracle.summonCandidates.lovers.find(item => item.id === id);
-      if (!candidate?.canSummon) { alert('Не хватает предметов для призыва.'); return; }
-      try {
-        const result = await runLocalAction('summon-lover', { account: state.account, loverId: id });
-        if (!result.ok) { alert(result.error?.message || 'Локальный движок отклонил призыв.'); return; }
-        state.account = normalizeAccountData(result.account);
-        saveState();
-        render();
-      } catch (error) {
-        alert(error.message || 'Локальный движок не смог выполнить призыв.');
-      }
     });
   });
 
