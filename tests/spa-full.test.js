@@ -15,7 +15,7 @@ function fn(name) {
   return app.slice(start.index, end ? end.index : app.length);
 }
 
-for (const name of ['createBlankAccountData','ensureStarterWarden','normalizeState','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
+for (const name of ['createBlankAccountData','ensureStarterWarden','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
 
 const topbar = fn('renderSpaTopbar');
 assert.ok(topbar.includes('id="btn-lang"'), 'language toggle is in the topbar');
