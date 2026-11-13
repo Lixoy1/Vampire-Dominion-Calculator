@@ -15,7 +15,7 @@ function fn(name) {
   return app.slice(start.index, end ? end.index : app.length);
 }
 
-for (const name of ['createBlankAccountData','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
+for (const name of ['createBlankAccountData','ensureStarterWarden','normalizeState','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
 
 const topbar = fn('renderSpaTopbar');
 assert.ok(topbar.includes('id="btn-lang"'), 'language toggle is in the topbar');
@@ -27,6 +27,16 @@ const blankAccount = fn('createBlankAccountData');
 assert.ok(blankAccount.includes('GAME_DB.wardens[0]'), 'new account starts with the first reference Warden');
 assert.ok(blankAccount.includes('createOwnedWarden(GAME_DB.wardens[0])'), 'starter Warden is initialized at level 1 with catalog talent defaults');
 assert.ok(blankAccount.includes('blood: 0') && blankAccount.includes('ownedLovers: {}'), 'new account begins with zero Blood and no Partners');
+
+const starterMigration = fn('ensureStarterWarden');
+assert.ok(starterMigration.includes('Number(storedVersion) >= 7'), 'existing version-7 profiles are never changed by starter migration');
+assert.ok(starterMigration.includes('Object.keys(account.ownedWardens || {}).length'), 'existing Warden rosters are preserved');
+assert.ok(starterMigration.includes('account.blood') && starterMigration.includes('account.ownedLovers') && starterMigration.includes('account.bag') && starterMigration.includes('account.skins'), 'migration checks the whole profile before adding starter Warden');
+assert.ok(starterMigration.includes('createOwnedWarden(starter)'), 'migration creates the catalog-defined starter Warden');
+const normalizer = fn('normalizeState');
+assert.equal((normalizer.match(/ensureStarterWarden\(/g) || []).length, 2, 'both single-account and multi-account legacy profiles are migrated');
+assert.equal((normalizer.match(/version: 7/g) || []).length, 2, 'both migrated state shapes are upgraded to version 7');
+
 const progress = fn('getAccountProgressPercent');
 assert.ok(progress.includes('Math.max(0'), 'empty profile can display zero-percent progress');
 assert.ok(progress.includes('return Math.max(0,'), 'empty progress is not rounded up to a false one percent');
