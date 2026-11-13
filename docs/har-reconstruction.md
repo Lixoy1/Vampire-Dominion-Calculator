@@ -13,7 +13,7 @@ The captures include successful HTTP 200 responses for:
 - `GET /api/v1/templates/conclave-levels`: 180
 - `GET /api/v1/templates/courtyard-levels`: 210
 
-The canonical catalog now contains all 240 item templates. Three previously missing skin items were added: 10464101, 20464101, and 30464101.
+The canonical catalog now contains all 240 item templates. Three previously missing skin items were added: 10464101, 20464101, and 30464101. Their API icon paths are preserved as `api_icon_path`, while `icon_path` is null because those three WebP files were not present in the supplied HAR captures or local asset bundle; the UI must use its normal icon fallback for these entries.
 
 ## API limits
 
