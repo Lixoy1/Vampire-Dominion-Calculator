@@ -15,7 +15,7 @@ function fn(name) {
   return app.slice(start.index, end ? end.index : app.length);
 }
 
-for (const name of ['renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
+for (const name of ['createBlankAccountData','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
 
 const topbar = fn('renderSpaTopbar');
 assert.ok(topbar.includes('id="btn-lang"'), 'language toggle is in the topbar');
@@ -23,6 +23,21 @@ assert.ok(topbar.includes('id="btn-theme"'), 'theme toggle is in the topbar');
 const home = fn('renderHomeScreen');
 assert.ok(home.includes('data-action="quick-calc"'));
 assert.ok(!home.includes('auto-all'), 'Auto All is not shown on home');
+const blankAccount = fn('createBlankAccountData');
+assert.ok(blankAccount.includes('GAME_DB.wardens[0]'), 'new account starts with the first reference Warden');
+assert.ok(blankAccount.includes('createOwnedWarden(GAME_DB.wardens[0])'), 'starter Warden is initialized at level 1 with catalog talent defaults');
+assert.ok(blankAccount.includes('blood: 0') && blankAccount.includes('ownedLovers: {}'), 'new account begins with zero Blood and no Partners');
+const progress = fn('getAccountProgressPercent');
+assert.ok(progress.includes('Math.max(0'), 'empty profile can display zero-percent progress');
+assert.ok(!progress.includes('Math.max(1'), 'empty progress is not rounded up to a false one percent');
+const home = fn('renderHomeScreen');
+for (const marker of ['home-resource-grid','home-primary-actions','home-profile-progress','Подсчёт Господства','Быстрый подсчёт']) {
+  assert.ok(home.includes(marker), 'reference home dashboard includes ' + marker);
+}
+for (const destination of ['resources','wardens_list','lovers','bag','calc_dominance']) {
+  assert.ok(home.includes('data-screen="' + destination + '"'), 'home dashboard shortcut opens ' + destination);
+}
+
 const nav = fn('renderCalculationNavStrip');
 for (const target of ['calc_dominance','conclave','wardens_list','warden_exp','calc_talents','lovers','calc_intimacy','skins','bag']) assert.ok(nav.includes(target), 'horizontal nav has ' + target);
 const dominance = fn('renderDominanceTab');
@@ -55,6 +70,9 @@ for (const value of ["'auto','dark','light'","'auto','smooth','less'","'male','f
 assert.ok(settings.includes('Не подключено'), 'offline app does not pretend that bot messaging is active');
 assert.ok(fn('applyTheme').includes('matchMedia'), 'automatic theme and reduced-motion settings follow device preferences');
 
+for (const selector of ['.home-resource-grid','.home-resource-card','.home-primary-actions','.home-profile-progress']) {
+  assert.ok(css.includes(selector), 'Crimson home component has styles: ' + selector);
+}
 assert.ok(css.includes('touch-action:pan-x') || css.includes('touch-action: pan-x'), 'horizontal strip supports touch scrolling');
 assert.ok(css.includes('pointer-events:none') || css.includes('pointer-events: none'), 'decorative images do not intercept taps');
 assert.ok(html.includes('локально на устройстве'));
