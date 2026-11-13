@@ -1132,6 +1132,24 @@ export function autoDistributeQuick(input = {}) {
     plan: freshPlan,
     quickSettings: settings,
   });
+
+  // The original Quick Calculation response has no Courtyard field and does
+  // not include Courtyard in its eight-step flow. Keep it out of this plan.
+  result.plan.courtyardToLvl = account.courtyardLvl;
+
+  // The API quick-plan contract contains changed targets only. Do not emit
+  // every owned Warden at their unchanged current level.
+  result.plan.levels = Object.fromEntries(
+    Object.entries(result.plan.levels || {}).filter(([id, target]) =>
+      Number(target) > Number(account.ownedWardens[id]?.level || 1)
+    )
+  );
+  result.plan.promotes = Object.fromEntries(
+    Object.entries(result.plan.promotes || {}).filter(([id, target]) =>
+      Number(target) > Number(account.ownedWardens[id]?.promoteId || 1)
+    )
+  );
+
   const unsupported = [];
   if (settings.spend.blood && Object.entries(result.plan.levels || {}).some(([id, target]) =>
     Number(target) > Number(account.ownedWardens[id]?.level || 1)
