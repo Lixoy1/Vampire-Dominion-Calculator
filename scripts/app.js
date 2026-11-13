@@ -1058,9 +1058,10 @@ function hasQuickDraftSelections() {
   if (Object.keys(plan.presences || {}).length || Object.keys(plan.skins || {}).length) return true;
   if (Object.values(plan.summons || {}).some(value => Array.isArray(value) && value.length)) return true;
   for (const [id, branches] of Object.entries(plan.bonds || {})) {
-    for (const branch of Object.values(branches || {})) {
-      if (Number(branch.targetLevel) > Number(account.ownedLovers?.[id]?.bonds?.[branch.attribute]?.level || 0)) return true;
-      if (Number(branch.targetPercentLevel) > Number(account.ownedLovers?.[id]?.bonds?.[branch.attribute]?.percentLevel || 0)) return true;
+    for (const [attribute, branch] of Object.entries(branches || {})) {
+      const current = account.ownedLovers?.[id]?.bonds?.[attribute] || {};
+      if (Number(branch.targetLevel) > Number(current.level || 0)) return true;
+      if (Number(branch.targetPercentLevel) > Number(current.percentLevel || current.pctLevel || 0)) return true;
     }
   }
   return false;
