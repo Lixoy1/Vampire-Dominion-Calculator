@@ -72,9 +72,14 @@ export function getObservedBondCostTable() {
 }
 
 export const API_OBSERVATION_META = Object.freeze({
-  source: 'supplied HAR captures',
+  source: 'four supplied HAR captures; sanitized aggregate only',
+  harCaptures: 4,
+  totalNetworkEntries: 3487,
+  apiRequests: 1251,
   successfulDominanceResponses: 78,
+  successfulQuickResponses: 17,
+  quickRateLimitedResponses: 5,
   distinctBloodNextCostLevels: Object.keys(API_OBSERVED_BLOOD_COSTS).length,
   distinctBondNextCostLevels: 26,
-  note: 'Only explicitly observed level/branch steps are exact. No interpolation is performed.',
+  note: 'All four captures were reconciled. Only explicitly observed level/branch steps are exact. No interpolation is performed.',
 });
