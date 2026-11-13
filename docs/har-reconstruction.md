@@ -64,6 +64,24 @@ The captures include these calculation endpoints:
 
 Dominance responses expose detailed sections for Conclave, levels, bonds, auras, presences, skins, talents, courtyard, and books. Quick calculation responses expose planned changes for Conclave, levels, bonds, auras, skins, talents, and presences.
 
+## Quick Calculation reconstruction
+
+The two HAR captures contain nine successful Quick Calculation calls but only three distinct request/response pairs. The captured request contract is:
+
+- `goal`: `all`, `strength`, `allure`, `intellect`, or `spirit`.
+- `spend`: independent switches for `blood`, `promote_items`, `conclave`, `trust`, `group_items`, `presence_items`, `talent_items`, `talent_exp`, `skin_cards`, and `fabric`.
+- `wardens`: per-template exclusions and limits, including `off`, `summon`, `levels`, `max_level`, and excluded promote/talent/aura/skin IDs.
+- `lovers`: per-template exclusions, summon switches, excluded bond branches, presences, and skins.
+- `conclave_off`: optional per-attribute exclusions.
+
+The captured client splash flow presents these stages in order: Conclave, levels and breakthroughs, summon, auras, talents, skins, Scarlet Bonds, and Presences. The Quick API response contains targets for Conclave, levels, bonds, auras, skins, talents, and presences. It does not contain a Courtyard target; the local Quick plan therefore leaves Courtyard unchanged.
+
+Only one non-empty Quick response was captured. It returned Warden targets 10270→3, 10280→7, 10300→10, and 10960→3; four first flat bond levels for Lover 20170; and two scroll levels for Warden 10540. A second distinct response disabled Blood, breakthrough items, Conclave, Trust, talent items/EXP, skin cards, and fabric and returned no planned changes. The third distinct request duplicated the first request/response pair.
+
+Important limitation: the HAR contains the browser's Quick UI/client code and calls to the server endpoint, but not the server-side optimization implementation. The client code confirms the settings model, response mapping, animation sequence, and replacement/undo behavior; it does not reveal the optimizer's internal candidate ranking or tie-breaking rules. Therefore the local implementation is a deterministic offline optimizer with explicit confidence warnings, not a claim of byte-for-byte parity with the server optimizer.
+
+Local Quick allocation uses a single mutable inventory ledger: each stage reserves items before later stages can consume them. Resource switches mask the corresponding budgets before planning. Quick plans are deltas: unchanged Warden levels and breakthrough targets are omitted, and Courtyard is not modified by Quick Calculation.
+
 ## Confidence policy
 
 - **Exact API observation**: directly returned by a successful API response.
