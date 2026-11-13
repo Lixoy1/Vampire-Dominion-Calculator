@@ -1,0 +1,93 @@
+{
+  "source": "User-supplied HAR captures; successful API responses only; account identifiers and session data omitted.",
+  "captured_at": "2026-11-12",
+  "endpoint": "POST /api/v1/accounts/{account_id}/calculations/dominance",
+  "scenarios": [
+    {
+      "id": "warden-levels-1-to-3",
+      "input": {
+        "levels": {
+          "10270": 3
+        }
+      },
+      "oracle": {
+        "warden_id": 10270,
+        "current_level": 1,
+        "target_level": 3,
+        "total_blood_cost": 384,
+        "next_cost_at_level_1": 115,
+        "next_cost_at_level_3": 461,
+        "gain": "50.0000000000"
+      }
+    },
+    {
+      "id": "warden-level-150-next-step",
+      "input": {
+        "levels": {}
+      },
+      "oracle": {
+        "warden_id": 10170,
+        "current_level": 150,
+        "next_cost": 2096083
+      }
+    },
+    {
+      "id": "first-flat-bond-level-is-free",
+      "input": {
+        "bonds": {
+          "20170": {
+            "strength": {
+              "level": 1
+            },
+            "allure": {
+              "level": 1
+            },
+            "intellect": {
+              "level": 1
+            },
+            "spirit": {
+              "level": 1
+            }
+          }
+        }
+      },
+      "oracle": {
+        "lover_id": 20170,
+        "bonds": [
+          {
+            "attribute": "strength",
+            "current_level": 0,
+            "target_level": 1,
+            "cost": 0,
+            "next_cost": 20,
+            "next_gain": "132.0000000000"
+          },
+          {
+            "attribute": "allure",
+            "current_level": 0,
+            "target_level": 1,
+            "cost": 0,
+            "next_cost": 20,
+            "next_gain": "110.0000000000"
+          },
+          {
+            "attribute": "intellect",
+            "current_level": 0,
+            "target_level": 1,
+            "cost": 0,
+            "next_cost": 20,
+            "next_gain": "110.0000000000"
+          },
+          {
+            "attribute": "spirit",
+            "current_level": 0,
+            "target_level": 1,
+            "cost": 0,
+            "next_cost": 54,
+            "next_gain": "330.0000000000"
+          }
+        ]
+      }
+    }
+  ]
+}
