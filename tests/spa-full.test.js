@@ -65,6 +65,16 @@ assert.ok(!app.includes('fetch('));
 const events = fn('bindSpaEvents');
 for (const action of ['save-calculation','reset-plan','export-profile','import-profile']) assert.ok(events.includes("action === '" + action + "'"), 'delegated handler supports ' + action);
 
+const exporter = fn('exportProfileJson');
+assert.ok(exporter.includes('navigator.canShare') && exporter.includes('navigator.share'), 'profile export supports the native mobile share sheet');
+assert.ok(exporter.includes('document.body.appendChild(link)') && exporter.includes('link.click()'), 'profile export attaches its download link to the document before clicking');
+assert.ok(exporter.includes('profile-export-json') && exporter.includes('btn-copy-export-json'), 'profile export provides a manual JSON copy fallback');
+const importer = fn('importProfileJson');
+assert.ok(importer.includes('document.body.appendChild(input)') && importer.includes('input.click()'), 'profile import keeps the file picker attached to the document');
+assert.ok(importer.includes('FileReader') && importer.includes('file.text()'), 'profile import supports both modern and fallback file reading');
+assert.ok(importer.includes('Array.isArray(parsed.accounts)') && importer.includes('Резервную копию профиля Vampire Dominion'), 'profile import validates the selected JSON shape');
+assert.ok(importer.includes('previousState') && importer.includes('localStorage.setItem'), 'profile import rolls back in-memory state if persistent save fails');
+
 const loverDetail = fn('renderLoverDetailScreen');
 for (const tab of ['trust','bonds','presences','skins']) {
   assert.ok(loverDetail.includes("['" + tab + "'"), 'partner detail has ' + tab + ' tab');
