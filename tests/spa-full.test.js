@@ -34,9 +34,10 @@ const homeDashboard = fn('renderHomeScreen');
 for (const marker of ['home-resource-grid','home-primary-actions','home-profile-progress','Подсчёт Господства','Быстрый подсчёт']) {
   assert.ok(homeDashboard.includes(marker), 'reference home dashboard includes ' + marker);
 }
-for (const destination of ['resources','wardens_list','lovers','bag','calc_dominance']) {
-  assert.ok(homeDashboard.includes('data-screen="' + destination + '"'), 'home dashboard shortcut opens ' + destination);
+for (const destination of ['resources','wardens_list','lovers','bag']) {
+  assert.ok(homeDashboard.includes("screen: '" + destination + "'"), 'home dashboard shortcut opens ' + destination);
 }
+assert.ok(homeDashboard.includes('data-screen="calc_dominance"'), 'main dashboard has a direct dominance-calculation action');
 
 const nav = fn('renderCalculationNavStrip');
 for (const target of ['calc_dominance','conclave','wardens_list','warden_exp','calc_talents','lovers','calc_intimacy','skins','bag']) assert.ok(nav.includes(target), 'horizontal nav has ' + target);
