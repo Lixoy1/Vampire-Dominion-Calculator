@@ -663,7 +663,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const exactGainObservation = WARDEN_LEVEL_GAIN_EXACT_INTERVALS.find(
     row => row.wardenId === warden.id && row.from === currentLvl && row.to === targetLvl
   );
-  const baseGain = exactGainObservation ? exactGainObservation.gain : estimatedBaseGain;
+  const baseGain = estimatedBaseGain;
 
   const bloodSpent = calcBloodCostForRange(currentLvl, targetLvl);
 
@@ -690,7 +690,9 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     toLvl: targetLvl,
     bloodSpent,
     baseGain,
-    baseGainConfidence: exactGainObservation ? 'exact_api_interval' : 'approximation_only',
+    baseGainConfidence: 'approximation_only',
+    observedApiGain: exactGainObservation?.gain ?? null,
+    observedApiGainScope: exactGainObservation ? 'captured_account_state_only' : null,
     neededPromotes,
     missingItems,
     canPromote: missingItems.length === 0,
