@@ -28310,7 +28310,8 @@
           "for_warden",
           "skin_s"
         ],
-        "icon_path": "items/10464101.185e0a90.webp"
+        "icon_path": null,
+        "api_icon_path": "items/10464101.185e0a90.webp"
       },
       {
         "id": 10514101,
@@ -28740,7 +28741,8 @@
           "for_lover",
           "skin_s"
         ],
-        "icon_path": "items/20464101.a7a8594d.webp"
+        "icon_path": null,
+        "api_icon_path": "items/20464101.a7a8594d.webp"
       },
       {
         "id": 20544101,
@@ -29040,7 +29042,8 @@
           "for_lover",
           "skin_s"
         ],
-        "icon_path": "items/30464101.61f8de6b.webp"
+        "icon_path": null,
+        "api_icon_path": "items/30464101.61f8de6b.webp"
       },
       {
         "id": 30514101,
