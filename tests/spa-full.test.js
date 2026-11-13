@@ -15,7 +15,7 @@ function fn(name) {
   return app.slice(start.index, end ? end.index : app.length);
 }
 
-for (const name of ['createBlankAccountData','ensureStarterWarden','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
+for (const name of ['createBlankAccountData','ensureStarterWarden','getAccountProgressPercent','renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','renderWardensListScreen','renderLoversScreen','renderQuickSettingsModal','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
 
 const topbar = fn('renderSpaTopbar');
 assert.ok(topbar.includes('id="btn-lang"'), 'language toggle is in the topbar');
@@ -88,3 +88,17 @@ assert.ok(css.includes('touch-action:pan-x') || css.includes('touch-action: pan-
 assert.ok(css.includes('pointer-events:none') || css.includes('pointer-events: none'), 'decorative images do not intercept taps');
 assert.ok(html.includes('локально на устройстве'));
 console.log('PASS local SPA actions, persistent top controls, swipe navigation and tap-through art');
+
+const wardenCatalog = fn('renderWardensListScreen');
+assert.ok(wardenCatalog.includes('Добавить смотрителя') && wardenCatalog.includes('data-action="add-warden"'), 'Warden selection uses a visible catalog');
+assert.ok(wardenCatalog.includes('getIconUrl(warden.icon_path'), 'Warden catalog cards include portraits');
+assert.ok(!wardenCatalog.includes('prompt(') && !app.includes("Введите ID смотрителя"), 'Warden selection never asks players to type IDs');
+const loverCatalog = fn('renderLoversScreen');
+assert.ok(loverCatalog.includes('Добавить партнёра') && loverCatalog.includes('data-action="add-lover"'), 'Partner selection uses a visible catalog');
+assert.ok(loverCatalog.includes('getLoverIconPath(lover,null)'), 'Partner catalog cards include portraits');
+assert.ok(!loverCatalog.includes('prompt(') && !app.includes("Введите ID партнёра"), 'Partner selection never asks players to type IDs');
+const quickModal = fn('renderQuickSettingsModal');
+assert.ok(quickModal.includes('Рассчитать быстро'), 'Quick calculation has a simple player-facing action');
+for (const jargon of ['API / HAR','Экспорт настроек JSON','Формат настроек восстановлен']) assert.ok(!quickModal.includes(jargon), 'Quick calculation hides technical term: ' + jargon);
+assert.ok(!fn('renderDominanceTab').includes('Подключение игрового аккаунта'), 'Dominance screen does not show the unused game-connection panel');
+assert.ok(!fn('renderSettingsTab').includes('btn-game-connect-panel'), 'Settings do not show the unused game-connection action');
