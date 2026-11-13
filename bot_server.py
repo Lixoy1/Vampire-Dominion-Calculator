@@ -23,6 +23,7 @@ BOT_TOKEN = (
     os.environ.get("BOT_TOKEN")
     or os.environ.get("TELEGRAM_BOT_TOKEN")
     or os.environ.get("BOTFATHER_TOKEN")
+    or os.environ.get("TELEGRAM_TOKEN")
 )
 WEB_APP_URL = "https://vampire-dominion-calculator-1.onrender.com"
 WELCOME_TEXT = (
@@ -120,6 +121,27 @@ class Handler(SimpleHTTPRequestHandler):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def do_GET(self):
+        if self.path.rstrip("/") == "/api/telegram-status":
+            status = {"token_configured": bool(BOT_TOKEN), "webhook_path": WEBHOOK_PATH}
+            if BOT_TOKEN:
+                try:
+                    info = telegram_api("getWebhookInfo", {})
+                    webhook = info.get("result", {})
+                    status["webhook"] = {
+                        "url": webhook.get("url", ""),
+                        "pending_update_count": webhook.get("pending_update_count", 0),
+                        "last_error_date": webhook.get("last_error_date"),
+                        "last_error_message": webhook.get("last_error_message"),
+                    }
+                except Exception as exc:
+                    status["telegram_api_error"] = str(exc)[:300]
+            body = json.dumps(status, ensure_ascii=False).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if self.path.rstrip("/") == "/api/health":
             body = json.dumps({"status": "ok"}).encode("utf-8")
             self.send_response(200)
