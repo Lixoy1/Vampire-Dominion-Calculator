@@ -960,11 +960,15 @@ function bindQuickCalculationModal() {
   }));
   body.querySelectorAll('[data-quick-conclave-off]').forEach(input => input.addEventListener('change', () => {
     const attr = input.dataset.quickConclaveOff;
-    const current = new Set(state.quickSettings.conclave_off || []);
+    const current = new Set(state.quickSettings.spend.conclave
+      ? (state.quickSettings.conclave_off || [])
+      : ATTRIBUTES);
     if (input.checked) current.delete(attr); else current.add(attr);
+    state.quickSettings.spend.conclave = current.size < ATTRIBUTES.length;
     state.quickSettings.conclave_off = [...current];
     state.quickSettings = normalizeQuickSettings(state.quickSettings);
     saveState();
+    openQuickCalculation();
   }));
   body.querySelectorAll('[data-quick-warden-off]').forEach(input => input.addEventListener('change', () => {
     const id = input.dataset.quickWardenOff;
@@ -1044,7 +1048,27 @@ function bindQuickCalculationModal() {
   body.querySelector('#btn-quick-optimize')?.addEventListener('click', runQuickOptimization);
 }
 
+function hasQuickDraftSelections() {
+  const account = state.account || {};
+  const plan = state.plan || {};
+  if (Object.entries(plan.conclave || {}).some(([attr, target]) => Number(target) > Number(account.conclave?.[attr] || 0))) return true;
+  if (Number(plan.courtyardToLvl) > Number(account.courtyardLvl || 0)) return true;
+  if (Object.entries(plan.levels || {}).some(([id, target]) => Number(target) > Number(account.ownedWardens?.[id]?.level || 1))) return true;
+  if (Object.keys(plan.talents || {}).length) return true;
+  if (Object.keys(plan.presences || {}).length || Object.keys(plan.skins || {}).length) return true;
+  if (Object.values(plan.summons || {}).some(value => Array.isArray(value) && value.length)) return true;
+  for (const [id, branches] of Object.entries(plan.bonds || {})) {
+    for (const branch of Object.values(branches || {})) {
+      if (Number(branch.targetLevel) > Number(account.ownedLovers?.[id]?.bonds?.[branch.attribute]?.level || 0)) return true;
+      if (Number(branch.targetPercentLevel) > Number(account.ownedLovers?.[id]?.bonds?.[branch.attribute]?.percentLevel || 0)) return true;
+    }
+  }
+  return false;
+}
+
 async function runQuickOptimization() {
+  if (hasQuickDraftSelections() && typeof globalThis.confirm === 'function' &&
+      !globalThis.confirm('Быстрый расчёт заменит текущий черновик плана во всех разделах. Сам профиль и ресурсы не изменятся. Продолжить?')) return;
   const button = document.getElementById('btn-quick-optimize');
   if (button) { button.disabled = true; button.textContent = 'Рассчитываем…'; }
   try {
