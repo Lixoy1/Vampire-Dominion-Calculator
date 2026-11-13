@@ -1288,14 +1288,6 @@ export function autoDistributeAll(input = {}) {
     tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
   }
 
-  // Plan scrolls, scripts and personal EXP against resources remaining after
-  // Warden breakthrough and existing skin reservations.
-  const talentDistribution = runTalentAutoDistribution(account, plan, tempBag, quickSettings);
-  plan.talents = talentDistribution.plan.talents;
-  for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
-    tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
-  }
-
   // Reserve summon resources through one shared bag ledger. A Lover can be
   // auto-selected only when their Warden is already owned or included above.
   plan.summons.wardens = [];
@@ -1334,6 +1326,15 @@ export function autoDistributeAll(input = {}) {
     if ((summonBag[candidate.itemId] || 0) < candidate.cost) continue;
     summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
+  }
+
+  // Match the captured Quick stage order: summon first, then talents. Both
+  // stages share this same mutable inventory ledger so an item cannot be
+  // allocated twice if a future catalog revision reuses an item category.
+  const talentDistribution = runTalentAutoDistribution(account, plan, summonBag, quickSettings);
+  plan.talents = talentDistribution.plan.talents;
+  for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
+    summonBag[itemId] = Math.max(0, (summonBag[itemId] || 0) - count);
   }
 
   const presenceDistribution = runPresenceAutoDistribution(account, plan, summonBag, quickSettings);
