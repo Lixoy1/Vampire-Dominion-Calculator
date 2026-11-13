@@ -1321,7 +1321,15 @@ function renderWardensListScreen(db) {
   const query = String(state.wardenListSearch || '').trim().toLocaleLowerCase();
   if (query) list = list.filter(warden => tName('warden',warden.name).toLocaleLowerCase().includes(query));
   list.sort((a,b) => state.wardenListSort === 'sum' ? computeWardenDetailedStats(state.account,b.id).sum - computeWardenDetailedStats(state.account,a.id).sum : tName('warden',a.name).localeCompare(tName('warden',b.name),state.lang === 'en' ? 'en' : 'ru'));
-  const catalog = db.wardens.filter(warden => !state.account.ownedWardens[warden.id]);
+  // Один и тот же фильтр и поиск применяются и к профилю, и к каталогу добавления.
+  // Раньше каталог строился отдельно и игнорировал выбранный атрибут — поэтому
+  // при нажатии «Сила / Харизма / Интеллект / Воля» в нём оставались все герои.
+  let catalog = db.wardens.filter(warden => !state.account.ownedWardens[warden.id]);
+  if (filter !== 'all') catalog = catalog.filter(warden => Array.isArray(warden.attributes) && warden.attributes.includes(filter));
+  if (query) catalog = catalog.filter(warden => tName('warden',warden.name).toLocaleLowerCase().includes(query));
+  catalog.sort((a,b) => state.wardenListSort === 'sum'
+    ? computeWardenDetailedStats(state.account,b.id).sum - computeWardenDetailedStats(state.account,a.id).sum
+    : tName('warden',a.name).localeCompare(tName('warden',b.name),state.lang === 'en' ? 'en' : 'ru'));
   return renderSubToolbar('resources','Смотрители') +
     '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden" placeholder="Поиск смотрителя..." value="' + escHtml(state.wardenListSearch || '') + '"></div><button class="pill-tab" data-action="toggle-warden-sort">' + (state.wardenListSort === 'sum' ? 'Сумма ↓' : 'Имя ↑') + '</button></div>' +
     '<div class="pill-tabs"><button class="pill-tab ' + (filter === 'all' ? 'active' : '') + '" data-action="warden-filter" data-val="all">Все ' + ownedIds.length + '</button>' +
@@ -1330,7 +1338,9 @@ function renderWardensListScreen(db) {
       const owned = state.account.ownedWardens[warden.id], stats = computeWardenDetailedStats(state.account,warden.id);
       return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '"><img src="' + getIconUrl(warden.icon_path,state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt=""><div class="card-body"><div class="card-title">' + escHtml(tName('warden',warden.name)) + '</div><div class="card-subtitle">' + warden.attributes.map(attr => '<span class="dot ' + attr + '"></span>').join(' ') + ' · ур. ' + Number(owned.level || 1) + '</div></div><div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">локальная база</div>›</div></div>';
     }).join('') + '</div><section class="attrs-box add-owned-details"><h3>Добавить смотрителя</h3><p class="row-sub">Выбери персонажа — нажми на его карточку</p><div class="grid-2">' +
-    catalog.map(warden => '<button type="button" class="catalog-pick" data-action="add-warden" data-id="' + warden.id + '"><img src="' + getIconUrl(warden.icon_path,state.preferLocalIcons) + '" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px"><span>' + escHtml(tName('warden',warden.name)) + '</span></button>').join('') + '</div></section>';
+    (catalog.length
+      ? catalog.map(warden => '<button type="button" class="catalog-pick" data-action="add-warden" data-id="' + warden.id + '"><img src="' + getIconUrl(warden.icon_path,state.preferLocalIcons) + '" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px"><span>' + escHtml(tName('warden',warden.name)) + '</span></button>').join('')
+      : '<p class="row-sub">По выбранным условиям смотрители не найдены.</p>') + '</div></section>';
 }
 function renderLoversScreen(db) {
   const ownedIds = Object.keys(state.account.ownedLovers || {}).map(Number);
