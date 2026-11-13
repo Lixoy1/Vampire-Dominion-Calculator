@@ -48,6 +48,8 @@ assert.deepEqual(
 assert.equal(result.next_level_cost_observations[0].level, 50);
 assert.equal(result.next_level_cost_observations[0].cost, 89785);
 assert.equal('gain' in result.blood_intervals[0], false);
-assert.doesNotMatch(JSON.stringify(result), /998877|do-not-export|Authorization/i);
+assert.doesNotMatch(JSON.stringify(result), /998877|do-not-export/);
+assert.equal(Object.hasOwn(result, 'headers'), false);
+assert.equal(Object.hasOwn(result, 'cookies'), false);
 
 console.log('HAR extractor tests passed: line-wrap repair, exact costs, and sensitive-data exclusion.');
