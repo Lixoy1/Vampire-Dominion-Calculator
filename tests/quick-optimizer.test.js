@@ -15,6 +15,17 @@ const fixturePath = fileURLToPath(new URL('./fixtures/quick-calculation-har.json
 const fixture = JSON.parse(readFileSync(fixturePath, 'utf8'));
 
 const defaults = createDefaultQuickSettings();
+const fourthFixturePath = fileURLToPath(new URL('./fixtures/quick-calculation-har-2026-11-13.json', import.meta.url));
+const fourthFixture = JSON.parse(readFileSync(fourthFixturePath, 'utf8'));
+const fourthPlan = mapQuickResultToPlan(fourthFixture.response, {});
+assert.deepEqual(fourthPlan.levels, { 10300: 87, 10490: 64, 10530: 100, 10950: 194 });
+assert.deepEqual(fourthPlan.bonds['20170'].strength, { targetLevel: 12, targetPercentLevel: 2 });
+assert.deepEqual(fourthPlan.bonds['20280'].intellect, { targetLevel: 6 });
+assert.deepEqual(fourthPlan.bonds['20500'].spirit, { targetLevel: 1 });
+assert.deepEqual(fourthPlan.talents['10250'].scrolls, { 15: 25, 10: 1 });
+assert.deepEqual(fourthPlan.talents['10300'].exp_levels, { 14: 10 });
+assert.deepEqual(fourthPlan.talents['10960'].scrolls, { 2: 1 });
+
 assert.equal(defaults.goal, 'all');
 assert.ok(Object.values(defaults.spend).every(value => value === true));
 assert.deepEqual(serializeQuickSettings(defaults), {
