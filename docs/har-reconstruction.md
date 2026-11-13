@@ -1,6 +1,6 @@
 # HAR-grounded reconstruction
 
-This document records only observations confirmed by the two supplied HAR captures. Private account identifiers, cookies, authorization headers, Telegram init data, and session tokens are intentionally excluded.
+This document records only observations confirmed by the three supplied HAR captures. Private account identifiers, cookies, authorization headers, Telegram init data, and session tokens are intentionally excluded.
 
 ## Successful template responses
 
@@ -105,3 +105,55 @@ The captured dominance response includes exact gains for four level intervals: W
 ## Conclave cost parity
 
 The captured dominance response for Conclave levels 5, 6, 7, and 8 reports next-step costs 6,014, 6,132, 6,250, and 6,368. These match the canonical destination-level table rows 6–9 and are covered by the HAR parity test.
+
+
+## Third HAR capture: 2026-11-13
+
+The third supplied HAR contains 322 network entries: 308 HTTP 200 responses, 3 HTTP 201 responses, and 11 HTTP 204 responses. The account-scoped URL segment is represented here as `{account}`; no account ID, cookie, authorization header, Telegram init data, or session token is retained in the repository.
+
+### Dominance response is the authoritative calculation record
+
+The browser sequence contains `POST /api/v1/accounts/{account}/calculations/quick` followed by `POST /api/v1/accounts/{account}/calculations/dominance`. Quick returns the proposed target map; the dominance response contains the calculated result. For Warden levels, the fields to preserve are:
+
+- `level` and `target`: captured interval endpoints;
+- `cost`: exact aggregate Blood cost for that interval;
+- `next_cost`: server-reported cost of the level after the target;
+- `promote` and `promote_after`: breakthrough state before and after the plan.
+
+The third capture adds these exact aggregate intervals (costs are Blood):
+
+| Warden template | Interval | Exact cost | Next cost |
+|---:|---:|---:|---:|
+| 10260 | 1→50 | 894,737 | 89,785 |
+| 10260 | 1→51 | 984,522 | 93,374 |
+| 10300 | 1→58 | 1,720,812 | 122,150 |
+| 10300 | 1→77 | 4,960,329 | 232,490 |
+| 10300 | 1→85 | 7,026,700 | 293,043 |
+| 10300 | 1→100 | 12,338,141 | 434,739 |
+| 10500 | 2→80 | 5,679,151 | 254,218 |
+| 10490 | 50→51 | 89,785 | 93,374 |
+| 10490 | 50→61 | 1,206,554 | 136,440 |
+| 10500 | 2→95 | 10,339,710 | 380,479 |
+| 10950 | 182→197 | 57,584,118 | 4,278,313 |
+| 10950 | 182→196 | 53,362,888 | 4,221,230 |
+| 10950 | 182→191 | 33,096,771 | 3,942,763 |
+| 10950 | 182→186 | 14,188,250 | 3,675,875 |
+
+These are exact aggregate observations for the recorded interval and breakthrough state only. They do not fill in all intermediate per-level costs. A repeated interval for Warden 10260 (1→50) returned the same Blood cost (894,737), while its `gain` value differed between responses (35,246 versus 49,549). Consequently the supplement stores costs and next costs, but deliberately omits server gain values: those depend on the captured account state and must not be generalized as a universal Warden formula.
+
+### Additional calculation response contracts
+
+- `GET /api/v1/accounts/{account}/calculations/talent-points` returns `minimum`, `expected`, `exp_points`, per-Warden `exp`, `points`, `left`, `room` and `plan`, item point contributions, `manuscripts`, and star `tiers` with chance/protection values. The numeric current-EXP values and plans are account-specific; only the response shape is recorded here.
+- `GET /api/v1/accounts/{account}/calculations/lover-points` returned intimacy min/expected/max of 10/12/16 for two bags of item 4232, and attraction 2/2/2 for two bags of item 4221.
+- `GET /api/v1/accounts/{account}/calculations/guild-exp` returned 160 min/expected/max guild EXP for eight units of item 30021, with `donation_days: 3`. This is a captured scenario, not a full level/price table.
+- The third capture again returned the shared Conclave and Courtyard level templates (180 and 210 rows respectively). These endpoints are shared template data; the account-scoped calculation responses remain profile-dependent.
+
+### Local extraction workflow
+
+The repository now includes `scripts/extract-har-observations.js`. Run it locally against a HAR file:
+
+```bash
+node scripts/extract-har-observations.js capture.har sanitized-observations.json
+```
+
+The generated JSON contains only changed-Warden interval costs and next-level cost observations from successful dominance responses. It excludes account IDs, request bodies, headers, cookies, authorization values, and gain fields. The original HAR stays local and should never be committed. Review the extracted output before merging it into the canonical observation data.
