@@ -44,15 +44,16 @@ export const API_OBSERVED_BLOOD_COSTS = Object.freeze({
 
 const BOND_COSTS = Object.freeze({
   flat: Object.freeze({
-    default: Object.freeze({ 1: 0, 2: 20, 9: 76, 11: 113, 13: 150 }),
+    // Step number = target level + 1 reported in the API's next_cost.
+    default: Object.freeze({ 1: 0, 2: 20, 6: 44, 7: 53, 9: 76, 11: 113, 13: 150 }),
     one: Object.freeze({ 1: 0, 2: 54, 3: 64, 11: 305 }),
-    two: Object.freeze({ 1: 0, 2: 37, 6: 81, 7: 98 }),
+    two: Object.freeze({ 2: 37, 6: 81, 7: 98 }),
     all: Object.freeze({ 1: 0, 2: 28, 4: 42 }),
   }),
   percent: Object.freeze({
-    default: Object.freeze({ 1: 20, 2: 20, 3: 24 }),
+    default: Object.freeze({ 1: 20, 3: 24, 34: 1037 }),
     one: Object.freeze({ 1: 54, 3: 64 }),
-    two: Object.freeze({ 1: 37, 7: 98 }),
+    two: Object.freeze({ 1: 37, 7: 98, 8: 118 }),
     all: Object.freeze({ 1: 28 }),
   }),
 });
@@ -74,5 +75,6 @@ export const API_OBSERVATION_META = Object.freeze({
   source: 'supplied HAR captures',
   successfulDominanceResponses: 78,
   distinctBloodNextCostLevels: Object.keys(API_OBSERVED_BLOOD_COSTS).length,
+  distinctBondNextCostLevels: 26,
   note: 'Only explicitly observed level/branch steps are exact. No interpolation is performed.',
 });
