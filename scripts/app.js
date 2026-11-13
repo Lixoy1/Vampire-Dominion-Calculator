@@ -20,7 +20,7 @@ function createBlankAccountData() {
     courtyardLvl: 0,
     guildProgress: { level: 0, exp: 0, nextLevelExp: 0 },
     conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
-    ownedWardens: {},
+    ownedWardens: GAME_DB.wardens[0] ? { [GAME_DB.wardens[0].id]: createOwnedWarden(GAME_DB.wardens[0]) } : {},
     ownedLovers: {},
     skins: {},
     bag: {},
@@ -55,7 +55,7 @@ function createDefaultState() {
   return {
     version: 6,
     screen: 'home',
-    currentWardenId: 10020,
+    currentWardenId: GAME_DB.wardens[0]?.id ?? 10010,
     currentLoverId: GAME_DB.lovers[0]?.id ?? 20010,
     wardenTab: 'attributes',
     loverTab: 'trust',
@@ -1360,7 +1360,7 @@ function getAccountProgressPercent(account) {
   const wPct = Object.keys(account.ownedWardens || {}).length / Math.max(1, GAME_DB.wardens.length);
   const lPct = Object.keys(account.ownedLovers || {}).length / Math.max(1, GAME_DB.lovers.length);
   const bagPct = Object.values(account.bag || {}).filter(function (value) { return Number(value) > 0; }).length / Math.max(1, GAME_DB.items.length);
-  return Math.max(1, Math.min(100, Math.round(((wPct + lPct + bagPct) / 3) * 100)));
+  return Math.max(0, Math.min(100, Math.round(((wPct + lPct + bagPct) / 3) * 100)));
 }
 
 function renderSpaTopbar() {
@@ -1419,30 +1419,45 @@ function renderSubToolbar(backTarget, title) {
 }
 
 function renderHomeScreen() {
-  const progress = getAccountProgressPercent(state.account);
-  const avatar = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
+  const account = state.account;
+  const progress = getAccountProgressPercent(account);
+  const avatar = GAME_DB.wardens.find(function (warden) {
+    return warden.id === Number(state.profile.avatarId);
+  }) || GAME_DB.wardens[0];
+  const wardenCount = Object.keys(account.ownedWardens || {}).length;
+  const loverCount = Object.keys(account.ownedLovers || {}).length;
+  const itemCount = Object.values(account.bag || {}).filter(function (value) { return Number(value) > 0; }).length;
+  const stats = [
+    { icon: '🩸', label: 'Кровь', value: fmt(account.blood || 0), screen: 'resources' },
+    { icon: '🛡', label: 'Смотрители', value: wardenCount + '/' + GAME_DB.wardens.length, screen: 'wardens_list' },
+    { icon: '♡', label: 'Партнёры', value: loverCount + '/' + GAME_DB.lovers.length, screen: 'lovers' },
+    { icon: '◇', label: 'Предметы', value: itemCount + '/' + GAME_DB.items.length, screen: 'bag' },
+  ];
   return '<section class="home-screen">' +
     '<div class="home-hero">' +
       '<div class="home-eyebrow">OPTIMIST · ПРОЕКТ СООБЩЕСТВА</div>' +
       '<div class="home-brand-title">Наследие<br>Вампиров</div>' +
-      '<div class="home-brand-sub">Vampire Dominion · Blood Moon Edition</div>' +
+      '<div class="home-brand-sub">Vampire Dominion · Crimson Obsidian</div>' +
       '<img src="./file_00000000f00c821095b68cab8b8fd574.png?v=20261112-3" class="home-sticker" alt="Герб «Наследие Вампиров»" width="1254" height="1254">' +
     '</div>' +
     '<div class="profile-main-card" data-action="nav" data-screen="settings">' +
       '<img src="' + getIconUrl(avatar.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt="Портрет">' +
       '<div class="profile-main-info"><div class="profile-main-name">' + escHtml(state.profile.name) + '</div>' +
-      '<div class="profile-main-server">' + escHtml(state.profile.server || 'сервер не указан') + '</div>' +
-      '<div class="profile-badge-row"><span class="badge-pill">👑 Локальный профиль · полный набор разделов</span></div></div><div class="card-right">⌄</div>' +
+      '<div class="profile-main-server">' + escHtml(state.profile.server || 'сервер не указан') + ' · ' + escHtml(state.profile.region || 'EU') + '</div>' +
+      '<div class="profile-badge-row"><span class="badge-pill">Локальный профиль</span><span class="badge-pill">' + progress + '% коллекции</span></div>' +
+      '<div class="home-profile-progress"><div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div></div></div><div class="card-right">⌄</div>' +
     '</div>' +
-    '<div class="quick-calc-launch-row"><button class="btn btn-gold quick-calc-entry" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button></div>' +
+    '<div class="home-resource-grid">' + stats.map(function (item) {
+      return '<button type="button" class="home-resource-card" data-action="nav" data-screen="' + item.screen + '"><span class="home-resource-icon">' + item.icon + '</span><span class="home-resource-label">' + item.label + '</span><b>' + item.value + '</b></button>';
+    }).join('') + '</div>' +
+    '<div class="home-primary-actions"><button class="btn btn-primary home-dominance-cta" type="button" data-action="nav" data-screen="calc_dominance">∑ Подсчёт Господства</button><button class="btn btn-gold" type="button" data-action="quick-calc">⚡ Быстрый подсчёт</button></div>' +
     '<div class="card-stack">' +
-      '<div class="nav-card" data-action="nav" data-screen="resources"><div class="card-icon-box">✎</div><div class="card-body"><div class="card-title">Ресурсы</div><div class="card-subtitle">Смотрители, партнёры, сумка, облики, Конклав</div><div class="progress-row"><div class="progress-track"><div class="progress-fill" style="width:' + progress + '%"></div></div><span class="progress-percent">' + progress + '%</span></div></div><div class="card-right">›</div></div>' +
-      '<div class="nav-card" data-action="nav" data-screen="calculations"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Расчёты</div><div class="card-subtitle">Господство, таланты, близость, влечение, гильдия</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="resources"><div class="card-icon-box">✎</div><div class="card-body"><div class="card-title">Ресурсы и коллекции</div><div class="card-subtitle">Смотрители, партнёры, сумка, облики, Конклав и Сад</div></div><div class="card-right">›</div></div>' +
+      '<div class="nav-card" data-action="nav" data-screen="calculations"><div class="card-icon-box">∑</div><div class="card-body"><div class="card-title">Все расчёты</div><div class="card-subtitle">Господство, таланты, близость, влечение, гильдия</div></div><div class="card-right">›</div></div>' +
       '<div class="nav-card" data-action="nav" data-screen="settings"><div class="card-icon-box">⚙</div><div class="card-body"><div class="card-title">Настройки и профили</div><div class="card-subtitle">Сервер, портрет, импорт и экспорт данных</div></div><div class="card-right">›</div></div>' +
     '</div>' +
   '</section>';
 }
-
 
 function renderResourcesScreen() {
   const account = state.account;
