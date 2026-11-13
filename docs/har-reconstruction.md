@@ -100,7 +100,7 @@ Validation is run in GitHub Actions for this feature branch before merging.
 
 ## Exact Warden dominance gains
 
-The captured dominance response includes exact gains for four level intervals: Warden 10270 (1→3: 50), 10280 (1→7: 641), 10300 (1→10: 2,051), and 10960 (1→3: 57). The engine stores these as captured-account observations, separate from its local estimate. They are not substituted into the generic formula because the HAR does not fully describe every profile modifier that contributed to the server result. The general level-gain formula remains approximation-only.
+The captured dominance response includes exact gains for four level intervals: Warden 10270 (1→3: 50), 10280 (1→7: 641), 10300 (1→10: 2,051), and 10960 (1→3: 57). The engine stores these as captured-account observations, separate from its local estimate. Repeated captures show that the same Warden and level interval can return different gains while Blood cost remains unchanged. The engine therefore keeps observed gains for comparison only and uses its local estimate for forecasts. That forecast remains approximation-only; the captured observations are not a universal formula.
 
 ## Conclave cost parity
 
@@ -189,3 +189,35 @@ The same Quick response proposes several Scarlet Bond targets for templates 2017
 ### Important: the HAR contains write operations
 
 The capture also contains successful `PATCH` requests to Warden batch and account batch endpoints. These are state-changing operations, unlike the read-only calculation requests. Their request bodies and account-specific data are not copied into the repository, and the project tooling does not replay them. For future captures, use calculation-only interactions whenever possible and avoid exporting or sharing login codes, cookies, authorization headers, Telegram init data, or account mutation payloads.
+
+
+## HAR evidence audit: what the captures actually identify
+
+Across the four distinct recent captures examined together, there are 18 successful Quick responses, 5 rate-limited Quick responses, and only **three unique Quick request configurations**. Repeated Quick calls are not 18 independent optimizer experiments. Several were issued after account data had changed through PATCH/PUT operations, so both the account snapshot and inventory could differ while the settings body stayed the same.
+
+The three distinct Quick configurations observed are:
+- all resources enabled with `goal: all`;
+- a mostly resource-disabled `goal: all` case (group and presence items remained enabled);
+- all resources enabled with `goal: spirit`.
+
+The captures do not contain a controlled one-variable-at-a-time matrix for each resource toggle, Warden exclusion, maximum-level limit, bond exclusion, or goal. Consequently they cannot identify the optimizer's ranking and tie-break rules. A pile of repeated clicks is not equivalent to a controlled experiment.
+
+### Client bundle versus server optimizer
+
+The HAR includes the browser's JavaScript modules. The Quick module serializes UI settings into the request and submits them to `POST /calculations/quick`; it then stores and displays the response. The `bestPath` module maps the server-returned `best_path.runs` to UI selections. The level, talent-plan and bond modules display server-provided costs, forecasts, limits and plans. These modules do not contain the server optimizer's candidate-ranking implementation.
+
+The backend optimizer itself is not present in these HAR captures. HAR can reveal its input/output behavior but cannot recover server source code or prove the internal algorithm. A compatible local optimizer can be reconstructed only through black-box experiments with controlled account snapshots and exact request/response pairs.
+
+### Two distinct oracles
+
+- `POST /calculations/quick` is the optimizer oracle: it proposes a plan from the account snapshot and selected settings.
+- `POST /calculations/dominance` is the evaluator oracle: it calculates a supplied hypothetical plan, including costs, gains, totals, missing items, next costs and best-path information.
+
+These must not be conflated. Quick explains **which targets the server chooses**; dominance explains **what a given target plan costs and yields**.
+
+### Current accuracy limits
+
+- Warden Blood costs are exact for captured aggregate intervals and captured next-level observations only. The generic per-level curve still contains approximation for unobserved levels.
+- Warden stat gains are account-state-dependent. Repeated results include conflicting gains for the same Warden/interval; they are retained as diagnostics and are no longer used as universal forecast overrides.
+- Quick optimizer choice rules remain underdetermined because the captures contain only three unique settings configurations and no controlled toggle matrix.
+- Mutating PATCH/PUT requests are not experiments to replay. Controlled captures should use the read-only Quick and Dominance calculations and leave the account state unchanged between test cases.
