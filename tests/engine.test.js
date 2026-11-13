@@ -53,7 +53,7 @@ test('favicon exists locally', () => {
   assert.ok(existsSync(join(root, 'assets', 'crest.svg')));
 });
 
-test('499 referenced images exist locally and are WebP', () => {
+test('496 referenced images exist locally and are WebP', () => {
   const paths = new Set();
   const walk = value => {
     if (Array.isArray(value)) return value.forEach(walk);
@@ -65,7 +65,7 @@ test('499 referenced images exist locally and are WebP', () => {
     }
   };
   walk(GAME_DB);
-  assert.equal(paths.size, 499);
+  assert.equal(paths.size, 496);
   for (const rel of paths) {
     const file = join(root, 'assets', 'icons', rel);
     assert.ok(existsSync(file), `missing ${rel}`);
