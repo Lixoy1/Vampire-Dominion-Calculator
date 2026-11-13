@@ -602,66 +602,69 @@ function closeAppModal() {
 }
 
 async function exportProfileJson() {
-  let json = '';
   try {
     syncActiveAccountSnapshot();
-    json = JSON.stringify(state, null, 2);
-    const file = new File([json], 'vampire_dominion_profile.json', { type: 'application/json' });
+    const json = JSON.stringify(state, null, 2);
+    const filename = 'Господство.json';
+    const file = new File([json], filename, { type: 'application/json;charset=utf-8' });
 
-    // На мобильных WebView системный диалог «Поделиться» надёжнее скачивания
-    // через blob: URL и позволяет сохранить JSON через доступные приложения.
-    if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
-        && navigator.canShare({ files: [file] })) {
+    // Если браузер поддерживает системный диалог сохранения файла — сразу
+    // предлагаем выбрать место и имя файла, без промежуточного копирования.
+    if (typeof window.showSaveFilePicker === 'function') {
       try {
-        await navigator.share({ files: [file], title: 'Резервная копия Vampire Dominion' });
+        const handle = await window.showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'Резервная копия Господство',
+            accept: { 'application/json': ['.json'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(file);
+        await writable.close();
+        alert('Резервная копия «Господство.json» сохранена.');
         return;
-      } catch (shareError) {
-        if (shareError?.name === 'AbortError') return;
-        // Если системный Share недоступен, пробуем обычную загрузку и ручной резерв.
+      } catch (saveError) {
+        if (saveError?.name === 'AbortError') return;
+        // В Telegram WebView этот API часто недоступен — ниже используем
+        // системное меню Android «Поделиться» или стандартную загрузку.
       }
     }
 
+    // Android: передаём готовый файл в системное меню, где можно выбрать
+    // «Сохранить в Файлы», «Загрузки» или другое приложение.
+    if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
+        && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: 'Сохранить резервную копию',
+          text: 'Резервная копия калькулятора Господство',
+        });
+        return;
+      } catch (shareError) {
+        if (shareError?.name === 'AbortError') return;
+        // Если системное меню недоступно, запускаем обычное скачивание.
+      }
+    }
+
+    // Универсальный fallback: браузер сам предложит скачать готовый JSON.
     const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'vampire_dominion_profile.json';
+    link.download = filename;
     link.style.position = 'fixed';
     link.style.left = '-10000px';
     document.body.appendChild(link);
     link.click();
     link.remove();
-    // Не отзываем blob URL слишком рано: Android WebView может начать загрузку позже.
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-
-    openAppModal('Резервная копия профиля', 
-      '<p>Подготовлен JSON-файл со всеми аккаунтами, ресурсами и планами.</p>' +
-      '<p class="row-sub">Если файл не появился в загрузках, скопируй резервную копию вручную.</p>' +
-      '<textarea id="profile-export-json" class="input" rows="6" readonly style="width:100%;font-size:11px;resize:vertical"></textarea>' +
-      '<button type="button" class="btn btn-primary" id="btn-copy-export-json">Скопировать JSON</button>');
-    const area = document.getElementById('profile-export-json');
-    if (area) area.value = json;
-    document.getElementById('btn-copy-export-json')?.addEventListener('click', async function () {
-      const text = document.getElementById('profile-export-json')?.value || json;
-      try {
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const field = document.getElementById('profile-export-json');
-          field?.focus();
-          field?.select();
-          if (!document.execCommand?.('copy')) throw new Error('Копирование недоступно');
-        }
-        alert('Резервная копия JSON скопирована.');
-      } catch (error) {
-        const field = document.getElementById('profile-export-json');
-        field?.focus();
-        field?.select();
-        alert('Автокопирование недоступно. Выдели текст в поле и скопируй вручную.');
-      }
-    });
+    openAppModal('Файл подготовлен', 
+      '<p>Создана резервная копия <b>Господство.json</b>.</p>' +
+      '<p class="row-sub">Браузер должен сохранить её в папку «Загрузки». Файл содержит все аккаунты, ресурсы и планы прокачки.</p>');
   } catch (error) {
-    alert('Не удалось экспортировать профиль: ' + (error.message || error));
+    alert('Не удалось создать файл «Господство.json»: ' + (error.message || error));
   }
 }
 
