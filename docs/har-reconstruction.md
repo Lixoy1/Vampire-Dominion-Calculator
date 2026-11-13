@@ -40,7 +40,7 @@ Successful `POST /api/v1/accounts/{account}/calculations/dominance` responses co
 | 1 | 10 | 9,799 | 2,883 |
 | 105 | 150 | 36,056,873 | 2,096,083 |
 
-These are exact **aggregate intervals**, not enough evidence to reconstruct every per-level cost. The legacy per-level exponential curve remains approximation-only outside exact intervals.
+These are exact **aggregate intervals**. The HAR also exposes exact next-step costs at levels 1 (115), 3 (461), 7 (1,614), 10 (2,883), 150 (2,096,083), 182 (3,470,701), and 258 (29,999,162). The exact 1→3 interval (384) plus the first-step cost (115) determines the level-2 step cost (269). Other per-level costs remain approximation-only.
 
 The same dominance responses confirm first-step Scarlet Bond costs:
 
