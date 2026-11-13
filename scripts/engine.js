@@ -590,7 +590,21 @@ export function calcWardenLevelMultiplier(level) {
 /**
  * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
  */
+// Exact single-step costs exposed as next_cost by captured dominance responses.
+export const BLOOD_COST_EXACT_STEPS = Object.freeze({
+  1: 115,
+  2: 269,
+  3: 461,
+  7: 1614,
+  10: 2883,
+  150: 2096083,
+  182: 3470701,
+  258: 29999162,
+});
+
 export function calcBloodCostForLevel(level) {
+  const exactStep = BLOOD_COST_EXACT_STEPS[Math.round(Number(level))];
+  if (exactStep !== undefined) return exactStep;
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
