@@ -41,6 +41,14 @@ assert.equal(Engine.getBloodCostConfidence(3, 7), 'approximation_only');
 // and the first percentage step costs 20. Later steps remain unverified.
 assert.equal(Engine.calcBondLevelCost(1), 0);
 assert.equal(Engine.calcBondLevelCost(2), 20);
+const capturedSpiritBond = GAME_DB.lovers.find(x => x.id === 20170).scarlet_bonds.find(x => x.id === 1704);
+assert.equal(Engine.calcBondLevelCost(2, capturedSpiritBond), 54);
+assert.equal(Engine.calcBondPercentCost(1, capturedSpiritBond), 54);
+const capturedLover = GAME_DB.lovers.find(x => x.id === 20170);
+const firstBondLevels = Object.fromEntries(capturedLover.scarlet_bonds.map(bond => [bond.attribute, { level: 0, targetLevel: 1, percentLevel: 0, targetPercentLevel: 0 }]));
+const bondResult = Engine.calcLoverBonds(capturedLover, 0, firstBondLevels, {}, 100);
+assert.equal(bondResult.spentAffinity, 0);
+assert.equal(bondResult.totalGain, 620);
 assert.equal(Engine.calcBondPercentCost(1), 20);
 
 // The captured lover-points scenario: 2 bags of item 4232 yield 10 / 12 / 16.
