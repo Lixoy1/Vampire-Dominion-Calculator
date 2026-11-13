@@ -690,7 +690,9 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const exactGainObservation = WARDEN_LEVEL_GAIN_EXACT_INTERVALS.find(
     row => row.wardenId === warden.id && row.from === currentLvl && row.to === targetLvl
   );
-  const baseGain = estimatedBaseGain;
+  // Use the server-returned gain only for the exact Warden + level interval
+  // captured in HAR. It is account-state-specific and must not be generalized.
+  const baseGain = exactGainObservation ? exactGainObservation.gain : estimatedBaseGain;
 
   const bloodSpent = calcBloodCostForRange(currentLvl, targetLvl);
 
@@ -717,7 +719,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     toLvl: targetLvl,
     bloodSpent,
     baseGain,
-    baseGainConfidence: 'approximation_only',
+    baseGainConfidence: exactGainObservation ? 'exact_api_observation' : 'approximation_only',
     observedApiGain: exactGainObservation?.gain ?? null,
     observedApiGainScope: exactGainObservation ? 'captured_account_state_only' : null,
     neededPromotes,
