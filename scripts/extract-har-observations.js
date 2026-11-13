@@ -11,6 +11,8 @@
  * account-specific stat gains are intentionally excluded from the output.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export function parseHarText(source) {
   // Some WebInspector exports wrap very long response-body strings with literal
@@ -23,11 +25,11 @@ export function parseHarText(source) {
   for (const character of source) {
     const code = character.charCodeAt(0);
     if (inString) {
-      if (character === '\\r' || character === '\\n') continue;
+      if (character === '\r' || character === '\n') continue;
       if (escaped) {
         output.push(character);
         escaped = false;
-      } else if (character === '\\\\') {
+      } else if (character === '\\') {
         output.push(character);
         escaped = true;
       } else if (character === '"') {
@@ -81,7 +83,7 @@ export function extractHarObservations(har) {
     } catch {
       continue;
     }
-    if (!/\\/api\\/v1\\/accounts\\/[^/]+\\/calculations\\/dominance$/.test(pathname)) continue;
+    if (!/\/api\/v1\/accounts\/[^/]+\/calculations\/dominance$/.test(pathname)) continue;
 
     const status = asNumber(entry?.response?.status);
     if (status === null || status < 200 || status >= 300) continue;
@@ -115,7 +117,7 @@ export function extractHarObservations(har) {
       }
 
       const nextCost = asNumber(row?.next_cost);
-      if (to !== null && nextCost !== null && nextCost > 0) {
+      if (nextCost !== null && nextCost > 0 && to !== null) {
         const key = [wardenId, to, promoteTo, nextCost].join(':');
         const item = nextCosts.get(key) || {
           warden_id: wardenId,
@@ -154,26 +156,26 @@ function main() {
   const inputPath = process.argv[2];
   const outputPath = process.argv[3];
   if (!inputPath) {
-    process.stderr.write('Usage: node scripts/extract-har-observations.js <capture.har> [sanitized-output.json]\\n');
+    process.stderr.write('Usage: node scripts/extract-har-observations.js <capture.har> [sanitized-output.json]\n');
     process.exitCode = 2;
     return;
   }
 
   try {
     const har = parseHarText(readFileSync(inputPath, 'utf8'));
-    const output = JSON.stringify(extractHarObservations(har), null, 2) + '\\n';
+    const output = JSON.stringify(extractHarObservations(har), null, 2) + '\n';
     if (outputPath) {
       writeFileSync(outputPath, output, 'utf8');
-      process.stdout.write('Sanitized observations saved. No account/session data was exported.\\n');
+      process.stdout.write('Sanitized observations saved. No account/session data was exported.\n');
     } else {
       process.stdout.write(output);
     }
   } catch {
-    process.stderr.write('Could not parse this HAR. Keep the original file unchanged and check that the export includes response content.\\n');
+    process.stderr.write('Could not parse this HAR. Keep the original file unchanged and check that the export includes response content.\n');
     process.exitCode = 1;
   }
 }
 
-if (process.argv[1] && import.meta.url === new URL('file://' + process.argv[1]).href) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   main();
 }
