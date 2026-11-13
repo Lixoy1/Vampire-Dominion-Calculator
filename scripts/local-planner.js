@@ -396,7 +396,14 @@ function runPresenceAutoDistribution(account, plan, availableBag = account.bag) 
 
 function makeWarnings(account, plan) {
   const warnings = [];
-  const hasLevelPlan = Object.entries(plan.levels).some(([id, target]) => target > (account.ownedWardens[id]?.level || 1));
+  const hasEstimatedBloodCost = Object.entries(plan.levels).some(([id, target]) => {
+    const from = Math.max(1, Number(account.ownedWardens[id]?.level) || 1);
+    const to = Math.max(from, Math.round(numeric(target, from)));
+    for (let level = from; level < to; level++) {
+      if (Engine.getBloodCostSource(level) !== 'api-observed') return true;
+    }
+    return false;
+  });
   const hasBondPlan = Object.entries(plan.bonds).some(([id, bonds]) => {
     const owned = account.ownedLovers[id];
     return (db.lovers.find(item => item.id === Number(id))?.scarlet_bonds || []).some(bond => {
@@ -406,18 +413,42 @@ function makeWarnings(account, plan) {
         || numeric(selected.targetPercentLevel) > numeric(current.percentLevel ?? current.pctLevel);
     });
   });
-  if (hasLevelPlan) warnings.push({
+  const hasEstimatedBondCost = Object.entries(plan.bonds).some(([id, bonds]) => {
+    const owned = account.ownedLovers[id];
+    const lover = db.lovers.find(item => item.id === Number(id));
+    if (!owned || !lover) return false;
+    return (lover.scarlet_bonds || []).some(bond => {
+      const current = record(owned.bonds?.[bond.attribute]);
+      const selected = record(bonds[bond.attribute]);
+      const currentFlat = Math.max(0, numeric(current.level));
+      const targetFlat = Math.max(currentFlat, numeric(selected.targetLevel, currentFlat));
+      for (let level = currentFlat + 1; level <= targetFlat; level++) {
+        if (Engine.getBondCostSource('flat', level, bond.type) !== 'api-observed') return true;
+      }
+      const currentPercent = Math.max(0, numeric(current.percentLevel ?? current.pctLevel));
+      const targetPercent = Math.max(currentPercent, numeric(selected.targetPercentLevel, currentPercent));
+      for (let level = currentPercent + 1; level <= targetPercent; level++) {
+        if (Engine.getBondCostSource('percent', level, bond.type) !== 'api-observed') return true;
+      }
+      return false;
+    });
+  });
+  if (hasEstimatedBloodCost) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Для уровней без полной таблицы стоимости используется расчётная кривая; оценка отображается отдельно.',
+    message: 'Для уровней без подтверждённого серверного значения используется расчётная кривая; такие шаги отмечаются отдельно.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
     code: 'SKIN_REQUIRES_CARDS',
     message: 'Для части выбранных обликов не хватает карточек: ткань для них не подходит. Проверьте раздел обликов перед применением.',
   });
-  if (hasBondPlan) warnings.push({
+  if (hasEstimatedBondCost) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
-    message: 'Стоимость Кровных уз рассчитывается по оценочной модели, если точная стоимость шага отсутствует в каталоге.',
+    message: 'Для шагов Кровных уз без точного наблюдения API используется оценочная формула стоимости.',
+  });
+  if (hasBondPlan) warnings.push({
+    code: 'ESTIMATED_BOND_GAIN',
+    message: 'Прирост Господства Кровных уз пока рассчитывается по оценочной модели; точность стоимости шага сама по себе не подтверждает точность прироста.',
   });
   if (plan.summons.wardens.length) warnings.push({
     code: 'ESTIMATED_SUMMON_GAIN',
@@ -425,7 +456,6 @@ function makeWarnings(account, plan) {
   });
   return warnings;
 }
-
 function getTalentPlanUsage(plan, ownedWardens) {
   const byItem = {};
   const byWarden = {};
@@ -981,7 +1011,7 @@ export function autoDistributeBondPlan(input = {}) {
         const state = record(states[bond.attribute]);
         const flatLevel = Math.max(numeric(state.level), numeric(state.targetLevel, numeric(state.level)));
         if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
-          const cost = Engine.calcBondLevelCost(flatLevel + 1);
+          const cost = Engine.calcBondLevelCost(flatLevel + 1, bond.type);
           const gain = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
           if (cost > 0 && cost <= remaining) {
             const efficiency = gain / cost;
@@ -994,7 +1024,7 @@ export function autoDistributeBondPlan(input = {}) {
         const currentPercent = Math.max(0, numeric(state.percentLevel, numeric(state.pctLevel)));
         const targetPercent = Math.max(currentPercent, numeric(state.targetPercentLevel, currentPercent));
         if (owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
-          const cost = Engine.calcBondPercentCost(targetPercent + 1);
+          const cost = Engine.calcBondPercentCost(targetPercent + 1, bond.type);
           const step = bond.is_advantage ? 0.005 : 0.0025;
           const previousGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent - currentPercent) * step);
           const nextGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent + 1 - currentPercent) * step);
@@ -2213,12 +2243,12 @@ export function getLocalEngineCapabilities() {
       'intimacy', 'attraction', 'guild-exp',
     ],
     formulaCaveats: [
-      'Warden blood costs currently use an approximate progression curve.',
-      'Blood-bond costs currently use formula estimates.',
+      'Warden blood costs use exact HAR observations for sampled levels; all unobserved steps still use an approximate curve.',
+      'Blood-bond costs use exact HAR observations for sampled branch types and levels; unobserved steps still use an approximate formula.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
-      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula.',
+      'Automatic Scarlet Bond allocation prefers HAR-observed step costs and uses estimates when a step has not been observed.',
       'Aura upgrades are shown from the current catalogue; a complete per-level cost table is not available for every aura.',
       'Automatic skin ranking remains disabled until a complete, reliable gain table is available.',
     ],
