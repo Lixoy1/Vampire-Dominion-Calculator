@@ -6,6 +6,8 @@
  * Содержит все формулы, константы и жадные/ДП алгоритмы распределения ресурсов.
  */
 
+import { getObservedBloodCost, getObservedBondCost } from './observed-costs.js';
+
 export const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 
 export const FABRIC_COST_BY_QUALITY = {
@@ -588,9 +590,21 @@ export function calcWardenLevelMultiplier(level) {
 }
 
 /**
- * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
+ * Источник стоимости шага. Наблюдённые серверные значения имеют приоритет;
+ * остальные уровни пока остаются оценочными — без подгонки между точками.
+ */
+export function getBloodCostSource(level) {
+  return getObservedBloodCost(level) === undefined ? 'estimated' : 'api-observed';
+}
+
+/**
+ * Стоимость перехода с уровня L на L+1.
+ * Для 32 уровней используется подтверждённое next_cost из HAR;
+ * на остальных уровнях сохранена прежняя оценочная кривая.
  */
 export function calcBloodCostForLevel(level) {
+  const observed = getObservedBloodCost(level);
+  if (observed !== undefined) return observed;
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
@@ -608,8 +622,11 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const baseGain = Math.round(talentSum * (multAfter - multBefore));
 
   let bloodSpent = 0;
+  const bloodCostEvidence = { apiObservedSteps: 0, estimatedSteps: 0 };
   for (let l = currentLvl; l < targetLvl; l++) {
     bloodSpent += calcBloodCostForLevel(l);
+    if (getBloodCostSource(l) === 'api-observed') bloodCostEvidence.apiObservedSteps++;
+    else bloodCostEvidence.estimatedSteps++;
   }
 
   // Проверка требуемых прорывов
@@ -634,6 +651,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     fromLvl: currentLvl,
     toLvl: targetLvl,
     bloodSpent,
+    bloodCostEvidence,
     baseGain,
     neededPromotes,
     missingItems,
@@ -647,12 +665,23 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Обычный уровень (level: 1..600): даёт плоскую прибавку к атрибуту смотрителя.
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
-export function calcBondLevelCost(level) {
-  // Стоимость шага доверия растёт по параболе/ступеням
+/**
+ * Источник стоимости ветви. Для точек, которых нет в HAR, используем
+ * прежнюю оценочную формулу и явно помечаем её как estimated.
+ */
+export function getBondCostSource(kind, level, bondType = 'default') {
+  return getObservedBondCost(kind, bondType, level) === undefined ? 'estimated' : 'api-observed';
+}
+
+export function calcBondLevelCost(level, bondType = 'default') {
+  const observed = getObservedBondCost('flat', bondType, level);
+  if (observed !== undefined) return observed;
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
-export function calcBondPercentCost(percentLevel) {
+export function calcBondPercentCost(percentLevel, bondType = 'default') {
+  const observed = getObservedBondCost('percent', bondType, percentLevel);
+  if (observed !== undefined) return observed;
   return Math.round(200 + Math.pow(percentLevel, 2.05) * 12);
 }
 
@@ -669,10 +698,10 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
     const targetPercentLevel = unlockedPct ? st.targetPercentLevel : st.percentLevel;
 
     let costFlat = 0;
-    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1);
+    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1, bond.type);
 
     let costPct = 0;
-    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1);
+    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1, bond.type);
 
     spentAffinity += costFlat + costPct;
 
