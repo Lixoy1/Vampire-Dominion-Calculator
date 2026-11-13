@@ -34673,6 +34673,40 @@
       "warden_max_level": 450,
       "source": "HAR /api/v1/limits and /api/v1/templates/warden-promotes",
       "confidence": "verified"
+    },
+    "warden_level_gain_known": {
+      "status": "exact_api_intervals",
+      "observations": [
+        {
+          "warden_id": 10270,
+          "from_level": 1,
+          "to_level": 3,
+          "gain": 50,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10280,
+          "from_level": 1,
+          "to_level": 7,
+          "gain": 641,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 10,
+          "gain": 2051,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 3,
+          "gain": 57,
+          "source": "HAR dominance response"
+        }
+      ],
+      "note": "Exact only for the captured Warden IDs and intervals. The generic level gain formula remains approximation-only for other intervals."
     }
   }
 }
