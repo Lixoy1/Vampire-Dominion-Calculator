@@ -1133,8 +1133,24 @@ export function autoDistributeQuick(input = {}) {
     quickSettings: settings,
   });
   const unsupported = [];
-  if (settings.spend.group_items) unsupported.push({ code: 'QUICK_AURAS_NOT_OPTIMIZED', message: 'Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.' });
-  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push({ code: 'QUICK_SKINS_NOT_OPTIMIZED', message: 'Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.' });
+  if (settings.spend.blood && Object.entries(result.plan.levels || {}).some(([id, target]) =>
+    Number(target) > Number(account.ownedWardens[id]?.level || 1)
+  )) unsupported.push({
+    code: 'QUICK_WARDEN_GAIN_APPROXIMATE',
+    message: 'Прирост Господства от уровней смотрителей для большинства уровней пока рассчитан локальной моделью, а не полностью сверенной формулой сервера.',
+  });
+  if (settings.spend.presence_items && Object.keys(result.plan.presences || {}).length) unsupported.push({
+    code: 'QUICK_PRESENCE_OBJECTIVE_APPROXIMATE',
+    message: 'Веяния распределяются по приросту процентных пунктов и стоимости жетонов. Это не доказанный максимум абсолютного Господства.',
+  });
+  if (settings.spend.group_items) unsupported.push({
+    code: 'QUICK_AURAS_NOT_OPTIMIZED',
+    message: 'Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.',
+  });
+  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push({
+    code: 'QUICK_SKINS_NOT_OPTIMIZED',
+    message: 'Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.',
+  });
   return {
     ...result,
     quickSettings: settings,
