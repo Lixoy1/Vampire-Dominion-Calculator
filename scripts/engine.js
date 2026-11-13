@@ -7,6 +7,7 @@
  */
 
 import { getObservedBloodCost, getObservedBondCost } from './observed-costs.js';
+import { getWorkbookBloodCost } from './workbook-blood-costs.js';
 
 export const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 
@@ -590,21 +591,25 @@ export function calcWardenLevelMultiplier(level) {
 }
 
 /**
- * Источник стоимости шага. Наблюдённые серверные значения имеют приоритет;
- * остальные уровни пока остаются оценочными — без подгонки между точками.
+ * Provenance for one Warden Blood transition.
+ * Priority: exact current HAR observation, historical Excel row, then the
+ * legacy fallback approximation outside the workbook range.
  */
 export function getBloodCostSource(level) {
-  return getObservedBloodCost(level) === undefined ? 'estimated' : 'api-observed';
+  if (getObservedBloodCost(level) !== undefined) return 'api-observed';
+  if (getWorkbookBloodCost(level) !== undefined) return 'workbook-reference';
+  return 'estimated';
 }
 
 /**
- * Стоимость перехода с уровня L на L+1.
- * Для 32 уровней используется подтверждённое next_cost из HAR;
- * на остальных уровнях сохранена прежняя оценочная кривая.
+ * Cost of transition L -> L+1. HAR observations always override the imported
+ * historical 500-row Excel table; the old curve is only an out-of-range fallback.
  */
 export function calcBloodCostForLevel(level) {
   const observed = getObservedBloodCost(level);
   if (observed !== undefined) return observed;
+  const workbook = getWorkbookBloodCost(level);
+  if (workbook !== undefined) return workbook;
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
@@ -622,10 +627,16 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const baseGain = Math.round(talentSum * (multAfter - multBefore));
 
   let bloodSpent = 0;
-  const bloodCostEvidence = { apiObservedSteps: 0, estimatedSteps: 0 };
+  const bloodCostEvidence = {
+    apiObservedSteps: 0,
+    workbookReferenceSteps: 0,
+    estimatedSteps: 0,
+  };
   for (let l = currentLvl; l < targetLvl; l++) {
     bloodSpent += calcBloodCostForLevel(l);
-    if (getBloodCostSource(l) === 'api-observed') bloodCostEvidence.apiObservedSteps++;
+    const source = getBloodCostSource(l);
+    if (source === 'api-observed') bloodCostEvidence.apiObservedSteps++;
+    else if (source === 'workbook-reference') bloodCostEvidence.workbookReferenceSteps++;
     else bloodCostEvidence.estimatedSteps++;
   }
 
