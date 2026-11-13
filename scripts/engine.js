@@ -703,8 +703,9 @@ export function findObservedBondStep(observations, lover, attribute, kind, sourc
     Number(row.target) === Number(targetLevel) &&
     row.cost !== null && row.cost !== undefined &&
     row.gain !== null && row.gain !== undefined &&
-    (row.wardenLevel === null || row.wardenLevel === undefined ||
-      (wardenLevel !== null && wardenLevel !== undefined && Number(row.wardenLevel) === Number(wardenLevel)))
+    (wardenLevel === null || wardenLevel === undefined
+      ? row.wardenLevel === null || row.wardenLevel === undefined
+      : row.wardenLevel !== null && row.wardenLevel !== undefined && Number(row.wardenLevel) === Number(wardenLevel))
   );
   const unique = new Map(matches.map(row => [
     String(Number(row.cost)) + ':' + String(Number(row.gain)) + ':' +
