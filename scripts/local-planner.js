@@ -55,7 +55,7 @@ function normalizeAccount(input = {}) {
     const warden = record(raw);
     ownedWardens[id] = {
       ...warden,
-      level: Math.max(1, Math.min(500, Math.round(numeric(warden.level, 1)))),
+      level: Math.max(1, Math.min(GAME_DB.limits?.levels?.max_warden_lvl ?? 450, Math.round(numeric(warden.level, 1)))),
       promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(warden.promoteId, 1)))),
       exp: nonNegative(warden.exp),
       talents: record(warden.talents),
