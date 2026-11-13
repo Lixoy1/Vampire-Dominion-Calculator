@@ -594,7 +594,7 @@ function walkNumbers(value, path = 'root') {
     courtyardToLvl: 0,
   } });
   assert.ok(automatic.summary.addedLevels > 0, 'Bond allocator spends available Affinity on unlocked branches');
-  assert.ok(automatic.summary.estimatedAffinity <= 1000);
+  assert.ok(automatic.summary.affinitySpent <= 1000);
   assert.ok(automatic.plan.bonds[bondLover.id]);
   const committed = commitLocalPlan({ account, plan: automatic.plan });
   assert.equal(committed.ok, true);

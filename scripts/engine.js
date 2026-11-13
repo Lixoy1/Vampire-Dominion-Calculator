@@ -6,6 +6,9 @@
  * Содержит все формулы, константы и жадные/ДП алгоритмы распределения ресурсов.
  */
 
+import { getObservedBloodCost, getObservedBondCost } from './observed-costs.js';
+import { getWorkbookBloodCost } from './workbook-blood-costs.js';
+
 export const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 
 export const FABRIC_COST_BY_QUALITY = {
@@ -588,9 +591,25 @@ export function calcWardenLevelMultiplier(level) {
 }
 
 /**
- * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
+ * Provenance for one Warden Blood transition.
+ * Priority: exact current HAR observation, historical Excel row, then the
+ * legacy fallback approximation outside the workbook range.
+ */
+export function getBloodCostSource(level) {
+  if (getObservedBloodCost(level) !== undefined) return 'api-observed';
+  if (getWorkbookBloodCost(level) !== undefined) return 'workbook-reference';
+  return 'estimated';
+}
+
+/**
+ * Cost of transition L -> L+1. HAR observations always override the imported
+ * historical 500-row Excel table; the old curve is only an out-of-range fallback.
  */
 export function calcBloodCostForLevel(level) {
+  const observed = getObservedBloodCost(level);
+  if (observed !== undefined) return observed;
+  const workbook = getWorkbookBloodCost(level);
+  if (workbook !== undefined) return workbook;
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
@@ -608,8 +627,17 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const baseGain = Math.round(talentSum * (multAfter - multBefore));
 
   let bloodSpent = 0;
+  const bloodCostEvidence = {
+    apiObservedSteps: 0,
+    workbookReferenceSteps: 0,
+    estimatedSteps: 0,
+  };
   for (let l = currentLvl; l < targetLvl; l++) {
     bloodSpent += calcBloodCostForLevel(l);
+    const source = getBloodCostSource(l);
+    if (source === 'api-observed') bloodCostEvidence.apiObservedSteps++;
+    else if (source === 'workbook-reference') bloodCostEvidence.workbookReferenceSteps++;
+    else bloodCostEvidence.estimatedSteps++;
   }
 
   // Проверка требуемых прорывов
@@ -634,6 +662,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     fromLvl: currentLvl,
     toLvl: targetLvl,
     bloodSpent,
+    bloodCostEvidence,
     baseGain,
     neededPromotes,
     missingItems,
@@ -647,42 +676,102 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Обычный уровень (level: 1..600): даёт плоскую прибавку к атрибуту смотрителя.
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
-export function calcBondLevelCost(level) {
-  // Стоимость шага доверия растёт по параболе/ступеням
+/**
+ * Источник стоимости ветви. Для точек, которых нет в HAR, используем
+ * прежнюю оценочную формулу и явно помечаем её как estimated.
+ */
+export function getBondCostSource(kind, level, bondType = 'default') {
+  return getObservedBondCost(kind, bondType, level) === undefined ? 'estimated' : 'api-observed';
+}
+
+export function calcBondLevelCost(level, bondType = 'default') {
+  const observed = getObservedBondCost('flat', bondType, level);
+  if (observed !== undefined) return observed;
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
-export function calcBondPercentCost(percentLevel) {
+export function calcBondPercentCost(percentLevel, bondType = 'default') {
+  const observed = getObservedBondCost('percent', bondType, percentLevel);
+  if (observed !== undefined) return observed;
   return Math.round(200 + Math.pow(percentLevel, 2.05) * 12);
 }
 
-export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs = { strength: 0, allure: 0, intellect: 0, spirit: 0 }, closeness = affinity) {
+/**
+ * Returns one unambiguous server observation for an exact Warden/Lover state.
+ * A matching row must have the same source level and selected target. Conflicting
+ * observations or a different Warden level are deliberately ignored.
+ */
+export function findObservedBondStep(observations, lover, attribute, kind, sourceLevel, targetLevel, wardenLevel = null) {
+  if (!Array.isArray(observations)) return null;
+  const matches = observations.filter(row =>
+    Number(row.loverId) === Number(lover.id) &&
+    Number(row.wardenId) === Number(lover.warden_id) &&
+    row.attribute === attribute &&
+    row.kind === kind &&
+    row.level !== null && row.level !== undefined &&
+    row.target !== null && row.target !== undefined &&
+    Number(row.level) === Number(sourceLevel) &&
+    Number(row.target) === Number(targetLevel) &&
+    row.cost !== null && row.cost !== undefined &&
+    row.gain !== null && row.gain !== undefined &&
+    (wardenLevel === null || wardenLevel === undefined
+      ? row.wardenLevel === null || row.wardenLevel === undefined
+      : row.wardenLevel !== null && row.wardenLevel !== undefined && Number(row.wardenLevel) === Number(wardenLevel))
+  );
+  const unique = new Map(matches.map(row => [
+    String(Number(row.cost)) + ':' + String(Number(row.gain)) + ':' +
+      String(row.nextCost ?? '') + ':' + String(row.nextGain ?? ''),
+    row,
+  ]));
+  return unique.size === 1 ? [...unique.values()][0] : null;
+}
+
+export function calcLoverBonds(
+  lover,
+  affinity,
+  bondStates = {},
+  wardenBaseAttrs = { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+  closeness = affinity,
+  observedSteps = [],
+  wardenLevel = null
+) {
   let spentAffinity = 0;
   const gainByAttr = { strength: 0, allure: 0, intellect: 0, spirit: 0 };
 
   const details = lover.scarlet_bonds.map(bond => {
     const st = bondStates[bond.attribute] ?? { level: 0, targetLevel: 0, percentLevel: 0, targetPercentLevel: 0 };
-    // Closeness unlocks a branch; Affinity is the spendable resource.
     const unlockedFlat = closeness >= bond.unlock_closeness;
     const unlockedPct = closeness >= bond.unlock_closeness_percent;
     const targetLevel = unlockedFlat ? st.targetLevel : st.level;
     const targetPercentLevel = unlockedPct ? st.targetPercentLevel : st.percentLevel;
 
+    const exactFlat = findObservedBondStep(observedSteps, lover, bond.attribute, 'flat', st.level, targetLevel, wardenLevel);
+    const exactPercent = findObservedBondStep(observedSteps, lover, bond.attribute, 'percent', st.percentLevel, targetPercentLevel, wardenLevel);
+
     let costFlat = 0;
-    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1);
+    if (exactFlat) costFlat = Number(exactFlat.cost);
+    else {
+      for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1, bond.type);
+    }
 
     let costPct = 0;
-    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1);
+    if (exactPercent) costPct = Number(exactPercent.cost);
+    else {
+      for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1, bond.type);
+    }
 
     spentAffinity += costFlat + costPct;
 
-    // Плоский бонус за уровень связи (зависит от типа связи one/two/all/default)
+    // Fallback gain model is retained only when no exact API row matches this state.
     const flatStep = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-    const flatGain = (targetLevel - st.level) * flatStep;
+    const flatGain = exactFlat
+      ? Number(exactFlat.gain)
+      : (targetLevel - st.level) * flatStep;
 
-    // Процентный бонус: 0.5% за уровень связи от базового атрибута смотрителя
     const pctStep = bond.is_advantage ? 0.005 : 0.0025;
-    const pctGain = Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
+    const pctGain = exactPercent
+      ? Number(exactPercent.gain)
+      : Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
 
     gainByAttr[bond.attribute] += flatGain + pctGain;
 
@@ -694,6 +783,8 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
       costPct,
       flatGain,
       pctGain,
+      exactFlat: !!exactFlat,
+      exactPercent: !!exactPercent,
       totalAttrGain: flatGain + pctGain,
     };
   });
@@ -705,6 +796,7 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
     leftAffinity: Math.max(0, affinity - spentAffinity),
     gainByAttr,
     totalGain: Object.values(gainByAttr).reduce((a, b) => a + b, 0),
+    exactBranches: details.filter(row => row.exactFlat || row.exactPercent).length,
     details,
   };
 }
@@ -834,7 +926,31 @@ export function calculateTotalDominanceReport({
     const l = db.lovers.find(x => x.id === Number(lIdStr));
     const ownedLover = account.ownedLovers?.[lIdStr];
     if (!l || !ownedLover) continue;
-    const res = calcLoverBonds(l, ownedLover.affinity ?? 0, bPlan, bPlan.wardenBaseAttrs, ownedLover.closeness ?? 0);
+    const wardenLevel = Math.max(
+      1,
+      Number(account.ownedWardens?.[l.warden_id]?.level) || 1,
+      Number(plan.levels?.[l.warden_id]) || Number(account.ownedWardens?.[l.warden_id]?.level) || 1
+    );
+    const bondObservations = account.communityImport?.referenceObservations?.bondSteps ?? [];
+    const selectedBonds = { ...bPlan };
+    for (const bond of l.scarlet_bonds || []) {
+      const current = account.ownedLovers?.[lIdStr]?.bonds?.[bond.attribute] ?? {};
+      const selected = selectedBonds[bond.attribute] ?? {};
+      const flatLevel = Math.max(0, Number(current.level) || 0);
+      const percentLevel = Math.max(0, Number(current.percentLevel ?? current.pctLevel) || 0);
+      selectedBonds[bond.attribute] = {
+        ...current,
+        ...selected,
+        level: Math.max(0, Number(selected.level ?? flatLevel) || 0),
+        targetLevel: Math.max(flatLevel, Number(selected.targetLevel ?? flatLevel) || 0),
+        percentLevel: Math.max(0, Number(selected.percentLevel ?? percentLevel) || 0),
+        targetPercentLevel: Math.max(percentLevel, Number(selected.targetPercentLevel ?? percentLevel) || 0),
+      };
+    }
+    const res = calcLoverBonds(
+      l, ownedLover.affinity ?? 0, selectedBonds, bPlan.wardenBaseAttrs,
+      ownedLover.closeness ?? 0, bondObservations, wardenLevel
+    );
     bondsGain += res.totalGain;
     bondAffinitySpent += res.spentAffinity;
   }

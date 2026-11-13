@@ -4,6 +4,7 @@
  */
 import { GAME_DB, getIconUrl } from './data.js';
 import * as LocalPlanner from './local-planner.js';
+import { normalizeQuickSettings, quickResponseToPlan } from './quick-settings.js';
 const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 const FABRIC_COST_BY_QUALITY = { a: 50, s: 100, ss: 200 };
 
@@ -85,6 +86,7 @@ function createDefaultState() {
     searchQuery: '',
     profile,
     settings: { theme: 'dark', loverSex: 'female' },
+    quickSettings: normalizeQuickSettings({}),
     account,
     plan,
     activeAccountId: id,
@@ -215,6 +217,7 @@ export function normalizeState(parsed = {}) {
       lang,
       profile: { name: selected.name, server: selected.server, region: selected.region, avatarId: selected.avatarId },
       settings: { ...base.settings, ...(source.settings || {}) },
+      quickSettings: normalizeQuickSettings(source.quickSettings || {}),
       account: selected.account,
       plan: selected.plan,
       activeAccountId: selected.id,
@@ -240,6 +243,7 @@ export function normalizeState(parsed = {}) {
     lang,
     profile,
     settings: { ...base.settings, ...(source.settings || {}) },
+    quickSettings: normalizeQuickSettings(source.quickSettings || {}),
     account,
     plan,
     activeAccountId: id,
@@ -467,8 +471,10 @@ async function runAutoBondDistribution() {
     alert(
       'План Кровных уз рассчитан.\\n' +
       'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
-      'Доверие по расчётной формуле: ' + (summary.estimatedAffinity || 0) + '\\n' +
-      'Оценка прироста: +' + (summary.estimatedGain || 0) + ' Господства'
+      'Потрачено Доверия: ' + (summary.affinitySpent || 0) + '\\n' +
+      'Подтверждённые шаги API: ' + (summary.exactSteps || 0) + '\\n' +
+      'Оценочные шаги: ' + (summary.estimatedSteps || 0) + '\\n' +
+      'Прирост: +' + (summary.gain || 0) + ' Господства'
     );
   } catch (error) {
     alert(error.message || 'Локальный движок не смог распределить Доверие.');
@@ -776,7 +782,7 @@ function renderLoverDetailScreen(db) {
     if (!detail) return '<div class="bond-row"><b>' + tName('attribute', bond.attribute) + '</b><div class="row-sub">Локальный движок не вернул детальный расчёт этой ветви.</div></div>';
     return '<div class="bond-row"><div class="bond-head"><b><span class="dot ' + bond.attribute + '"></span> ' + tName('attribute', bond.attribute) + (bond.is_advantage ? ' ★' : '') + '</b><span>+' + fmt(detail.totalAttrGain || 0) + '</span></div><div class="grid-2 bond-inputs">' +
       '<label class="field-stack"><span>Уровень связи · ' + (detail.unlockedFlat ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.level || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="flat" value="' + Number(statePlan.targetLevel ?? statePlan.level ?? 0) + '" ' + (detail.unlockedFlat ? '' : 'disabled') + '></label>' +
-      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div><div class="row-sub">Цена по локальный движок: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост по модели: +' + fmt(detail.totalAttrGain || 0) + '</div></div>';
+      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div><div class="row-sub">Цена: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост: +' + fmt(detail.totalAttrGain || 0) + ' · ' + (detail.exactFlat && detail.exactPercent ? 'подтверждено API' : detail.exactFlat || detail.exactPercent ? 'частично подтверждено API' : 'оценка') + '</div></div>';
   }).join('');
   return renderSubToolbar('lovers', 'Партнёр') +
     '<div class="warden-hero-card"><img src="' + getIconUrl(getLoverIconPath(lover, owned), state.preferLocalIcons) + '" class="warden-avatar-lg" alt=""><div class="card-body"><div class="warden-title-serif">' + tName('lover', lover.name) + '</div><div class="card-subtitle">' + (warden ? tName('warden', warden.name) : '') + '</div></div></div>' +
@@ -784,7 +790,7 @@ function renderLoverDetailScreen(db) {
       '<label class="field-stack"><span>Близость / откровенность</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="closeness" value="' + Number(owned.closeness || 0) + '"></label>' +
       '<label class="field-stack"><span>Доверие / влечение</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="affinity" value="' + Number(owned.affinity || 0) + '"></label></div>' +
       '<label class="field-stack"><span>Пол портрета</span><select class="select" data-spa-lover-sex="' + id + '"><option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option><option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option></select></label></section>' +
-    '<section class="attrs-box"><div class="card-title">Кровные узы · локальный расчёт</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Прирост отображается как модельная оценка.</div>' +
+    '<section class="attrs-box"><div class="card-title">Кровные узы · локальный расчёт</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Для совпадающих состояний используются сохранённые ответы API; остальные шаги отмечаются как оценка.</div>' +
       '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-bonds">⚡ Распределить Кровные узы</button><button class="btn" id="btn-auto-presences">⚡ Распределить Веяния</button></div>' +
       (result ? '<div class="bond-summary">Потратится: <b>' + fmt(result.spentAffinity || 0) + '</b> · Останется: <b>' + fmt(result.leftAffinity || 0) + '</b> · Прирост: <b>+' + fmt(result.totalGain || 0) + '</b></div>' : '<div class="row-sub">Нет серверного расчёта уз.</div>') +
       (result && result.spentAffinity > Number(owned.affinity || 0) ? '<div class="bond-warning">Недостаточно Доверия для выбранного плана.</div>' : '') + bondsHtml + '</section>' +
@@ -868,26 +874,355 @@ function renderSpaScreen(db, report, oracle) {
   }
 }
 
-function openQuickCalculation() {
-  const report = calculationSnapshot?.report;
-  if (!report) return;
-  const account = state.account;
+const QUICK_GOAL_LABELS = {
+  all: 'Всё',
+  strength: 'Сила',
+  allure: 'Харизма',
+  intellect: 'Интеллект',
+  spirit: 'Воля',
+};
+
+const QUICK_SPEND_LABELS = {
+  blood: ['Кровь', 'Уровни смотрителей'],
+  promote_items: ['Прорывы', 'Предметы прорыва'],
+  conclave: ['Конклав', 'Очки Конклава'],
+  trust: ['Доверие', 'Кровные узы'],
+  group_items: ['Призыв и вдохновения', 'Предметы призыва'],
+  presence_items: ['Веяния', 'Предметы Веяний'],
+  talent_items: ['Свитки и рукописи', 'Предметы талантов'],
+  talent_exp: ['Личный опыт', 'Опыт талантов'],
+  skin_cards: ['Карточки обликов', 'Карточки'],
+  fabric: ['Ткань', 'Материалы обликов'],
+};
+
+function updateQuickSettings(next) {
+  state.quickSettings = normalizeQuickSettings(next);
+  saveState();
+}
+
+function downloadQuickSettings() {
+  const settings = normalizeQuickSettings(state.quickSettings || {});
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'vampire-dominion-quick-settings.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function parseQuickJsonValue(value) {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); }
+  catch (error) { throw new Error('Файл не содержит корректный JSON: ' + error.message); }
+}
+
+function extractQuickResponse(parsedValue) {
+  let parsed = parseQuickJsonValue(parsedValue);
+  if (parsed && parsed.log && Array.isArray(parsed.log.entries)) {
+    const entries = parsed.log.entries.filter(entry =>
+      String(entry.request?.url || '').includes('/calculations/quick') &&
+      Number(entry.response?.status) >= 200 &&
+      Number(entry.response?.status) < 300 &&
+      typeof entry.response?.content?.text === 'string'
+    );
+    if (!entries.length) throw new Error('В HAR не найден успешный ответ /calculations/quick.');
+    const entry = entries[entries.length - 1];
+    let body = entry.response.content.text;
+    if (entry.response.content.encoding === 'base64') {
+      const binary = atob(body);
+      const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+      body = new TextDecoder().decode(bytes);
+    }
+    parsed = parseQuickJsonValue(body);
+  }
+  if (parsed && parsed.response?.content?.text) {
+    parsed = parseQuickJsonValue(parsed.response.content.text);
+  }
+  if (parsed && parsed.res && typeof parsed.res === 'object') return parsed.res;
+  if (parsed && parsed.result && typeof parsed.result === 'object') return parsed.result;
+  if (parsed && parsed.ok === true && parsed.result && typeof parsed.result === 'object') return parsed.result;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  throw new Error('Не удалось определить структуру ответа Quick Calculation.');
+}
+
+function quickPlanStats(plan) {
+  const levels = Object.keys(plan.levels || {}).length;
+  const bonds = Object.values(plan.bonds || {}).reduce((sum, value) => sum + Object.keys(value || {}).length, 0);
+  const talents = Object.values(plan.talents || {}).reduce((sum, value) =>
+    sum + ['scrolls', 'scripts', 'exp_levels'].reduce((inner, key) =>
+      inner + Object.values(value?.[key] || {}).filter(amount => Number(amount) > 0).length, 0), 0);
+  const presences = Object.values(plan.presences || {}).reduce((sum, value) => sum + Object.keys(value || {}).length, 0);
+  return { levels, bonds, talents, presences, skins: Object.keys(plan.skins || {}).length,
+    summons: (plan.summons?.wardens?.length || 0) + (plan.summons?.lovers?.length || 0) };
+}
+
+function importQuickResponseFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,.har,application/json';
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Файл слишком большой для мобильного импорта. Экспортируй из HAR только один JSON-ответ /calculations/quick и импортируй его.');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(await file.text());
+      const response = extractQuickResponse(parsed);
+      const mapped = quickResponseToPlan(response, state.account, state.plan);
+      const counts = quickPlanStats(mapped.plan);
+      const ignoredAuraCount = Object.values(mapped.ignored.wardenAuraLevels || {})
+        .reduce((sum, values) => sum + Object.keys(values || {}).length, 0);
+      const ignoredExpCount = Object.values(mapped.ignored.talentExpItems || {})
+        .reduce((sum, values) => sum + Object.keys(values || {}).length, 0);
+      const detail = [
+        'Смотрители по уровням: ' + counts.levels,
+        'Партнёры / ветви уз: ' + counts.bonds,
+        'Таланты: ' + counts.talents,
+        'Веяния: ' + counts.presences,
+        'Облики: ' + counts.skins,
+        'Призывы: ' + counts.summons,
+        ignoredAuraCount ? 'Вдохновения без поля в локальном плане: ' + ignoredAuraCount : '',
+        ignoredExpCount ? 'Предметы опыта талантов без поля в локальном плане: ' + ignoredExpCount : '',
+      ].filter(Boolean).join('\n');
+      const note = ignoredAuraCount || ignoredExpCount
+        ? '\n\nЧасть результата пока не поддерживается локальной моделью и не будет применена.'
+        : '';
+      if (!confirm('Получен серверный результат Quick Calculation.\n\n' + detail + note + '\n\nПеренести поддерживаемые значения в текущий план?')) return;
+      state.plan = normalizePlan(mapped.plan, state.account);
+      saveState();
+      await render();
+      closeAppModal();
+      alert('Результат Quick перенесён в черновик плана. Профиль и ресурсы не изменены. Проверь расчёт перед применением.');
+    } catch (error) {
+      alert(error.message || 'Не удалось импортировать результат Quick Calculation.');
+    }
+  });
+  input.click();
+}
+
+function renderQuickSettingsModal() {
+  const settings = normalizeQuickSettings(state.quickSettings || {});
+  const goals = Object.entries(QUICK_GOAL_LABELS).map(([key, label]) =>
+    '<option value="' + key + '" ' + (settings.goal === key ? 'selected' : '') + '>' + label + '</option>'
+  ).join('');
+  const spend = Object.entries(QUICK_SPEND_LABELS).map(([key, labels]) =>
+    '<label class="quick-settings-check"><input type="checkbox" data-quick-spend="' + key + '" ' +
+    (settings.spend[key] !== false ? 'checked' : '') + '><span><b>' + labels[0] + '</b><small>' + labels[1] + '</small></span></label>'
+  ).join('');
+  const conclave = ATTRIBUTES.map(attribute =>
+    '<label class="quick-settings-inline"><input type="checkbox" data-quick-conclave="' + attribute + '" ' +
+    (!(settings.conclave_off || []).includes(attribute) ? 'checked' : '') + '><span>' + tName('attribute', attribute) + '</span></label>'
+  ).join('');
+  const renderFeatureCheckbox = (kind, id, feature, value, label, checked, extra = '') =>
+    '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="' + kind +
+    '" data-id="' + id + '" data-feature="' + feature + '" data-value="' + value + '" ' + extra + ' ' +
+    (checked ? 'checked' : '') + '><span>' + label + '</span></label>';
+
+  const wardenCandidates = GAME_DB.wardens.filter(entity =>
+    state.account.ownedWardens[entity.id] || entity.summon_item_id != null
+  );
+  const wardens = wardenCandidates.map(entity => {
+    const id = entity.id;
+    const owned = state.account.ownedWardens[id];
+    const item = settings.wardens[id] || {};
+    const promotions = GAME_DB.warden_promotes
+      .filter(row => !owned || row.min_warden_lvl >=
+        (GAME_DB.warden_promotes.find(stage => stage.id === Number(owned.promoteId))?.max_warden_lvl ?? 1));
+    const auras = (entity.auras || []).filter(row => row.aura_type === 'updatable' && row.upgrade_item_id != null);
+    const talents = entity.talents || [];
+    const skins = entity.skins || [];
+    const promotionHtml = promotions.length
+      ? '<details><summary>Прорывы (' + (promotions.length - (item.promotes_off || []).length) + '/' + promotions.length + ')</summary><div class="quick-feature-grid">' +
+        promotions.map(row => renderFeatureCheckbox('warden', id, 'promotes_off', row.id,
+          escHtml(tName('warden_promote', row.name)) + ' · ур. ' + row.min_warden_lvl,
+          !(item.promotes_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const talentHtml = talents.length
+      ? '<details><summary>Таланты (' + (talents.length - (item.talents_off || []).length) + '/' + talents.length + ')</summary><div class="quick-feature-grid">' +
+        talents.map((row, position) => renderFeatureCheckbox('warden', id, 'talents_off', position,
+          escHtml(tName('attribute', row.attribute)) + ' · ' + row.stars + '★ · №' + position,
+          !(item.talents_off || []).includes(position))).join('') + '</div></details>'
+      : '';
+    const auraHtml = auras.length
+      ? '<details><summary>Вдохновения (' + (auras.length - (item.auras_off || []).length) + '/' + auras.length + ')</summary><div class="quick-feature-grid">' +
+        auras.map(row => renderFeatureCheckbox('warden', id, 'auras_off', row.id,
+          escHtml(tName('aura', row.name)), !(item.auras_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const skinHtml = skins.length
+      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
+        skins.map(row => renderFeatureCheckbox('warden', id, 'skins_off', row.id,
+          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const summonHtml = !owned && entity.summon_item_id != null
+      ? renderFeatureCheckbox('warden', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
+      : '';
+    const levelHtml = '<div class="quick-entity-control-row">' +
+      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-levels="' + id + '" ' +
+      (item.levels !== false ? 'checked' : '') + '> <span>Уровни</span></label>' +
+      '<label class="quick-settings-inline">Не выше <input class="input quick-settings-max" type="number" min="' +
+      (Number(owned?.level) || 1) + '" max="450" placeholder="без лимита" data-quick-warden-max="' + id +
+      '" value="' + (item.max_level || '') + '"></label></div>';
+    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('warden', entity.name)) +
+      '</span><small>' + (owned ? 'свой · ур. ' + Number(owned.level || 1) : 'доступен для призыва') +
+      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
+      renderFeatureCheckbox('warden', id, 'off', 'true', 'Участвует в Quick', !item.off) +
+      summonHtml + levelHtml + promotionHtml + talentHtml + auraHtml + skinHtml + '</div></details>';
+  }).join('') || '<p class="row-sub">Нет доступных смотрителей.</p>';
+
+  const loverCandidates = GAME_DB.lovers.filter(entity =>
+    state.account.ownedLovers[entity.id] || entity.summon_item_id != null
+  );
+  const lovers = loverCandidates.map(entity => {
+    const id = entity.id;
+    const owned = state.account.ownedLovers[id];
+    const item = settings.lovers[id] || {};
+    const bonds = entity.scarlet_bonds || [];
+    const presences = (entity.presences || []).filter(row => row.presence_type === 'updatable' && row.upgrade_item_id != null);
+    const skins = entity.skins || [];
+    const bondsHtml = bonds.length
+      ? '<details><summary>Кровные узы (' + (bonds.length * 2 - (item.bonds_off || []).length) + '/' + (bonds.length * 2) + ')</summary><div class="quick-feature-grid">' +
+        bonds.flatMap(row => ['level', 'percent'].map(kind => {
+          const excluded = (item.bonds_off || []).some(entry => entry.attribute === row.attribute && entry.kind === kind);
+          return '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="lover" data-id="' + id +
+            '" data-feature="bonds_off" data-attribute="' + row.attribute + '" data-kind="' + kind + '" ' +
+            (!excluded ? 'checked' : '') + '><span>' + escHtml(tName('attribute', row.attribute)) + ' · ' +
+            (kind === 'level' ? 'уровень' : 'процент') + '</span></label>';
+        })).join('') + '</div></details>'
+      : '';
+    const presenceHtml = presences.length
+      ? '<details><summary>Веяния (' + (presences.length - (item.presences_off || []).length) + '/' + presences.length + ')</summary><div class="quick-feature-grid">' +
+        presences.map(row => renderFeatureCheckbox('lover', id, 'presences_off', row.id,
+          escHtml(tName('presence', row.name)), !(item.presences_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const skinHtml = skins.length
+      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
+        skins.map(row => renderFeatureCheckbox('lover', id, 'skins_off', row.id,
+          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const summonHtml = !owned && entity.summon_item_id != null
+      ? renderFeatureCheckbox('lover', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
+      : '';
+    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('lover', entity.name)) +
+      '</span><small>' + (owned ? 'свой · близость ' + Number(owned.closeness || 0) : 'доступен для призыва') +
+      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
+      renderFeatureCheckbox('lover', id, 'off', 'true', 'Участвует в Quick', !item.off) +
+      summonHtml + bondsHtml + presenceHtml + skinHtml + '</div></details>';
+  }).join('') || '<p class="row-sub">Нет доступных партнёров.</p>';
+
   const html = '<section class="quick-calc-summary">' +
-    '<div class="card-title">Быстрый подсчёт</div>' +
-    '<div class="quick-calc-total">+' + fmt(report.gain?.total || 0) + '</div>' +
-    '<div class="row-sub">Локальный расчёт прироста по выбранному плану · ' + escHtml(calculationSnapshot.meta?.localEngineVersion || '') + '</div>' +
-    '<div class="quick-calc-grid">' +
-      '<div><span>Кровь</span><b>' + fmt(account.blood || 0) + '</b></div>' +
-      '<div><span>Конклав</span><b>' + fmt(account.conclaveExp || 0) + '</b></div>' +
-      '<div><span>Сад</span><b>' + fmt(account.courtyardExp || 0) + '</b></div>' +
-      '<div><span>Смотрители</span><b>' + Object.keys(account.ownedWardens || {}).length + '/' + GAME_DB.wardens.length + '</b></div>' +
-      '<div><span>Партнёры</span><b>' + Object.keys(account.ownedLovers || {}).length + '/' + GAME_DB.lovers.length + '</b></div>' +
-      '<div><span>Облики</span><b>' + Object.values(account.skins || {}).filter(value => Number(value) > 0).length + '</b></div>' +
-    '</div>' +
-    '<p class="row-sub">Это предварительный обзор локального расчёта. Неподтверждённые игровые формулы отмечаются отдельно в покрытии точности.</p>' +
-    '<div class="quick-calc-actions"><button class="btn btn-primary" data-modal-nav="calc_dominance">Подробный расчёт</button><button class="btn" data-modal-nav="resources">Ресурсы</button><button class="btn" data-modal-nav="conclave">Конклав и Сад</button></div>' +
+    '<div class="card-title">Quick Calculation · настройки</div>' +
+    '<div class="row-sub">Формат настроек восстановлен по официальному клиенту. Сам алгоритм оптимизации выполняется на сервере игры и в этой локальной копии не воспроизводится.</div>' +
+    '<label class="field-stack"><span>Цель оптимизации</span><select class="select" id="quick-goal">' + goals + '</select></label>' +
+    '<details open><summary>Что разрешено тратить</summary><div class="quick-settings-spend">' + spend + '</div></details>' +
+    '<details><summary>Атрибуты Конклава</summary><div class="quick-settings-inline-wrap">' + conclave + '</div></details>' +
+    '<details><summary>Участие смотрителей (' + Object.keys(state.account.ownedWardens || {}).length + ')</summary><div class="quick-settings-entities">' + wardens + '</div></details>' +
+    '<details><summary>Участие партнёров (' + Object.keys(state.account.ownedLovers || {}).length + ')</summary><div class="quick-settings-entities">' + lovers + '</div></details>' +
+    '<div class="quick-calc-actions"><button class="btn" id="quick-export-settings">Экспорт настроек JSON</button><button class="btn btn-primary" id="quick-import-response">Импортировать ответ API / HAR</button></div>' +
+    '<p class="row-sub">Импорт переносит подтверждённый сервером план в черновик. Он не списывает ресурсы и не меняет профиль. Вдохновения и отдельные предметы опыта пока сохраняются в списке неподдерживаемых полей.</p>' +
+    '<div class="quick-calc-actions"><button class="btn" id="quick-open-full-calc">Подробный расчёт</button><button class="btn" id="quick-close">Закрыть</button></div>' +
   '</section>';
   openAppModal('Быстрый подсчёт', html);
+
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  const refresh = () => renderQuickSettingsModal();
+  body.querySelector('#quick-goal')?.addEventListener('change', event => {
+    updateQuickSettings({ ...state.quickSettings, goal: event.target.value });
+    refresh();
+  });
+  body.querySelectorAll('[data-quick-spend]').forEach(input => input.addEventListener('change', event => {
+    const spend = { ...state.quickSettings.spend, [event.target.dataset.quickSpend]: event.target.checked };
+    updateQuickSettings({ ...state.quickSettings, spend });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-conclave]').forEach(input => input.addEventListener('change', () => {
+    const excluded = [...body.querySelectorAll('[data-quick-conclave]:not(:checked)')]
+      .map(node => node.dataset.quickConclave);
+    updateQuickSettings({ ...state.quickSettings, conclave_off: excluded });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-entity]').forEach(input => input.addEventListener('change', event => {
+    const kind = event.target.dataset.quickEntity === 'warden' ? 'wardens' : 'lovers';
+    const id = event.target.dataset.id;
+    const entities = { ...state.quickSettings[kind] };
+    const current = { ...(entities[id] || {}) };
+    if (event.target.checked) delete current.off;
+    else current.off = true;
+    if (Object.keys(current).length) entities[id] = current;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-warden-levels]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickWardenLevels;
+    const entities = { ...state.quickSettings.wardens };
+    const item = { ...(entities[id] || {}) };
+    if (event.target.checked) delete item.levels;
+    else item.levels = false;
+    entities[id] = item;
+    updateQuickSettings({ ...state.quickSettings, wardens: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-feature-kind]').forEach(input => input.addEventListener('change', event => {
+    const node = event.target;
+    const kind = node.dataset.quickFeatureKind === 'warden' ? 'wardens' : 'lovers';
+    const id = node.dataset.id;
+    const feature = node.dataset.feature;
+    const entities = { ...state.quickSettings[kind] };
+    const item = { ...(entities[id] || {}) };
+    if (feature === 'off') {
+      if (node.checked) delete item.off;
+      else item.off = true;
+    } else if (feature === 'summon') {
+      if (node.checked) delete item.summon;
+      else item.summon = false;
+    } else if (feature === 'bonds_off') {
+      const attribute = node.dataset.attribute;
+      const bondKind = node.dataset.kind;
+      const entries = [...(item.bonds_off || [])];
+      const exists = entries.some(entry => entry.attribute === attribute && entry.kind === bondKind);
+      item.bonds_off = node.checked
+        ? entries.filter(entry => entry.attribute !== attribute || entry.kind !== bondKind)
+        : (exists ? entries : [...entries, { attribute, kind: bondKind }]);
+    } else {
+      const value = Number(node.dataset.value || node.value);
+      const values = [...(item[feature] || [])];
+      item[feature] = node.checked
+        ? values.filter(entry => Number(entry) !== value)
+        : [...values.filter(entry => Number(entry) !== value), value];
+    }
+    if (Object.keys(item).length) entities[id] = item;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-warden-max]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickWardenMax;
+    const entities = { ...state.quickSettings.wardens };
+    const item = { ...(entities[id] || {}) };
+    const value = Math.max(1, Math.min(450, Math.round(Number(event.target.value) || 0)));
+    if (event.target.value && Number.isFinite(value)) item.max_level = value;
+    else delete item.max_level;
+    if (Object.keys(item).length) entities[id] = item;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, wardens: entities });
+    refresh();
+  }));
+  body.querySelector('#quick-export-settings')?.addEventListener('click', downloadQuickSettings);
+  body.querySelector('#quick-import-response')?.addEventListener('click', importQuickResponseFile);
+  body.querySelector('#quick-open-full-calc')?.addEventListener('click', () => {
+    closeAppModal();
+    navigate('calc_dominance');
+  });
+  body.querySelector('#quick-close')?.addEventListener('click', closeAppModal);
+}
+
+function openQuickCalculation() {
+  if (!calculationSnapshot?.report) return;
+  renderQuickSettingsModal();
 }
 
 function openFormulaInfo() {
@@ -1579,8 +1914,11 @@ function renderLevelsTab(db, report, oracle) {
             <div class="row-info">
               <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
               <div class="row-sub">
-                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь по расчёту: ${fmt(upg.bloodSpent)}
+                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь: ${fmt(upg.bloodSpent)}
                 ${!upg.canPromote ? `<span style="color:var(--warn)"> · Нужны предметы прорыва</span>` : ''}
+              </div>
+              <div class="row-sub">
+                Источник цены: API ${upg.bloodCostEvidence?.apiObservedSteps || 0} · Excel ${upg.bloodCostEvidence?.workbookReferenceSteps || 0} · резерв ${upg.bloodCostEvidence?.estimatedSteps || 0}
               </div>
             </div>
             <div class="row-controls">

@@ -394,9 +394,34 @@ function runPresenceAutoDistribution(account, plan, availableBag = account.bag) 
   };
 }
 
+function findBondObservation(account, plan, lover, bond, kind, targetLevel) {
+  const owned = account.ownedLovers?.[lover.id];
+  const wardenId = lover.warden_id;
+  const wardenLevel = Math.max(
+    1,
+    Math.round(numeric(record(account.ownedWardens)[wardenId]?.level, 1)),
+    Math.round(numeric(record(plan.levels)[wardenId], record(account.ownedWardens)[wardenId]?.level || 1))
+  );
+  const state = record(owned?.bonds?.[bond.attribute]);
+  const sourceLevel = kind === 'flat'
+    ? Math.max(0, numeric(state.level))
+    : Math.max(0, numeric(state.percentLevel ?? state.pctLevel));
+  const observations = record(account.communityImport).referenceObservations?.bondSteps ?? [];
+  return Engine.findObservedBondStep(
+    observations, lover, bond.attribute, kind, sourceLevel, targetLevel, wardenLevel
+  );
+}
+
 function makeWarnings(account, plan) {
   const warnings = [];
-  const hasLevelPlan = Object.entries(plan.levels).some(([id, target]) => target > (account.ownedWardens[id]?.level || 1));
+  const hasEstimatedBloodCost = Object.entries(plan.levels).some(([id, target]) => {
+    const from = Math.max(1, Number(account.ownedWardens[id]?.level) || 1);
+    const to = Math.max(from, Math.round(numeric(target, from)));
+    for (let level = from; level < to; level++) {
+      if (Engine.getBloodCostSource(level) !== 'api-observed') return true;
+    }
+    return false;
+  });
   const hasBondPlan = Object.entries(plan.bonds).some(([id, bonds]) => {
     const owned = account.ownedLovers[id];
     return (db.lovers.find(item => item.id === Number(id))?.scarlet_bonds || []).some(bond => {
@@ -406,18 +431,62 @@ function makeWarnings(account, plan) {
         || numeric(selected.targetPercentLevel) > numeric(current.percentLevel ?? current.pctLevel);
     });
   });
-  if (hasLevelPlan) warnings.push({
+  const hasEstimatedBondCost = Object.entries(plan.bonds).some(([id, bonds]) => {
+    const owned = account.ownedLovers[id];
+    const lover = db.lovers.find(item => item.id === Number(id));
+    if (!owned || !lover) return false;
+    return (lover.scarlet_bonds || []).some(bond => {
+      const current = record(owned.bonds?.[bond.attribute]);
+      const selected = record(bonds[bond.attribute]);
+      const currentFlat = Math.max(0, numeric(current.level));
+      const targetFlat = Math.max(currentFlat, numeric(selected.targetLevel, currentFlat));
+      if (targetFlat > currentFlat && !findBondObservation(account, plan, lover, bond, 'flat', targetFlat)) {
+        for (let level = currentFlat + 1; level <= targetFlat; level++) {
+          if (Engine.getBondCostSource('flat', level, bond.type) !== 'api-observed') return true;
+        }
+      }
+      const currentPercent = Math.max(0, numeric(current.percentLevel ?? current.pctLevel));
+      const targetPercent = Math.max(currentPercent, numeric(selected.targetPercentLevel, currentPercent));
+      if (targetPercent > currentPercent && !findBondObservation(account, plan, lover, bond, 'percent', targetPercent)) {
+        for (let level = currentPercent + 1; level <= targetPercent; level++) {
+          if (Engine.getBondCostSource('percent', level, bond.type) !== 'api-observed') return true;
+        }
+      }
+      return false;
+    });
+  });
+  if (hasEstimatedBloodCost) warnings.push({
     code: 'APPROXIMATE_BLOOD_COST',
-    message: 'Для уровней без полной таблицы стоимости используется расчётная кривая; оценка отображается отдельно.',
+    message: 'Для шагов без HAR next_cost используется историческая 500-уровневая таблица Excel. Это более обоснованная оценка, чем прежняя формула, но она не подтверждена как актуальная серверная цена; вне диапазона таблицы остаётся резервная кривая.',
   });
   const skinUsage = getSkinPlanUsage(plan, account);
   if (Object.keys(skinUsage.unavailable).length) warnings.push({
     code: 'SKIN_REQUIRES_CARDS',
     message: 'Для части выбранных обликов не хватает карточек: ткань для них не подходит. Проверьте раздел обликов перед применением.',
   });
-  if (hasBondPlan) warnings.push({
+  if (hasEstimatedBondCost) warnings.push({
     code: 'APPROXIMATE_BOND_COST',
-    message: 'Стоимость Кровных уз рассчитывается по оценочной модели, если точная стоимость шага отсутствует в каталоге.',
+    message: 'Для шагов Кровных уз без точного наблюдения API используется оценочная формула стоимости.',
+  });
+  const hasEstimatedBondGain = Object.entries(plan.bonds).some(([id, bonds]) => {
+    const owned = account.ownedLovers[id];
+    const lover = db.lovers.find(item => item.id === Number(id));
+    if (!owned || !lover) return false;
+    return (lover.scarlet_bonds || []).some(bond => {
+      const current = record(owned.bonds?.[bond.attribute]);
+      const selected = record(bonds[bond.attribute]);
+      const currentFlat = Math.max(0, numeric(current.level));
+      const targetFlat = Math.max(currentFlat, numeric(selected.targetLevel, currentFlat));
+      if (targetFlat > currentFlat && !findBondObservation(account, plan, lover, bond, 'flat', targetFlat)) return true;
+      const currentPercent = Math.max(0, numeric(current.percentLevel ?? current.pctLevel));
+      const targetPercent = Math.max(currentPercent, numeric(selected.targetPercentLevel, currentPercent));
+      if (targetPercent > currentPercent && !findBondObservation(account, plan, lover, bond, 'percent', targetPercent)) return true;
+      return false;
+    });
+  });
+  if (hasEstimatedBondGain) warnings.push({
+    code: 'ESTIMATED_BOND_GAIN',
+    message: 'Для выбранного состояния ветви Кровных уз нет совпадающего серверного наблюдения; прирост остаётся оценочным.',
   });
   if (plan.summons.wardens.length) warnings.push({
     code: 'ESTIMATED_SUMMON_GAIN',
@@ -425,7 +494,6 @@ function makeWarnings(account, plan) {
   });
   return warnings;
 }
-
 function getTalentPlanUsage(plan, ownedWardens) {
   const byItem = {};
   const byWarden = {};
@@ -959,6 +1027,8 @@ export function autoDistributeBondPlan(input = {}) {
   let addedLevels = 0;
   let addedAffinity = 0;
   let estimatedGain = 0;
+  let exactStepCount = 0;
+  let estimatedStepCount = 0;
   const byLover = {};
 
   for (const [loverId, owned] of Object.entries(account.ownedLovers)) {
@@ -966,13 +1036,22 @@ export function autoDistributeBondPlan(input = {}) {
     if (!lover?.scarlet_bonds?.length) continue;
     const states = clone(record(plan.bonds[loverId]));
     const wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account, plan);
+    const wardenLevel = Math.max(
+      1,
+      Math.round(numeric(account.ownedWardens[lover.warden_id]?.level, 1)),
+      Math.round(numeric(plan.levels[lover.warden_id], account.ownedWardens[lover.warden_id]?.level || 1))
+    );
+    const observedSteps = account.communityImport?.referenceObservations?.bondSteps ?? [];
     const currentResult = Engine.calcLoverBonds(
-      lover, owned.affinity || 0, states, wardenBaseAttrs, owned.closeness || 0
+      lover, owned.affinity || 0, states, wardenBaseAttrs,
+      owned.closeness || 0, observedSteps, wardenLevel
     );
     let remaining = Math.max(0, (owned.affinity || 0) - currentResult.spentAffinity);
     let localAddedLevels = 0;
     let localAddedAffinity = 0;
     let localGain = 0;
+    let localExactSteps = 0;
+    let localEstimatedSteps = 0;
 
     for (let guard = 0; guard < 8 * 600; guard++) {
       if (remaining <= 0) break;
@@ -981,12 +1060,22 @@ export function autoDistributeBondPlan(input = {}) {
         const state = record(states[bond.attribute]);
         const flatLevel = Math.max(numeric(state.level), numeric(state.targetLevel, numeric(state.level)));
         if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
-          const cost = Engine.calcBondLevelCost(flatLevel + 1);
-          const gain = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-          if (cost > 0 && cost <= remaining) {
-            const efficiency = gain / cost;
+          const exactCurrent = Engine.findObservedBondStep(
+            observedSteps, lover, bond.attribute, 'flat',
+            Math.max(0, numeric(owned.bonds?.[bond.attribute]?.level)), flatLevel, wardenLevel
+          );
+          const exactNextCost = exactCurrent?.nextCost;
+          const exactNextGain = exactCurrent?.nextGain;
+          const hasExactNext = exactNextCost !== null && exactNextCost !== undefined
+            && exactNextGain !== null && exactNextGain !== undefined;
+          const cost = hasExactNext ? Math.max(0, numeric(exactNextCost)) : Engine.calcBondLevelCost(flatLevel + 1, bond.type);
+          const gain = hasExactNext
+            ? numeric(exactNextGain)
+            : (bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100);
+          if (gain > 0 && cost >= 0 && cost <= remaining) {
+            const efficiency = cost === 0 ? Number.POSITIVE_INFINITY : gain / cost;
             if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1 };
+              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1, exact: hasExactNext };
             }
           }
         }
@@ -994,15 +1083,24 @@ export function autoDistributeBondPlan(input = {}) {
         const currentPercent = Math.max(0, numeric(state.percentLevel, numeric(state.pctLevel)));
         const targetPercent = Math.max(currentPercent, numeric(state.targetPercentLevel, currentPercent));
         if (owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
-          const cost = Engine.calcBondPercentCost(targetPercent + 1);
+          const exactCurrent = Engine.findObservedBondStep(
+            observedSteps, lover, bond.attribute, 'percent',
+            Math.max(0, numeric(owned.bonds?.[bond.attribute]?.percentLevel ?? owned.bonds?.[bond.attribute]?.pctLevel)),
+            targetPercent, wardenLevel
+          );
+          const exactNextCost = exactCurrent?.nextCost;
+          const exactNextGain = exactCurrent?.nextGain;
+          const hasExactNext = exactNextCost !== null && exactNextCost !== undefined
+            && exactNextGain !== null && exactNextGain !== undefined;
+          const cost = hasExactNext ? Math.max(0, numeric(exactNextCost)) : Engine.calcBondPercentCost(targetPercent + 1, bond.type);
           const step = bond.is_advantage ? 0.005 : 0.0025;
           const previousGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent - currentPercent) * step);
           const nextGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent + 1 - currentPercent) * step);
-          const gain = nextGain - previousGain;
-          if (cost > 0 && cost <= remaining && gain > 0) {
-            const efficiency = gain / cost;
+          const gain = hasExactNext ? numeric(exactNextGain) : nextGain - previousGain;
+          if (cost >= 0 && cost <= remaining && gain > 0) {
+            const efficiency = cost === 0 ? Number.POSITIVE_INFINITY : gain / cost;
             if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, nextLevel: targetPercent + 1 };
+              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, nextLevel: targetPercent + 1, exact: hasExactNext };
             }
           }
         }
@@ -1016,6 +1114,13 @@ export function autoDistributeBondPlan(input = {}) {
       localAddedLevels++;
       localAddedAffinity += best.cost;
       localGain += best.gain;
+      if (best.exact) {
+        exactStepCount++;
+        localExactSteps++;
+      } else {
+        estimatedStepCount++;
+        localEstimatedSteps++;
+      }
     }
 
     if (localAddedLevels) {
@@ -1023,8 +1128,10 @@ export function autoDistributeBondPlan(input = {}) {
       plan.bonds[loverId] = states;
       byLover[loverId] = {
         addedLevels: localAddedLevels,
-        estimatedAffinity: localAddedAffinity,
-        estimatedGain: Math.round(localGain),
+        affinitySpent: localAddedAffinity,
+        gain: Math.round(localGain),
+        exactSteps: localExactSteps,
+        estimatedSteps: localEstimatedSteps,
         remainingAffinity: remaining,
       };
       addedLevels += localAddedLevels;
@@ -1035,7 +1142,14 @@ export function autoDistributeBondPlan(input = {}) {
 
   return {
     plan: normalizePlan(plan, account),
-    summary: { addedLevels, estimatedAffinity: addedAffinity, estimatedGain: Math.round(estimatedGain), byLover },
+    summary: {
+      addedLevels,
+      affinitySpent: addedAffinity,
+      gain: Math.round(estimatedGain),
+      exactSteps: exactStepCount,
+      estimatedSteps: estimatedStepCount,
+      byLover,
+    },
   };
 }
 
@@ -1581,6 +1695,7 @@ export function importCommunitySnapshot(input = {}) {
   const previousObservations = record(previousImport.referenceObservations);
   const referenceObservations = {
     wardenSteps: { ...record(previousObservations.wardenSteps) },
+    wardenTargets: { ...record(previousObservations.wardenTargets) },
     talentScripts: Array.isArray(previousObservations.talentScripts) ? [...previousObservations.talentScripts] : [],
     talentScrolls: previousObservations.talentScrolls ?? null,
     talentScrollsRows: Array.isArray(previousObservations.talentScrollsRows) ? [...previousObservations.talentScrollsRows] : [],
@@ -1670,6 +1785,10 @@ export function importCommunitySnapshot(input = {}) {
       const id = Math.round(numeric(row.template_id ?? row.warden_id ?? row.owner_id ?? row.id));
       if (!knownWardens.has(id)) { summary.skipped++; continue; }
       const step = exactStep(row);
+      const observedWardenLevel = row.target ?? row.level ?? row.current_level ?? null;
+      if (observedWardenLevel !== null && observedWardenLevel !== undefined) {
+        referenceObservations.wardenTargets[id] = Math.max(1, Math.round(numeric(observedWardenLevel, 1)));
+      }
       if (step.nextCost !== null || step.nextGain !== null) {
         referenceObservations.wardenSteps[id] = {
           ...step,
@@ -1929,6 +2048,27 @@ export function importCommunitySnapshot(input = {}) {
       target.push({ ...extra, ...step });
     }
   };
+  const keepBondStep = (rowValue, extra = {}) => {
+    const row = record(rowValue);
+    const observed = {
+      ...extra,
+      level: row.level ?? row.current_level ?? null,
+      target: row.target ?? null,
+      cost: row.cost ?? null,
+      gain: row.gain ?? null,
+      nextCost: row.next_cost ?? row.nextCost ?? null,
+      nextGain: row.next_gain ?? row.nextGain ?? null,
+      maxTarget: row.max_target ?? row.maxTarget ?? null,
+      wardenLevel: referenceObservations.wardenTargets[extra.wardenId]
+        ?? account.ownedWardens[extra.wardenId]?.level
+        ?? null,
+    };
+    if (observed.level !== null || observed.target !== null
+        || observed.cost !== null || observed.gain !== null
+        || observed.nextCost !== null || observed.nextGain !== null) {
+      pushBounded(referenceObservations.bondSteps, [observed]);
+    }
+  };
   const importObject = objectValue => {
     const object = unwrap(objectValue);
     const levels = record(object.levels);
@@ -1998,8 +2138,9 @@ export function importCommunitySnapshot(input = {}) {
             level: Math.max(0, Math.min(600, Math.round(numeric(flat.level)))),
             percentLevel: Math.max(0, Math.min(600, Math.round(numeric(percent.level)))),
           };
-          keepExactStep(referenceObservations.bondSteps, flat, { loverId, attribute, kind: 'level' });
-          keepExactStep(referenceObservations.bondSteps, percent, { loverId, attribute, kind: 'percent' });
+          const wardenId = lover.warden_id;
+          keepBondStep(flat, { loverId, wardenId, attribute, kind: 'flat' });
+          keepBondStep(percent, { loverId, wardenId, attribute, kind: 'percent' });
           summary.bonds++;
         }
         owned.bonds = bondStates;
@@ -2213,12 +2354,12 @@ export function getLocalEngineCapabilities() {
       'intimacy', 'attraction', 'guild-exp',
     ],
     formulaCaveats: [
-      'Warden blood costs currently use an approximate progression curve.',
-      'Blood-bond costs currently use formula estimates.',
+      'Warden Blood priority is exact HAR next_cost, then the historical 500-level Excel table, then the legacy fallback curve; workbook rows are estimates, not current-server truth.',
+      'Blood-bond totals use saved exact API cost/gain when Lover, Warden level, source level and target all match; otherwise exact sampled costs or estimates are used.',
       'Summon dominance gain is an estimate and is excluded from the exact total.',
       'Presence auto-distribution maximizes summed percentage-point gain per token; it is not an absolute dominance optimizer.',
       'Personal talent EXP uses bounded star-point allocation at 200 EXP per star point.',
-      'Automatic Scarlet Bond allocation uses the current estimated affinity-cost formula.',
+      'Automatic Scarlet Bond allocation uses API next_cost/next_gain when the sampled base state and current target match; otherwise it falls back to the local estimate.',
       'Aura upgrades are shown from the current catalogue; a complete per-level cost table is not available for every aura.',
       'Automatic skin ranking remains disabled until a complete, reliable gain table is available.',
     ],
