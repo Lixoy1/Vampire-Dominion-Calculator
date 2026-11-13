@@ -590,7 +590,19 @@ export function calcWardenLevelMultiplier(level) {
 /**
  * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
  */
+// Exact prices observed in successful /calculations/dominance responses.
+// Keys are the current level; values are the cost to advance to the next level.
+export const VERIFIED_BLOOD_COSTS = Object.freeze({
+  1: 115,
+  2: 269,
+  3: 461,
+  150: 2096083,
+});
+
 export function calcBloodCostForLevel(level) {
+  if (Object.hasOwn(VERIFIED_BLOOD_COSTS, level)) return VERIFIED_BLOOD_COSTS[level];
+  // Fallback retained for planning outside captured levels. It is an estimate,
+  // not a verified game formula; callers can inspect the confidence helper.
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
@@ -601,6 +613,10 @@ export function calcBloodCostForLevel(level) {
   return Math.round(605000000 * Math.pow(1.02, level - 400));
 }
 
+export function isBloodCostVerified(level) {
+  return Object.hasOwn(VERIFIED_BLOOD_COSTS, level);
+}
+
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
   const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
   const multBefore = calcWardenLevelMultiplier(currentLvl);
@@ -608,8 +624,10 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
   const baseGain = Math.round(talentSum * (multAfter - multBefore));
 
   let bloodSpent = 0;
+  const estimatedBloodLevels = [];
   for (let l = currentLvl; l < targetLvl; l++) {
     bloodSpent += calcBloodCostForLevel(l);
+    if (!isBloodCostVerified(l)) estimatedBloodLevels.push(l);
   }
 
   // Проверка требуемых прорывов
@@ -634,6 +652,8 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     fromLvl: currentLvl,
     toLvl: targetLvl,
     bloodSpent,
+    bloodCostVerified: estimatedBloodLevels.length === 0,
+    estimatedBloodLevels,
     baseGain,
     neededPromotes,
     missingItems,
@@ -648,7 +668,11 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
 export function calcBondLevelCost(level) {
-  // Стоимость шага доверия растёт по параболе/ступеням
+  // The first ordinary bond level is free in the captured game's own guide
+  // and in the dominance API response (level 0 -> target 1, cost 0).
+  if (level <= 1) return 0;
+  // Later steps remain an estimate until a HAR scenario exposes their exact
+  // per-level cost curve. Keep this fallback isolated and clearly documented.
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
