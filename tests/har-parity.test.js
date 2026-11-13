@@ -54,6 +54,11 @@ const secondBondResult = Engine.calcLoverBonds(capturedLover, 1000, secondBondLe
 assert.equal(secondBondResult.spentAffinity, 114);
 assert.equal(secondBondResult.totalGain, 1302);
 assert.ok(secondBondResult.details.every(row => row.flatGainConfidence === 'exact_api_observation'));
+const firstPercentStates = Object.fromEntries(capturedLover.scarlet_bonds.map(bond => [bond.attribute, { level: 0, targetLevel: 0, percentLevel: 0, targetPercentLevel: 1 }]));
+const firstPercentResult = Engine.calcLoverBonds(capturedLover, 1000, firstPercentStates, {}, 200);
+assert.equal(firstPercentResult.spentAffinity, 114);
+assert.equal(firstPercentResult.totalGain, 6);
+assert.ok(firstPercentResult.details.every(row => row.percentGainConfidence === 'exact_api_next_gain'));
 assert.equal(Engine.calcBondPercentCost(1), 20);
 
 // The captured Conclave levels 5–8 expose the next destination-level costs.
