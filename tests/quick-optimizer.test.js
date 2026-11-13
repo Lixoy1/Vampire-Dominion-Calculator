@@ -131,4 +131,18 @@ const skippedWarden = autoDistributeQuick({
 });
 assert.equal(skippedWarden.plan.levels[wardenId], 1, 'excluded Wardens must not be leveled');
 
+const cappedWarden = autoDistributeQuick({
+  account,
+  plan: {},
+  settings: {
+    goal: 'all',
+    spend: { blood: true, conclave: false, trust: false, talent_items: false, talent_exp: false, group_items: false, presence_items: false, skin_cards: false, fabric: false, promote_items: false },
+    wardens: { [wardenId]: { max_level: 2 } },
+  },
+});
+assert.equal(cappedWarden.plan.levels[wardenId], 2, 'per-Warden maximum level must constrain allocation');
+assert.ok(cappedWarden.warnings.some(item => item.code === 'QUICK_WARDEN_GAIN_APPROXIMATE'),
+  'unverified Warden dominance gain must be disclosed');
+
+
 console.log('PASS HAR-grounded Quick Calculation settings, result mapping and local resource guards');
