@@ -86,7 +86,8 @@ for (const [wardenId, target, gain] of [[10270,3,50],[10280,7,641],[10300,10,205
   const result = Engine.calcWardenLevelsUpgrade(warden, 1, target, 1, GAME_DB.warden_promotes, {}, {});
   assert.equal(result.observedApiGain, gain, `Warden ${wardenId} observed API gain`);
   assert.equal(result.observedApiGainScope, 'captured_account_state_only');
-  assert.equal(result.baseGainConfidence, 'approximation_only');
+  assert.equal(result.baseGain, gain, `Warden ${wardenId} exact captured gain must drive the interval result`);
+  assert.equal(result.baseGainConfidence, 'exact_api_observation');
 }
 
 console.log('HAR parity checks passed: templates, limits, exact intervals, bond entry costs, bag points, manuscripts.');
