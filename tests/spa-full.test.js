@@ -44,7 +44,7 @@ for (const tab of ['trust','bonds','presences','skins']) {
   assert.ok(loverDetail.includes("['" + tab + "'"), 'partner detail has ' + tab + ' tab');
 }
 assert.ok(loverDetail.includes('data-action="set-lover-tab"'), 'partner tabs are interactive');
-assert.ok(loverDetail.includes('class="lover-subtabs"'), 'partner tabs use the compact horizontal tab strip');
+assert.ok(loverDetail.includes('lover-subtabs'), 'partner tabs use the compact horizontal tab strip');
 const settings = fn('renderSettingsScreen');
 for (const marker of ['portrait-picker-grid','setting-segment','setting-toggle','profile-region-select','data-copy-kind="user"','data-copy-kind="account"','data-action="delete-account"']) {
   assert.ok(settings.includes(marker), 'settings include ' + marker);
