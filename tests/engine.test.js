@@ -6,6 +6,7 @@ import { GAME_DB, getIconUrl } from '../scripts/data.js';
 import * as E from '../scripts/engine.js';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
+const harOracle = JSON.parse(readFileSync(join(root, 'tests', 'fixtures', 'har-oracle.json'), 'utf8'));
 let passed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log(`PASS ${name}`); }
@@ -16,6 +17,14 @@ const expectedCounts = {
   wardens: 68, lovers: 45, items: 237, warden_promotes: 8,
   conclave_levels: 180, courtyard_levels: 210, lover_presence_levels: 155,
 };
+
+test('sanitized HAR oracle fixture contains only minimal game-rule observations', () => {
+  assert.equal(harOracle.scenarios.length, 3);
+  assert.equal(harOracle.scenarios.find(x => x.id === 'warden-levels-1-to-3').oracle.total_blood_cost, 384);
+  assert.equal(harOracle.scenarios.find(x => x.id === 'first-flat-bond-level-is-free').oracle.bonds.every(x => x.cost === 0), true);
+  assert.equal(JSON.stringify(harOracle).includes('cookie'), false);
+  assert.equal(JSON.stringify(harOracle).includes('authorization'), false);
+});
 
 test('database tables have expected cardinality', () => {
   for (const [key, count] of Object.entries(expectedCounts)) assert.equal(GAME_DB[key]?.length, count, key);
