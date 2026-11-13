@@ -46,7 +46,7 @@ The same dominance responses confirm first-step Scarlet Bond costs:
 
 - Captured bond templates 1701–1704: first flat level costs 0 and gains 120 / 100 / 100 / 300 respectively.
 - Their next flat-step costs are 20 / 20 / 20 / 54; next gains are 132 / 110 / 110 / 330.
-- Their first percentage-step costs are 20 / 20 / 20 / 54, with next-gain fields 1 / 1 / 1 / 3.
+- Their first percentage-step costs are 20 / 20 / 20 / 54, with API next-gain forecasts 1 / 1 / 1 / 3. Those percentage next-gain values were returned by the API but the captures did not exercise applying those upgrades.
 
 These values are exact only for those four captured bond templates and their first two flat levels: the response's next_gain fields supply the second-step gains. Higher bond levels and other bond templates are not covered and remain unverified.
 
