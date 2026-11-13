@@ -6,6 +6,7 @@
  */
 import { GAME_DB, CALCULATION_REFERENCE } from './data.js';
 import * as Engine from './engine.js';
+import { normalizeQuickSettings, summarizeQuickSettings } from './quick-settings.js';
 
 export const LOCAL_ENGINE_VERSION = '1.8.0';
 export const LOCAL_ENGINE_SCHEMA_VERSION = 1;
@@ -119,6 +120,7 @@ function normalizePlan(input = {}, account) {
     levels: {},
     promotes: {},
     bonds: {},
+    auras: Object.fromEntries(Object.entries(record(source.auras)).filter(([id]) => /^\d+$/.test(id)).map(([id, levels]) => [id, clone(record(levels))])),
     presences: {},
     skins: Object.fromEntries(Object.entries(record(source.skins)).filter(([id]) => {
       const skinId = Number(id);
