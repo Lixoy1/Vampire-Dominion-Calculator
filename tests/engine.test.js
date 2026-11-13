@@ -206,4 +206,29 @@ test('breakthrough reservation accumulates repeated item costs across tiers', ()
 
 
 
+
+test('HAR-confirmed reference values override approximations', () => {
+  assert.equal(GAME_DB.items.length, 240);
+  for (const id of [10464101, 20464101, 30464101]) {
+    assert.ok(GAME_DB.items.some(item => item.id === id), `missing HAR item ${id}`);
+  }
+  assert.equal(GAME_DB.limits.levels.max_warden_lvl, 450);
+  assert.equal(E.calcBloodCostForRange(1, 3), 384);
+  assert.equal(E.calcBloodCostForRange(1, 7), 3765);
+  assert.equal(E.calcBloodCostForRange(1, 10), 9799);
+  assert.equal(E.calcBloodCostForRange(105, 150), 36056873);
+  assert.equal(E.getBloodCostConfidence(1, 3), 'exact_api_interval');
+  assert.equal(E.getBloodCostConfidence(3, 7), 'approximation_only');
+  assert.equal(E.calcBondLevelCost(1), 0);
+  assert.equal(E.calcBondLevelCost(2), 20);
+  assert.equal(E.calcBondPercentCost(1), 20);
+});
+
+test('HAR-confirmed early Warden upgrade interval is used by the engine', () => {
+  const warden = GAME_DB.wardens.find(item => item.id === 10270);
+  const result = E.calcWardenLevelsUpgrade(warden, 1, 3, 1, GAME_DB.warden_promotes, {}, {});
+  assert.equal(result.bloodSpent, 384);
+  assert.equal(result.baseGain, 50);
+});
+
 console.log(`\n${passed} test groups passed.`);
