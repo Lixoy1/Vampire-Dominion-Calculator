@@ -71,3 +71,7 @@ Dominance responses expose detailed sections for Conclave, levels, bonds, auras,
 - **Not captured**: no test result for the behavior in these HAR files.
 
 Never present an approximation as an exact game formula.
+
+## Known parity gap identified by the HAR comparison
+
+For the captured Warden upgrade scenario 10270, level 1 -> 3, the server returns a gain of 50 while the current local attribute formula returns 9. The blood interval is exact (384), but the stat-gain formula is **not** yet reconciled. The engine now exposes `baseGainConfidence: approximation_only`; this value must not be presented as exact until additional evidence resolves the discrepancy.
