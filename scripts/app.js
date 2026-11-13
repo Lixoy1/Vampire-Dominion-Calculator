@@ -1065,7 +1065,7 @@ async function runQuickOptimization() {
         '<div><span>Кровь к расходу</span><b>' + fmt(report.spent?.blood || 0) + '</b></div>' +
         '<div><span>Опыт Конклава</span><b>' + fmt(report.spent?.conclaveExp || 0) + '</b></div>' +
         '<div><span>Опыт талантов</span><b>' + fmt(report.spent?.talentExpTotal || 0) + '</b></div>' +
-        '<div><span>Уровни талантов</span><b>' + fmt(report.talentPlan?.plannedLevels || 0) + '</b></div>' +
+        '<div><span>Уровни талантов</span><b>' + fmt(calculationSnapshot?.talentPlan?.plannedLevels || 0) + '</b></div>' +
       '</div>' +
       (warnings ? '<div class="quick-warning"><b>Ограничения точности</b><ul>' + warnings + '</ul></div>' : '') +
       '<div class="quick-calc-actions"><button class="btn btn-primary" data-modal-nav="calc_dominance">Проверить план</button><button class="btn" id="btn-quick-back">Настройки</button></div>' +
