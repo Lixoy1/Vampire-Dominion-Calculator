@@ -33,7 +33,7 @@ assert.ok(starterMigration.includes('Number(storedVersion) >= 7'), 'existing ver
 assert.ok(starterMigration.includes('Object.keys(account.ownedWardens || {}).length'), 'existing Warden rosters are preserved');
 assert.ok(starterMigration.includes('account.blood') && starterMigration.includes('account.ownedLovers') && starterMigration.includes('account.bag') && starterMigration.includes('account.skins'), 'migration checks the whole profile before adding starter Warden');
 assert.ok(starterMigration.includes('createOwnedWarden(starter)'), 'migration creates the catalog-defined starter Warden');
-const normalizer = fn('normalizeState');
+const normalizer = app.slice(app.indexOf('export function normalizeState('), app.indexOf('\n\nfunction loadState'));
 assert.equal((normalizer.match(/ensureStarterWarden\(/g) || []).length, 2, 'both single-account and multi-account legacy profiles are migrated');
 assert.equal((normalizer.match(/version: 7/g) || []).length, 2, 'both migrated state shapes are upgraded to version 7');
 
