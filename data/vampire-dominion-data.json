@@ -34615,22 +34615,59 @@
       "status": "partial_exact_api_observation",
       "observations": [
         {
-          "branch": "flat",
+          "bond_id": 1701,
+          "attribute": "strength",
           "from_level": 0,
           "to_level": 1,
-          "cost": 0,
-          "next_cost": 20,
-          "source": "HAR /api/v1/accounts/{account}/calculations/dominance"
+          "flat_gain": 120,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 132,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
         },
         {
-          "branch": "percent",
+          "bond_id": 1702,
+          "attribute": "allure",
           "from_level": 0,
           "to_level": 1,
-          "cost": 20,
-          "source": "HAR /api/v1/accounts/{account}/calculations/dominance"
+          "flat_gain": 100,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 110,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
+        },
+        {
+          "bond_id": 1703,
+          "attribute": "intellect",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 100,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 110,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
+        },
+        {
+          "bond_id": 1704,
+          "attribute": "spirit",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 300,
+          "flat_cost": 0,
+          "next_flat_cost": 54,
+          "next_flat_gain": 330,
+          "percent_next_cost": 54,
+          "percent_next_gain": 3,
+          "source": "HAR dominance response"
         }
       ],
-      "note": "Only first-step costs are confirmed by captured API responses. Higher bond levels remain unverified."
+      "note": "These values are exact only for the four captured bond template IDs and the first flat level. Higher levels and other bond templates remain unverified."
     },
     "account_limits": {
       "warden_max_level": 450,
