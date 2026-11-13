@@ -141,8 +141,16 @@ const cappedWarden = autoDistributeQuick({
   },
 });
 assert.equal(cappedWarden.plan.levels[wardenId], 2, 'per-Warden maximum level must constrain allocation');
+assert.deepEqual(cappedWarden.plan.promotes, {}, 'unchanged promotion targets must not leak into a Quick plan');
+assert.equal(cappedWarden.plan.courtyardToLvl, account.courtyardLvl,
+  'Quick Calculation must not allocate Courtyard: the captured API quick response and step flow omit it');
 assert.ok(cappedWarden.warnings.some(item => item.code === 'QUICK_WARDEN_GAIN_APPROXIMATE'),
   'unverified Warden dominance gain must be disclosed');
+
+// A Quick plan is a delta, not a full account snapshot: unchanged owned Wardens
+// must not be returned as selected targets.
+assert.ok(!Object.hasOwn(protectedResult.plan.levels, wardenId),
+  'unchanged Warden levels must be omitted from the Quick plan');
 
 
 console.log('PASS HAR-grounded Quick Calculation settings, result mapping and local resource guards');
