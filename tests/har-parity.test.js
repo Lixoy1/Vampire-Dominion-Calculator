@@ -67,8 +67,9 @@ assert.deepEqual(
 for (const [wardenId, target, gain] of [[10270,3,50],[10280,7,641],[10300,10,2051],[10960,3,57]]) {
   const warden = GAME_DB.wardens.find(item => item.id === wardenId);
   const result = Engine.calcWardenLevelsUpgrade(warden, 1, target, 1, GAME_DB.warden_promotes, {}, {});
-  assert.equal(result.baseGain, gain, `Warden ${wardenId} gain`);
-  assert.equal(result.baseGainConfidence, 'exact_api_interval');
+  assert.equal(result.observedApiGain, gain, `Warden ${wardenId} observed API gain`);
+  assert.equal(result.observedApiGainScope, 'captured_account_state_only');
+  assert.equal(result.baseGainConfidence, 'approximation_only');
 }
 
 console.log('HAR parity checks passed: templates, limits, exact intervals, bond entry costs, bag points, manuscripts.');
