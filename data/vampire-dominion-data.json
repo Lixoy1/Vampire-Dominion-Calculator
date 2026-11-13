@@ -34562,7 +34562,6 @@
           "promote_to": 1,
           "cost": 12682,
           "next_cost": 3382,
-          "gain": 2468,
           "confidence": "exact_interval"
         },
         {
@@ -34574,7 +34573,6 @@
           "promote_to": 1,
           "cost": 845,
           "next_cost": 691,
-          "gain": 102,
           "confidence": "exact_interval"
         },
         {
@@ -34586,7 +34584,6 @@
           "promote_to": 1,
           "cost": 1536,
           "next_cost": 961,
-          "gain": 160,
           "confidence": "exact_interval"
         },
         {
@@ -34598,7 +34595,6 @@
           "promote_to": 1,
           "cost": 12338141,
           "next_cost": 434739,
-          "gain": 0,
           "confidence": "exact_interval"
         },
         {
@@ -34610,7 +34606,6 @@
           "promote_to": 3,
           "cost": 6396048,
           "next_cost": 2204807,
-          "gain": 0,
           "confidence": "exact_interval"
         },
         {
@@ -34622,7 +34617,6 @@
           "promote_to": 5,
           "cost": 29999162,
           "next_cost": 30745656,
-          "gain": 0,
           "confidence": "exact_interval"
         },
         {
@@ -34634,7 +34628,6 @@
           "promote_to": 3,
           "cost": 70592158,
           "next_cost": 8858383,
-          "gain": 0,
           "confidence": "exact_interval"
         }
       ],
