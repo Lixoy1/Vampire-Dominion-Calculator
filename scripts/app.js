@@ -58,6 +58,7 @@ function createDefaultState() {
     currentWardenId: 10020,
     currentLoverId: GAME_DB.lovers[0]?.id ?? 20010,
     wardenTab: 'attributes',
+    loverTab: 'trust',
     expandedAttr: null,
     wardenListFilter: 'all',
     wardenListSearch: '',
@@ -381,10 +382,14 @@ function fmt(num) {
 }
 
 function applyTheme() {
-  const light = state.settings?.theme === 'light';
+  const preference = state.settings?.theme || 'dark';
+  const systemLight = globalThis.matchMedia?.('(prefers-color-scheme: light)')?.matches || false;
+  const light = preference === 'light' || (preference === 'auto' && systemLight);
+  const motion = state.settings?.animations || 'smooth';
   document.documentElement?.classList.toggle('light-theme', light);
+  document.documentElement?.classList.toggle('reduce-motion', motion === 'less' || (motion === 'auto' && globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches));
   try {
-    const color = light ? '#f5efe7' : '#12070b';
+    const color = light ? '#f3eee4' : '#0b0910';
     tg?.setHeaderColor(color);
     tg?.setBackgroundColor(color);
   } catch {}
@@ -762,6 +767,7 @@ function renderWardenDetailScreen(db) {
 
 
 function renderLoverDetailScreen(db) {
+  const ownedIds = Object.keys(state.account.ownedLovers || {}).map(Number);
   const id = Number(state.currentLoverId);
   const lover = db.lovers.find(item => item.id === id);
   const owned = state.account.ownedLovers[id];
@@ -770,31 +776,79 @@ function renderLoverDetailScreen(db) {
   const plan = getBondPlan(lover, owned);
   const serverLover = calculationSnapshot?.lovers?.[id] || {};
   const result = serverLover.bondResult;
+  const tabs = [
+    ['trust', 'Доверие'],
+    ['bonds', 'Кровные узы'],
+    ['presences', 'Веяния'],
+    ['skins', 'Облики'],
+  ];
+  const activeTab = tabs.some(tab => tab[0] === state.loverTab) ? state.loverTab : 'trust';
+  state.loverTab = activeTab;
+
+  const trustHtml =
+    '<section class="attrs-box"><div class="card-title">Доверие и близость</div>' +
+    '<div class="grid-2">' +
+      '<label class="field-stack"><span>Близость / откровенность</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="closeness" value="' + Number(owned.closeness || 0) + '"></label>' +
+      '<label class="field-stack"><span>Доверие / влечение</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="affinity" value="' + Number(owned.affinity || 0) + '"></label>' +
+    '</div>' +
+    '<label class="field-stack"><span>Пол портрета</span><select class="select" data-spa-lover-sex="' + id + '">' +
+      '<option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option>' +
+      '<option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option>' +
+    '</select></label>' +
+    '<div class="row-sub">Близость открывает условия для ветвей Кровных уз. Доверие расходуется при выборе целевых уровней.</div></section>';
+
+  const bondsHtml = (lover.scarlet_bonds || []).map(bond => {
+    const statePlan = plan[bond.attribute] || { level: 0, targetLevel: 0, percentLevel: 0, targetPercentLevel: 0 };
+    const detail = (result?.details || []).find(item => item.attribute === bond.attribute);
+    if (!detail) {
+      return '<div class="bond-row"><b>' + tName('attribute', bond.attribute) + '</b><div class="row-sub">Детальный расчёт этой ветви пока недоступен.</div></div>';
+    }
+    return '<div class="bond-row"><div class="bond-head"><b><span class="dot ' + bond.attribute + '"></span> ' + tName('attribute', bond.attribute) + (bond.is_advantage ? ' ★' : '') + '</b><span>+' + fmt(detail.totalAttrGain || 0) + '</span></div><div class="grid-2 bond-inputs">' +
+      '<label class="field-stack"><span>Уровень связи · ' + (detail.unlockedFlat ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.level || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="flat" value="' + Number(statePlan.targetLevel ?? statePlan.level ?? 0) + '" ' + (detail.unlockedFlat ? '' : 'disabled') + '></label>' +
+      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div>' +
+      '<div class="row-sub">Цена: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост: +' + fmt(detail.totalAttrGain || 0) + ' · ' + (detail.exactFlat && detail.exactPercent ? 'подтверждено API' : detail.exactFlat || detail.exactPercent ? 'частично подтверждено API' : 'оценка') + '</div></div>';
+  }).join('');
+  const bondsHtmlWithSummary =
+    '<section class="attrs-box"><div class="card-title">Кровные узы</div>' +
+    '<div class="row-sub">Плоский и процентный уровни считаются отдельно. Достоверность показана для каждого шага.</div>' +
+    '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-bonds">⚡ Распределить Кровные узы</button></div>' +
+    (result ? '<div class="bond-summary">Потратится: <b>' + fmt(result.spentAffinity || 0) + '</b> · Останется: <b>' + fmt(result.leftAffinity || 0) + '</b> · Прирост: <b>+' + fmt(result.totalGain || 0) + '</b></div>' : '<div class="row-sub">Для расчёта выбери цель и обнови сводку Господства.</div>') +
+    (result && result.spentAffinity > Number(owned.affinity || 0) ? '<div class="bond-warning">Недостаточно Доверия для выбранного плана.</div>' : '') +
+    bondsHtml + '</section>';
+
   const presenceHtml = (lover.presences || []).map(presence => {
     const level = Number(owned.presences?.[presence.id] ?? presence.min_lvl ?? 0);
     const values = serverLover.presences?.[presence.id]?.percents || {};
     return '<div class="nav-card" style="cursor:default"><div class="card-body"><div class="card-title">' + escHtml(presence.name || 'Веяние') + '</div><div class="card-subtitle">Сила ' + Number(values.strength || 0) + '% · Харизма ' + Number(values.allure || 0) + '% · Интеллект ' + Number(values.intellect || 0) + '% · Воля ' + Number(values.spirit || 0) + '%</div></div><input class="input stepper-input presence-level" type="number" min="' + (presence.min_lvl || 0) + '" max="' + (presence.max_lvl || 30) + '" data-lid="' + id + '" data-pid="' + presence.id + '" value="' + level + '"></div>';
   }).join('');
-  const bondDetails = result?.details || [];
-  const bondsHtml = (lover.scarlet_bonds || []).map(bond => {
-    const statePlan = plan[bond.attribute] || { level: 0, targetLevel: 0, percentLevel: 0, targetPercentLevel: 0 };
-    const detail = bondDetails.find(item => item.attribute === bond.attribute);
-    if (!detail) return '<div class="bond-row"><b>' + tName('attribute', bond.attribute) + '</b><div class="row-sub">Локальный движок не вернул детальный расчёт этой ветви.</div></div>';
-    return '<div class="bond-row"><div class="bond-head"><b><span class="dot ' + bond.attribute + '"></span> ' + tName('attribute', bond.attribute) + (bond.is_advantage ? ' ★' : '') + '</b><span>+' + fmt(detail.totalAttrGain || 0) + '</span></div><div class="grid-2 bond-inputs">' +
-      '<label class="field-stack"><span>Уровень связи · ' + (detail.unlockedFlat ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.level || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="flat" value="' + Number(statePlan.targetLevel ?? statePlan.level ?? 0) + '" ' + (detail.unlockedFlat ? '' : 'disabled') + '></label>' +
-      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div><div class="row-sub">Цена: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост: +' + fmt(detail.totalAttrGain || 0) + ' · ' + (detail.exactFlat && detail.exactPercent ? 'подтверждено API' : detail.exactFlat || detail.exactPercent ? 'частично подтверждено API' : 'оценка') + '</div></div>';
+  const presencesHtml =
+    '<section class="attrs-box"><div class="card-title">Веяния партнёра</div>' +
+    '<div class="row-sub">Проценты берутся из сохранённых кривых Веяний. Уровень меняется в пределах каталога.</div>' +
+    '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-presences">⚡ Распределить Веяния</button></div>' +
+    (presenceHtml || '<div class="row-sub">Для партнёра нет записей Веяний.</div>') + '</section>';
+
+  const skinsHtml = (lover.skins || []).map(skin => {
+    const level = Number(state.account.skins?.[skin.id] || 0);
+    return '<div class="nav-card" style="cursor:default"><img src="' + getIconUrl(skin.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg skin-mini-avatar" alt=""><div class="card-body"><div class="card-title">' + tName('lover_skin', skin.name) + '</div><div class="card-subtitle">' + String(skin.quality || '').toUpperCase() + ' · максимум ' + Number(skin.max_lvl || 10) + '</div></div><div class="stepper-group"><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="-1">−</button><span class="stepper-val">' + level + '</span><button class="stepper-btn" data-action="skin-step" data-skin="' + skin.id + '" data-delta="1">+</button></div></div>';
   }).join('');
+  const skinsSection =
+    '<section class="attrs-box"><div class="card-title">Облики партнёра</div>' +
+    '<div class="row-sub">Уровни хранятся в профиле и учитываются в общем плане.</div>' +
+    (skinsHtml || '<div class="row-sub">В каталоге этого партнёра нет отдельных обликов.</div>') +
+    '<button class="btn" type="button" data-action="nav" data-screen="skins">Открыть общий каталог обликов</button></section>';
+
+  const body = activeTab === 'trust' ? trustHtml :
+    activeTab === 'bonds' ? bondsHtmlWithSummary :
+    activeTab === 'presences' ? presencesHtml : skinsSection;
+  const currentIndex = ownedIds.indexOf(id);
+  const pager = ownedIds.length > 1
+    ? '<div class="warden-pager-bar"><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex - 1 + ownedIds.length) % ownedIds.length] + '">‹ Предыдущий</button><button class="pager-btn" data-action="open-lover-picker">' + (currentIndex + 1) + ' из ' + ownedIds.length + ' ⌃</button><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex + 1) % ownedIds.length] + '">Следующий ›</button></div>'
+    : '';
+
   return renderSubToolbar('lovers', 'Партнёр') +
     '<div class="warden-hero-card"><img src="' + getIconUrl(getLoverIconPath(lover, owned), state.preferLocalIcons) + '" class="warden-avatar-lg" alt=""><div class="card-body"><div class="warden-title-serif">' + tName('lover', lover.name) + '</div><div class="card-subtitle">' + (warden ? tName('warden', warden.name) : '') + '</div></div></div>' +
-    '<section class="attrs-box"><div class="grid-2">' +
-      '<label class="field-stack"><span>Близость / откровенность</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="closeness" value="' + Number(owned.closeness || 0) + '"></label>' +
-      '<label class="field-stack"><span>Доверие / влечение</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="affinity" value="' + Number(owned.affinity || 0) + '"></label></div>' +
-      '<label class="field-stack"><span>Пол портрета</span><select class="select" data-spa-lover-sex="' + id + '"><option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option><option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option></select></label></section>' +
-    '<section class="attrs-box"><div class="card-title">Кровные узы · локальный расчёт</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Для совпадающих состояний используются сохранённые ответы API; остальные шаги отмечаются как оценка.</div>' +
-      '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-bonds">⚡ Распределить Кровные узы</button><button class="btn" id="btn-auto-presences">⚡ Распределить Веяния</button></div>' +
-      (result ? '<div class="bond-summary">Потратится: <b>' + fmt(result.spentAffinity || 0) + '</b> · Останется: <b>' + fmt(result.leftAffinity || 0) + '</b> · Прирост: <b>+' + fmt(result.totalGain || 0) + '</b></div>' : '<div class="row-sub">Нет серверного расчёта уз.</div>') +
-      (result && result.spentAffinity > Number(owned.affinity || 0) ? '<div class="bond-warning">Недостаточно Доверия для выбранного плана.</div>' : '') + bondsHtml + '</section>' +
-    '<section class="attrs-box"><div class="card-title">Веяния · проценты по локальной таблице</div>' + (presenceHtml || '<div class="row-sub">Для партнёра нет записей Веяний.</div>') + '</section>';
+    '<div class="pill-tabs lover-subtabs">' + tabs.map(tab => '<button class="pill-tab ' + (activeTab === tab[0] ? 'active' : '') + '" data-action="set-lover-tab" data-tab="' + tab[0] + '">' + tab[1] + '</button>').join('') + '</div>' +
+    body + pager;
 }
 
 function renderConclaveScreen(db, report, oracle) {
@@ -1276,7 +1330,7 @@ function createOwnedLover(lover) {
     closeness: 0,
     intimacy: 0,
     affinity: 0,
-    sex: lover.fixed_sex || state.settings.loverSex || 'female',
+    sex: lover.fixed_sex || state.settings?.loverSex || 'female',
     bonds: {},
     presences: {}
   };
@@ -1597,15 +1651,43 @@ function renderProjectInfoCard() {
 
 function renderSettingsScreen() {
   const selected = GAME_DB.wardens.find(function (warden) { return warden.id === Number(state.profile.avatarId); }) || GAME_DB.wardens[0];
-  return renderSubToolbar('home', 'Настройки и профиль') + '<div class="collection-banner settings-banner"><div><b>ЦИТАДЕЛЬ</b><span>Призыв · профиль · настройки</span></div></div>' +
-    '<section class="attrs-box"><div class="card-title">Активный профиль</div><div class="settings-profile-row"><img src="' + getIconUrl(selected.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt=""><div class="card-body"><b>' + escHtml(state.profile.name) + '</b><div class="row-sub">' + escHtml(state.profile.server || 'сервер не указан') + '</div></div></div>' +
-      '<label class="field-stack"><span>Никнейм</span><input class="input" type="text" data-spa-profile="name" value="' + escHtml(state.profile.name) + '"></label>' +
-      '<label class="field-stack"><span>Сервер</span><input class="input" type="text" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
-      '<label class="field-stack"><span>Портрет профиля</span><select class="select" id="profile-avatar-select">' + GAME_DB.wardens.map(function (warden) { return '<option value="' + warden.id + '"' + (Number(state.profile.avatarId) === warden.id ? ' selected' : '') + '>' + tName('warden', warden.name) + '</option>'; }).join('') + '</select></label></section>' +
-    '<section class="attrs-box"><div class="card-title">Профили</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) { return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>'; }).join('') + '</select>' +
-      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button></div>' +
-      '<div class="row-sub">Профили и ресурсы хранятся локально на устройстве. Экспортируй резервную копию перед переносом на другое устройство.</div></section>' +
-    renderProjectInfoCard();
+  const userId = tg?.initDataUnsafe?.user?.id;
+  const settings = state.settings || {};
+  const segment = function (key, values, labels) {
+    return '<div class="setting-segment" role="group" aria-label="' + key + '">' + values.map(function (value, index) {
+      return '<button type="button" class="setting-segment-btn ' + (settings[key] === value ? 'active' : '') + '" data-action="setting-value" data-setting="' + key + '" data-value="' + value + '">' + labels[index] + '</button>';
+    }).join('') + '</div>';
+  };
+  const toggle = function (key, label, description, fallback) {
+    const checked = settings[key] === undefined ? fallback : Boolean(settings[key]);
+    return '<div class="setting-toggle-row"><div><b>' + label + '</b><div class="row-sub">' + description + '</div></div><button type="button" role="switch" aria-checked="' + checked + '" class="setting-toggle ' + (checked ? 'on' : '') + '" data-action="setting-toggle" data-setting="' + key + '"><span></span></button></div>';
+  };
+  return renderSubToolbar('home', 'Настройки и профиль') +
+    '<div class="collection-banner settings-banner"><div><b>CRIMSON OBSIDIAN</b><span>Параметры цитадели и личного профиля</span></div></div>' +
+    '<section class="attrs-box"><div class="card-title">Активный профиль</div><div class="settings-profile-row"><img src="' + getIconUrl(selected.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" alt=""><div class="card-body"><b>' + escHtml(state.profile.name) + '</b><div class="row-sub">' + escHtml(state.profile.server || 'сервер не указан') + ' · ' + escHtml(state.profile.region || 'EU') + '</div></div></div>' +
+      '<label class="field-stack"><span>Имя профиля</span><input class="input" type="text" maxlength="40" data-spa-profile="name" value="' + escHtml(state.profile.name) + '"></label>' +
+      '<div class="grid-2"><label class="field-stack"><span>Номер сервера</span><input class="input" type="text" inputmode="numeric" data-spa-profile="server" value="' + escHtml(state.profile.server) + '"></label>' +
+      '<label class="field-stack"><span>Регион</span><select class="select" id="profile-region-select"><option value="EU" ' + (state.profile.region === 'EU' ? 'selected' : '') + '>EU</option><option value="AS" ' + (state.profile.region === 'AS' ? 'selected' : '') + '>AS</option><option value="US" ' + (state.profile.region === 'US' ? 'selected' : '') + '>US</option></select></label></div>' +
+      '<details class="portrait-picker"><summary>Выбрать портрет · ' + tName('warden', selected.name) + '</summary><div class="portrait-picker-grid">' + GAME_DB.wardens.map(function (warden) {
+        return '<button type="button" class="portrait-picker-item ' + (Number(state.profile.avatarId) === warden.id ? 'selected' : '') + '" data-action="profile-avatar" data-id="' + warden.id + '" aria-label="' + escHtml(tName('warden', warden.name)) + '">' +
+          '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" alt=""><span>' + escHtml(tName('warden', warden.name)) + '</span></button>';
+      }).join('') + '</div></details></section>' +
+    '<section class="attrs-box"><div class="card-title">Профили аккаунтов</div><select class="select account-switch" id="account-switcher">' + state.accounts.map(function (item) {
+      return '<option value="' + escHtml(item.id) + '"' + (String(item.id) === String(state.activeAccountId) ? ' selected' : '') + '>' + escHtml(item.name) + ' · ' + escHtml(item.server || 'без сервера') + '</option>';
+    }).join('') + '</select>' +
+      '<div class="settings-actions"><button class="btn btn-primary" id="btn-create-account-settings">＋ Новый аккаунт</button><button class="btn" id="btn-export">💾 Экспорт профиля</button><button class="btn" id="btn-import">📂 Импорт профиля</button><button class="btn" id="btn-game-connect">🔗 Подключение к игре</button><button class="btn btn-danger" data-action="reset-account">🧹 Очистить калькулятор</button><button class="btn btn-danger" data-action="delete-account">Удалить аккаунт</button></div>' +
+      '<div class="row-sub">Профили и ресурсы хранятся локально. Подключение к игровому аккаунту не имитируется: без официального подключения доступно ручное заполнение и импорт JSON.</div></section>' +
+    '<section class="attrs-box"><div class="card-title">Вид и оформление</div><div class="setting-preference-row"><div><b>Тема</b><div class="row-sub">Палитра Crimson Obsidian</div></div>' + segment('theme', ['auto','dark','light'], ['Авто','Тёмная','Светлая']) + '</div>' +
+      '<div class="setting-preference-row"><div><b>Анимации</b><div class="row-sub">Плавность переходов и движения</div></div>' + segment('animations', ['auto','smooth','less'], ['Авто','Плавно','Меньше']) + '</div>' +
+      '<div class="setting-preference-row"><div><b>Пол партнёров по умолчанию</b><div class="row-sub">Применяется к новым записям, если каталог не задаёт пол</div></div>' + segment('loverSex', ['male','female'], ['Мужской','Женский']) + '</div>' +
+      toggle('warnOnChoice', 'Предупреждать о выборе', 'Запрашивать подтверждение перед добавлением сущностей в профиль.', true) +
+      toggle('botMessages', 'Сообщения приложения', 'Показывать локальные уведомления о действиях и ошибках. Игровой бот не подключён.', true) +
+    '</section>' +
+    '<section class="attrs-box"><div class="card-title">Уведомления и поддержка</div>' +
+      '<div class="setting-id-row"><div><b>Telegram ID</b><div class="row-sub">' + (userId ? escHtml(String(userId)) : 'Доступен только внутри Telegram') + '</div></div><button type="button" class="btn btn-sm" data-action="copy-id" data-copy-kind="user" ' + (userId ? '' : 'disabled') + '>Копировать</button></div>' +
+      '<div class="setting-id-row"><div><b>ID локального профиля</b><div class="row-sub">' + escHtml(String(state.activeAccountId || 'primary')) + '</div></div><button type="button" class="btn btn-sm" data-action="copy-id" data-copy-kind="account">Копировать</button></div>' +
+      '<div class="row-sub">ID профиля создан внутри этого калькулятора и не является игровым ID аккаунта.</div>' +
+    '</section>' + renderProjectInfoCard();
 }
 
 
@@ -2518,12 +2600,65 @@ function bindSpaEvents(db, report, oracle) {
       }
       if (action === 'open-warden-picker') return navigate('wardens_list');
       if (action === 'set-warden-tab') { state.wardenTab = button.dataset.tab; return render(); }
+      if (action === 'set-lover-tab') { state.loverTab = button.dataset.tab; return render(); }
+      if (action === 'setting-value') {
+        const key = button.dataset.setting;
+        if (!['theme','animations','loverSex'].includes(key)) return;
+        state.settings ||= {};
+        state.settings[key] = button.dataset.value;
+        saveState();
+        applyTheme();
+        return render();
+      }
+      if (action === 'setting-toggle') {
+        const key = button.dataset.setting;
+        if (!['warnOnChoice','botMessages'].includes(key)) return;
+        state.settings ||= {};
+        state.settings[key] = !Boolean(state.settings[key] ?? true);
+        saveState();
+        return render();
+      }
+      if (action === 'profile-avatar') {
+        state.profile.avatarId = Number(button.dataset.id) || 10010;
+        saveState();
+        return render();
+      }
+      if (action === 'copy-id') {
+        const value = button.dataset.copyKind === 'user' ? String(tg?.initDataUnsafe?.user?.id || '') : String(state.activeAccountId || 'primary');
+        if (!value) { alert('Telegram ID недоступен в обычном браузере.'); return; }
+        const clipboard = globalThis.navigator?.clipboard;
+        if (!clipboard?.writeText) { alert('Браузер не разрешил копирование. Выдели ID и скопируй его вручную.'); return; }
+        try { await clipboard.writeText(value); alert('ID скопирован.'); }
+        catch { alert('Браузер не разрешил копирование. Выдели ID и скопируй его вручную.'); }
+        return;
+      }
+      if (action === 'delete-account') {
+        if (!globalThis.confirm('Удалить активный профиль вместе с его ресурсами и расчётными данными?')) return;
+        const activeId = String(state.activeAccountId || 'primary');
+        state.accounts = (state.accounts || []).filter(item => String(item.id) !== activeId);
+        if (!state.accounts.length) {
+          const profile = { id: 'primary', name: 'Оптимист', server: '', region: 'EU', avatarId: 10010 };
+          const account = createBlankAccountData();
+          const plan = createBlankPlan(account);
+          state.accounts = [{ ...profile, account, plan }];
+        }
+        const selected = state.accounts[0];
+        state.activeAccountId = String(selected.id);
+        state.profile = { name: selected.name, server: selected.server, region: selected.region, avatarId: selected.avatarId };
+        state.account = normalizeAccountData(selected.account);
+        state.plan = normalizePlan(selected.plan, state.account);
+        state.history = [];
+        state.future = [];
+        saveState();
+        return navigate('home');
+      }
       if (action === 'toggle-attr-detail') { state.expandedAttr = state.expandedAttr === button.dataset.attr ? null : button.dataset.attr; return render(); }
       if (action === 'toggle-warden-sort') { state.wardenListSort = state.wardenListSort === 'sum' ? 'name' : 'sum'; return render(); }
       if (action === 'warden-filter') { state.wardenListFilter = button.dataset.val; return render(); }
       if (action === 'warden-exp-filter') { state.wardenExpFilter = button.dataset.val === 'with_exp' ? 'with_exp' : 'all'; return render(); }
       if (action === 'add-warden') {
         const warden = db.wardens.find(function (item) { return item.id === Number(button.dataset.id); });
+        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить смотрителя в профиль?')) return;
         if (!warden || state.account.ownedWardens[warden.id]) return;
         pushUndoSnapshot();
         state.account.ownedWardens[warden.id] = createOwnedWarden(warden);
@@ -2564,6 +2699,7 @@ function bindSpaEvents(db, report, oracle) {
       }
       if (action === 'add-lover') {
         const lover = db.lovers.find(function (item) { return item.id === Number(button.dataset.id); });
+        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить партнёра в профиль?')) return;
         if (!lover) return;
         pushUndoSnapshot();
         state.account.ownedLovers[lover.id] = createOwnedLover(lover);
@@ -2781,6 +2917,11 @@ function bindSpaEvents(db, report, oracle) {
 
 function bindEvents(db) {
   document.getElementById('account-switcher')?.addEventListener('change', event => switchAccount(event.target.value));
+  document.getElementById('profile-region-select')?.addEventListener('change', event => {
+    state.profile.region = event.target.value;
+    saveState();
+    render();
+  });
   document.getElementById('btn-profile-edit')?.addEventListener('click', editProfile);
   document.getElementById('btn-profile-edit-settings')?.addEventListener('click', editProfile);
   document.getElementById('btn-theme')?.addEventListener('click', () => { state.settings.theme = state.settings.theme === 'light' ? 'dark' : 'light'; saveState(); applyTheme(); render(); });
