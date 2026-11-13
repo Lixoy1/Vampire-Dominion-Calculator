@@ -467,8 +467,10 @@ async function runAutoBondDistribution() {
     alert(
       'План Кровных уз рассчитан.\\n' +
       'Новых уровней: ' + (summary.addedLevels || 0) + '\\n' +
-      'Доверие по расчётной формуле: ' + (summary.estimatedAffinity || 0) + '\\n' +
-      'Оценка прироста: +' + (summary.estimatedGain || 0) + ' Господства'
+      'Потрачено Доверия: ' + (summary.affinitySpent || 0) + '\\n' +
+      'Подтверждённые шаги API: ' + (summary.exactSteps || 0) + '\\n' +
+      'Оценочные шаги: ' + (summary.estimatedSteps || 0) + '\\n' +
+      'Прирост: +' + (summary.gain || 0) + ' Господства'
     );
   } catch (error) {
     alert(error.message || 'Локальный движок не смог распределить Доверие.');
@@ -776,7 +778,7 @@ function renderLoverDetailScreen(db) {
     if (!detail) return '<div class="bond-row"><b>' + tName('attribute', bond.attribute) + '</b><div class="row-sub">Локальный движок не вернул детальный расчёт этой ветви.</div></div>';
     return '<div class="bond-row"><div class="bond-head"><b><span class="dot ' + bond.attribute + '"></span> ' + tName('attribute', bond.attribute) + (bond.is_advantage ? ' ★' : '') + '</b><span>+' + fmt(detail.totalAttrGain || 0) + '</span></div><div class="grid-2 bond-inputs">' +
       '<label class="field-stack"><span>Уровень связи · ' + (detail.unlockedFlat ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.level || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="flat" value="' + Number(statePlan.targetLevel ?? statePlan.level ?? 0) + '" ' + (detail.unlockedFlat ? '' : 'disabled') + '></label>' +
-      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div><div class="row-sub">Цена по локальный движок: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост по модели: +' + fmt(detail.totalAttrGain || 0) + '</div></div>';
+      '<label class="field-stack"><span>Процент · ' + (detail.unlockedPct ? 'открыто' : 'закрыто до близости ' + bond.unlock_closeness_percent) + '</span><input class="input bond-target" type="number" min="' + Number(statePlan.percentLevel || 0) + '" max="600" data-lid="' + id + '" data-attr="' + bond.attribute + '" data-kind="percent" value="' + Number(statePlan.targetPercentLevel ?? statePlan.percentLevel ?? 0) + '" ' + (detail.unlockedPct ? '' : 'disabled') + '></label></div><div class="row-sub">Цена: ' + fmt(Number(detail.costFlat || 0) + Number(detail.costPct || 0)) + ' доверия · прирост: +' + fmt(detail.totalAttrGain || 0) + ' · ' + (detail.exactFlat && detail.exactPercent ? 'подтверждено API' : detail.exactFlat || detail.exactPercent ? 'частично подтверждено API' : 'оценка') + '</div></div>';
   }).join('');
   return renderSubToolbar('lovers', 'Партнёр') +
     '<div class="warden-hero-card"><img src="' + getIconUrl(getLoverIconPath(lover, owned), state.preferLocalIcons) + '" class="warden-avatar-lg" alt=""><div class="card-body"><div class="warden-title-serif">' + tName('lover', lover.name) + '</div><div class="card-subtitle">' + (warden ? tName('warden', warden.name) : '') + '</div></div></div>' +
@@ -784,7 +786,7 @@ function renderLoverDetailScreen(db) {
       '<label class="field-stack"><span>Близость / откровенность</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="closeness" value="' + Number(owned.closeness || 0) + '"></label>' +
       '<label class="field-stack"><span>Доверие / влечение</span><input class="input lover-stat-input" type="number" min="0" data-lid="' + id + '" data-field="affinity" value="' + Number(owned.affinity || 0) + '"></label></div>' +
       '<label class="field-stack"><span>Пол портрета</span><select class="select" data-spa-lover-sex="' + id + '"><option value="female" ' + (owned.sex !== 'male' ? 'selected' : '') + '>Женский</option><option value="male" ' + (owned.sex === 'male' ? 'selected' : '') + '>Мужской</option></select></label></section>' +
-    '<section class="attrs-box"><div class="card-title">Кровные узы · локальный расчёт</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Прирост отображается как модельная оценка.</div>' +
+    '<section class="attrs-box"><div class="card-title">Кровные узы · локальный расчёт</div><div class="row-sub">Близость открывает ветви, Доверие расходуется на прокачку. Для совпадающих состояний используются сохранённые ответы API; остальные шаги отмечаются как оценка.</div>' +
       '<div class="quick-calc-actions"><button class="btn btn-primary" id="btn-auto-bonds">⚡ Распределить Кровные узы</button><button class="btn" id="btn-auto-presences">⚡ Распределить Веяния</button></div>' +
       (result ? '<div class="bond-summary">Потратится: <b>' + fmt(result.spentAffinity || 0) + '</b> · Останется: <b>' + fmt(result.leftAffinity || 0) + '</b> · Прирост: <b>+' + fmt(result.totalGain || 0) + '</b></div>' : '<div class="row-sub">Нет серверного расчёта уз.</div>') +
       (result && result.spentAffinity > Number(owned.affinity || 0) ? '<div class="bond-warning">Недостаточно Доверия для выбранного плана.</div>' : '') + bondsHtml + '</section>' +
