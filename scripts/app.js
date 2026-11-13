@@ -601,34 +601,120 @@ function closeAppModal() {
   document.getElementById('modal-overlay')?.classList.add('hidden');
 }
 
-function exportProfileJson() {
+async function exportProfileJson() {
+  let json = '';
   try {
     syncActiveAccountSnapshot();
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    json = JSON.stringify(state, null, 2);
+    const file = new File([json], 'vampire_dominion_profile.json', { type: 'application/json' });
+
+    // На мобильных WebView системный диалог «Поделиться» надёжнее скачивания
+    // через blob: URL и позволяет сохранить JSON через доступные приложения.
+    if (typeof navigator.share === 'function' && typeof navigator.canShare === 'function'
+        && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Резервная копия Vampire Dominion' });
+        return;
+      } catch (shareError) {
+        if (shareError?.name === 'AbortError') return;
+        // Если системный Share недоступен, пробуем обычную загрузку и ручной резерв.
+      }
+    }
+
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
     link.download = 'vampire_dominion_profile.json';
+    link.style.position = 'fixed';
+    link.style.left = '-10000px';
+    document.body.appendChild(link);
     link.click();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-  } catch (error) { alert('Не удалось экспортировать профиль: ' + (error.message || error)); }
+    link.remove();
+    // Не отзываем blob URL слишком рано: Android WebView может начать загрузку позже.
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+
+    openAppModal('Резервная копия профиля', 
+      '<p>Подготовлен JSON-файл со всеми аккаунтами, ресурсами и планами.</p>' +
+      '<p class="row-sub">Если файл не появился в загрузках, скопируй резервную копию вручную.</p>' +
+      '<textarea id="profile-export-json" class="input" rows="6" readonly style="width:100%;font-size:11px;resize:vertical"></textarea>' +
+      '<button type="button" class="btn btn-primary" id="btn-copy-export-json">Скопировать JSON</button>');
+    const area = document.getElementById('profile-export-json');
+    if (area) area.value = json;
+    document.getElementById('btn-copy-export-json')?.addEventListener('click', async function () {
+      const text = document.getElementById('profile-export-json')?.value || json;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+        } else {
+          const field = document.getElementById('profile-export-json');
+          field?.focus();
+          field?.select();
+          if (!document.execCommand?.('copy')) throw new Error('Копирование недоступно');
+        }
+        alert('Резервная копия JSON скопирована.');
+      } catch (error) {
+        const field = document.getElementById('profile-export-json');
+        field?.focus();
+        field?.select();
+        alert('Автокопирование недоступно. Выдели текст в поле и скопируй вручную.');
+      }
+    });
+  } catch (error) {
+    alert('Не удалось экспортировать профиль: ' + (error.message || error));
+  }
 }
 
 function importProfileJson() {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = 'application/json';
+  input.accept = '.json,application/json';
+  input.setAttribute('aria-label', 'Выбрать резервную копию профиля');
+  input.style.position = 'fixed';
+  input.style.left = '-10000px';
+  document.body.appendChild(input);
+
   input.addEventListener('change', async function () {
     const file = input.files && input.files[0];
-    if (!file) return;
+    if (!file) { input.remove(); return; }
     try {
-      const parsed = JSON.parse(await file.text());
-      state = normalizeState(parsed);
-      saveState();
+      const raw = typeof file.text === 'function'
+        ? await file.text()
+        : await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('Не удалось прочитать выбранный файл'));
+            reader.readAsText(file);
+          });
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+          || !(Array.isArray(parsed.accounts) || parsed.account || parsed.wardens || parsed.skins || parsed.guild || parsed.guildProgress)) {
+        throw new Error('Файл не похож на резервную копию профиля Vampire Dominion.');
+      }
+      if (typeof globalThis.confirm === 'function'
+          && !globalThis.confirm('Импорт заменит текущие данные профиля. Перед продолжением убедись, что у тебя есть резервная копия. Продолжить?')) return;
+
+      const previousState = state;
+      try {
+        state = normalizeState(parsed);
+        syncActiveAccountSnapshot();
+        // Сохраняем напрямую: saveState() перехватывает ошибки и иначе мог бы
+        // показать ложное сообщение об успешном импорте при проблеме localStorage.
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (saveError) {
+        state = previousState;
+        throw saveError;
+      }
       await render();
-      alert('Профиль успешно импортирован.');
-    } catch (error) { alert('Ошибка чтения JSON файла профиля: ' + (error.message || error)); }
+      alert('Профиль успешно импортирован и сохранён на этом устройстве.');
+    } catch (error) {
+      alert('Не удалось импортировать профиль: ' + (error.message || error));
+    } finally {
+      input.remove();
+    }
   });
+  // Поле остаётся в DOM на всё время системного выбора файла — это важно
+  // для Android WebView и Telegram Mini App.
   input.click();
 }
 
