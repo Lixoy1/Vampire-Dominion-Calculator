@@ -1113,9 +1113,23 @@ export function autoDistributeQuick(input = {}) {
   const settings = normalizeQuickSettings(raw.settings ?? raw.quickSettings ?? {});
   const account = normalizeAccount(raw.account);
   const maskedAccount = maskQuickResources(account, settings);
+  // The original quick calculator replaces the plan's selected targets rather
+  // than incrementally extending an earlier manual draft.
+  const freshPlan = {
+    conclave: { ...account.conclave },
+    courtyardToLvl: account.courtyardLvl,
+    levels: {},
+    promotes: {},
+    talents: {},
+    bonds: {},
+    auras: {},
+    presences: {},
+    skins: {},
+    summons: { wardens: [], lovers: [] },
+  };
   const result = autoDistributeAll({
     account: maskedAccount,
-    plan: raw.plan,
+    plan: freshPlan,
     quickSettings: settings,
   });
   const unsupported = [];
@@ -1264,9 +1278,11 @@ export function autoDistributeAll(input = {}) {
   plan.summons.lovers = [];
   for (const candidate of wardenCandidates) {
     const rule = quickSettings?.wardens?.[candidate.id] || {};
-    if (rule.off || rule.summon === false || !candidate.canSummon) continue;
-    if (candidate.itemId && candidate.cost > 0 && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId && candidate.cost > 0) summonBag[candidate.itemId] -= candidate.cost;
+    // A zero-cost catalog entry is not proof that the game currently allows a summon.
+    // Require an actual summon item until a captured Quick response confirms otherwise.
+    if (rule.off || rule.summon === false || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
+    if ((summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
     ownedWardenIds.add(candidate.id);
   }
@@ -1280,9 +1296,9 @@ export function autoDistributeAll(input = {}) {
   ).lovers;
   for (const candidate of loverCandidates) {
     const rule = quickSettings?.lovers?.[candidate.id] || {};
-    if (rule.off || rule.summon === false || !candidate.hasWarden || !candidate.canSummon) continue;
-    if (candidate.itemId && candidate.cost > 0 && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId && candidate.cost > 0) summonBag[candidate.itemId] -= candidate.cost;
+    if (rule.off || rule.summon === false || !candidate.hasWarden || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
+    if ((summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
   }
 
