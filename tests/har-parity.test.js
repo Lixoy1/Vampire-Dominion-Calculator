@@ -88,6 +88,21 @@ for (const [level, expected] of [
   assert.equal(Engine.calcBloodCostForLevel(level), expected, `third HAR next blood cost at level ${level}`);
 }
 
+// Fourth HAR capture: exact aggregate costs for additional intervals.
+for (const [from, to, expected] of [
+  [50, 85, 6131963],
+  [50, 87, 6726205],
+  [50, 64, 1631077],
+  [50, 100, 11443404],
+  [182, 194, 45089824],
+]) {
+  assert.equal(Engine.calcBloodCostForRange(from, to), expected, `fourth HAR blood interval ${from}->${to}`);
+  assert.equal(Engine.getBloodCostConfidence(from, to), 'exact_api_interval');
+}
+for (const [level, expected] of [[64,151904],[87,309486],[194,4108454]]) {
+  assert.equal(Engine.calcBloodCostForLevel(level), expected, `fourth HAR next blood cost at level ${level}`);
+}
+
 // API confirms the first flat bond level is free, the following step is 20,
 // and the first percentage step costs 20. Later steps remain unverified.
 assert.equal(Engine.calcBondLevelCost(1), 0);
