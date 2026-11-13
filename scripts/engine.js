@@ -914,10 +914,29 @@ export function calculateTotalDominanceReport({
     const l = db.lovers.find(x => x.id === Number(lIdStr));
     const ownedLover = account.ownedLovers?.[lIdStr];
     if (!l || !ownedLover) continue;
-    const wardenLevel = account.ownedWardens?.[l.warden_id]?.level ?? null;
+    const wardenLevel = Math.max(
+      1,
+      Number(account.ownedWardens?.[l.warden_id]?.level) || 1,
+      Number(plan.levels?.[l.warden_id]) || Number(account.ownedWardens?.[l.warden_id]?.level) || 1
+    );
     const bondObservations = account.communityImport?.referenceObservations?.bondSteps ?? [];
+    const selectedBonds = { ...bPlan };
+    for (const bond of l.scarlet_bonds || []) {
+      const current = account.ownedLovers?.[lIdStr]?.bonds?.[bond.attribute] ?? {};
+      const selected = selectedBonds[bond.attribute] ?? {};
+      const flatLevel = Math.max(0, Number(current.level) || 0);
+      const percentLevel = Math.max(0, Number(current.percentLevel ?? current.pctLevel) || 0);
+      selectedBonds[bond.attribute] = {
+        ...current,
+        ...selected,
+        level: Math.max(0, Number(selected.level ?? flatLevel) || 0),
+        targetLevel: Math.max(flatLevel, Number(selected.targetLevel ?? flatLevel) || 0),
+        percentLevel: Math.max(0, Number(selected.percentLevel ?? percentLevel) || 0),
+        targetPercentLevel: Math.max(percentLevel, Number(selected.targetPercentLevel ?? percentLevel) || 0),
+      };
+    }
     const res = calcLoverBonds(
-      l, ownedLover.affinity ?? 0, bPlan, bPlan.wardenBaseAttrs,
+      l, ownedLover.affinity ?? 0, selectedBonds, bPlan.wardenBaseAttrs,
       ownedLover.closeness ?? 0, bondObservations, wardenLevel
     );
     bondsGain += res.totalGain;
