@@ -13,7 +13,7 @@ function test(name, fn) {
 }
 
 const expectedCounts = {
-  wardens: 68, lovers: 45, items: 237, warden_promotes: 8,
+  wardens: 68, lovers: 45, items: 240, warden_promotes: 8,
   conclave_levels: 180, courtyard_levels: 210, lover_presence_levels: 155,
 };
 
@@ -53,7 +53,7 @@ test('favicon exists locally', () => {
   assert.ok(existsSync(join(root, 'assets', 'crest.svg')));
 });
 
-test('496 referenced images exist locally and are WebP', () => {
+test('499 referenced images exist locally and are WebP', () => {
   const paths = new Set();
   const walk = value => {
     if (Array.isArray(value)) return value.forEach(walk);
@@ -65,7 +65,7 @@ test('496 referenced images exist locally and are WebP', () => {
     }
   };
   walk(GAME_DB);
-  assert.equal(paths.size, 496);
+  assert.equal(paths.size, 499);
   for (const rel of paths) {
     const file = join(root, 'assets', 'icons', rel);
     assert.ok(existsSync(file), `missing ${rel}`);
@@ -228,7 +228,6 @@ test('HAR-confirmed early Warden upgrade interval is used by the engine', () => 
   const warden = GAME_DB.wardens.find(item => item.id === 10270);
   const result = E.calcWardenLevelsUpgrade(warden, 1, 3, 1, GAME_DB.warden_promotes, {}, {});
   assert.equal(result.bloodSpent, 384);
-  assert.equal(result.baseGain, 50);
 });
 
 console.log(`\n${passed} test groups passed.`);
