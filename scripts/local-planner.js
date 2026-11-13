@@ -1264,9 +1264,9 @@ export function autoDistributeAll(input = {}) {
   plan.summons.lovers = [];
   for (const candidate of wardenCandidates) {
     const rule = quickSettings?.wardens?.[candidate.id] || {};
-    if (rule.off || rule.summon === false || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
+    if (rule.off || rule.summon === false || !candidate.canSummon) continue;
+    if (candidate.itemId && candidate.cost > 0 && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    if (candidate.itemId && candidate.cost > 0) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
     ownedWardenIds.add(candidate.id);
   }
@@ -1280,9 +1280,9 @@ export function autoDistributeAll(input = {}) {
   ).lovers;
   for (const candidate of loverCandidates) {
     const rule = quickSettings?.lovers?.[candidate.id] || {};
-    if (rule.off || rule.summon === false || !candidate.hasWarden || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
+    if (rule.off || rule.summon === false || !candidate.hasWarden || !candidate.canSummon) continue;
+    if (candidate.itemId && candidate.cost > 0 && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    if (candidate.itemId && candidate.cost > 0) summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
   }
 
