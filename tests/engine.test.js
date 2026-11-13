@@ -107,6 +107,38 @@ test('talent DP is integer and within exp/cap bounds', () => {
   assert.equal(E.calcWardenBaseTalentStars(warden), warden.talents.reduce((sum, t) => sum + t.stars, 0));
 });
 
+test('HAR oracle: verified blood costs match successful dominance API responses', () => {
+  assert.equal(E.calcBloodCostForLevel(1), 115);
+  assert.equal(E.calcBloodCostForLevel(2), 269);
+  assert.equal(E.calcBloodCostForLevel(3), 461);
+  assert.equal(E.calcBloodCostForLevel(150), 2096083);
+  assert.equal(E.isBloodCostVerified(1), true);
+  assert.equal(E.isBloodCostVerified(4), false);
+
+  const warden = GAME_DB.wardens.find(row => row.id === 10270);
+  const result = E.calcWardenLevelsUpgrade(
+    warden, 1, 3, 1, GAME_DB.warden_promotes, {}, {}
+  );
+  assert.equal(result.bloodSpent, 384);
+  assert.equal(result.bloodCostVerified, true);
+  assert.deepEqual(result.estimatedBloodLevels, []);
+});
+
+test('HAR oracle: the first ordinary bond level costs zero Affinity', () => {
+  const lover = GAME_DB.lovers.find(row => row.id === 20170);
+  assert.ok(lover, 'HAR-observed partner template exists');
+  const states = Object.fromEntries(lover.scarlet_bonds.map(bond => [bond.attribute, {
+    level: 0, targetLevel: 1, percentLevel: 0, targetPercentLevel: 0,
+  }]));
+  const result = E.calcLoverBonds(
+    lover, 0, states,
+    { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    100
+  );
+  assert.equal(result.spentAffinity, 0);
+  assert.ok(result.details.every(row => row.costFlat === 0));
+});
+
 test('Closeness unlocks bond branches; Affinity pays their cost', () => {
   const lover = GAME_DB.lovers[0];
   const states = Object.fromEntries(lover.scarlet_bonds.map(b => [b.attribute, { level: 0, targetLevel: 2, percentLevel: 0, targetPercentLevel: 2 }]));
