@@ -637,8 +637,13 @@ export function calcBloodCostForRange(fromLevel, toLevel) {
 export function getBloodCostConfidence(fromLevel, toLevel) {
   const from = Math.max(1, Math.round(Number(fromLevel) || 1));
   const to = Math.max(from, Math.round(Number(toLevel) || from));
-  return BLOOD_COST_EXACT_INTERVALS.some(row => row.from === from && row.to === to)
-    ? 'exact_api_interval'
+  if (BLOOD_COST_EXACT_INTERVALS.some(row => row.from === from && row.to === to)) {
+    return 'exact_api_interval';
+  }
+  const steps = [];
+  for (let level = from; level < to; level++) steps.push(level);
+  return steps.length > 0 && steps.every(level => BLOOD_COST_EXACT_STEPS[level] !== undefined)
+    ? 'exact_api_steps'
     : 'approximation_only';
 }
 
