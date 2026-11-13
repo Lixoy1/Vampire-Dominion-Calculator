@@ -628,11 +628,23 @@ export function getBloodCostConfidence(fromLevel, toLevel) {
     : 'approximation_only';
 }
 
+// Exact Warden dominance gains returned by the captured dominance API scenarios.
+export const WARDEN_LEVEL_GAIN_EXACT_INTERVALS = Object.freeze([
+  { wardenId: 10270, from: 1, to: 3, gain: 50 },
+  { wardenId: 10280, from: 1, to: 7, gain: 641 },
+  { wardenId: 10300, from: 1, to: 10, gain: 2051 },
+  { wardenId: 10960, from: 1, to: 3, gain: 57 },
+]);
+
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
   const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
   const multBefore = calcWardenLevelMultiplier(currentLvl);
   const multAfter = calcWardenLevelMultiplier(targetLvl);
-  const baseGain = Math.round(talentSum * (multAfter - multBefore));
+  const estimatedBaseGain = Math.round(talentSum * (multAfter - multBefore));
+  const exactGainObservation = WARDEN_LEVEL_GAIN_EXACT_INTERVALS.find(
+    row => row.wardenId === warden.id && row.from === currentLvl && row.to === targetLvl
+  );
+  const baseGain = exactGainObservation ? exactGainObservation.gain : estimatedBaseGain;
 
   const bloodSpent = calcBloodCostForRange(currentLvl, targetLvl);
 
@@ -659,7 +671,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     toLvl: targetLvl,
     bloodSpent,
     baseGain,
-    baseGainConfidence: 'approximation_only',
+    baseGainConfidence: exactGainObservation ? 'exact_api_interval' : 'approximation_only',
     neededPromotes,
     missingItems,
     canPromote: missingItems.length === 0,
