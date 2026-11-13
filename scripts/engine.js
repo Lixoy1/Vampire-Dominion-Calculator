@@ -672,16 +672,28 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Обычный уровень (level: 1..600): даёт плоскую прибавку к атрибуту смотрителя.
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
-export function calcBondLevelCost(level) {
-  // HAR confirms the first flat bond level is free; the following step costs 20.
+// First-step observations are keyed by the actual bond template ID.
+// They are exact for the four bonds exercised in the supplied HAR captures.
+export const BOND_FIRST_STEP_OBSERVATIONS = Object.freeze({
+  1701: { flatGain: 120, flatNextCost: 20, flatNextGain: 132, percentNextCost: 20, percentNextGain: 1 },
+  1702: { flatGain: 100, flatNextCost: 20, flatNextGain: 110, percentNextCost: 20, percentNextGain: 1 },
+  1703: { flatGain: 100, flatNextCost: 20, flatNextGain: 110, percentNextCost: 20, percentNextGain: 1 },
+  1704: { flatGain: 300, flatNextCost: 54, flatNextGain: 330, percentNextCost: 54, percentNextGain: 3 },
+});
+
+export function calcBondLevelCost(level, bond = null) {
+  // The first flat bond level is free in every observed branch.
   if (level <= 1) return 0;
+  const observed = bond && BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+  if (level === 2 && observed) return observed.flatNextCost;
   if (level === 2) return 20;
   // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
-export function calcBondPercentCost(percentLevel) {
-  // HAR response exposes next_cost=20 from percent level 0.
+export function calcBondPercentCost(percentLevel, bond = null) {
+  const observed = bond && BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+  if (percentLevel === 1 && observed) return observed.percentNextCost;
   if (percentLevel === 1) return 20;
   // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(200 + Math.pow(percentLevel, 2.05) * 12);
@@ -700,16 +712,18 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
     const targetPercentLevel = unlockedPct ? st.targetPercentLevel : st.percentLevel;
 
     let costFlat = 0;
-    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1);
+    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1, bond);
 
     let costPct = 0;
-    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1);
+    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1, bond);
 
     spentAffinity += costFlat + costPct;
 
     // Плоский бонус за уровень связи (зависит от типа связи one/two/all/default)
+    const observedBond = BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+    const exactFirstStep = st.level === 0 && targetLevel === 1 && observedBond;
     const flatStep = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-    const flatGain = (targetLevel - st.level) * flatStep;
+    const flatGain = exactFirstStep ? observedBond.flatGain : (targetLevel - st.level) * flatStep;
 
     // Процентный бонус: 0.5% за уровень связи от базового атрибута смотрителя
     const pctStep = bond.is_advantage ? 0.005 : 0.0025;
@@ -726,6 +740,7 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
       flatGain,
       pctGain,
       totalAttrGain: flatGain + pctGain,
+      flatGainConfidence: exactFirstStep ? 'exact_api_observation' : 'approximation_only',
     };
   });
 
