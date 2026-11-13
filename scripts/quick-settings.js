@@ -51,6 +51,12 @@ function sortedUniqueIds(values) {
   return ids.length ? ids : undefined;
 }
 
+function sortedUniqueIndices(values) {
+  if (!Array.isArray(values)) return undefined;
+  const indices = [...new Set(values.map(numericIndex).filter(index => index !== null))].sort((a, b) => a - b);
+  return indices.length ? indices : undefined;
+}
+
 function normalizeWardenSettings(value) {
   const source = asRecord(value);
   const result = {};
@@ -62,7 +68,7 @@ function normalizeWardenSettings(value) {
     if (Number.isFinite(max) && max > 0) result.max_level = Math.floor(max);
   }
   for (const key of ['promotes_off', 'talents_off', 'auras_off', 'skins_off']) {
-    const values = sortedUniqueIds(source[key]);
+    const values = key === 'talents_off' ? sortedUniqueIndices(source[key]) : sortedUniqueIds(source[key]);
     if (values) result[key] = values;
   }
   return Object.keys(result).length ? result : undefined;
