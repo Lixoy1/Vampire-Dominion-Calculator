@@ -1,7 +1,6 @@
 services:
-  - type: web
+  - type: static
     name: vampire-dominion-calculator
-    runtime: static
     buildCommand: ""
     staticPublishPath: .
     previews:
