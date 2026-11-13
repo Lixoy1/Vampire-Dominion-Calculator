@@ -34706,6 +34706,31 @@
           "from_level": 259,
           "cost": 30745656,
           "source": "HAR dominance response next_cost after target level 259"
+        },
+        {
+          "from_level": 50,
+          "cost": 89785,
+          "source": "HAR dominance response next_cost at level 50"
+        },
+        {
+          "from_level": 250,
+          "cost": 25316634,
+          "source": "HAR dominance response next_cost at level 250"
+        },
+        {
+          "from_level": 300,
+          "cost": 126095128,
+          "source": "HAR dominance response next_cost at level 300"
+        },
+        {
+          "from_level": 350,
+          "cost": 624596836,
+          "source": "HAR dominance response next_cost at level 350"
+        },
+        {
+          "from_level": 400,
+          "cost": 6884526660,
+          "source": "HAR dominance response next_cost at level 400"
         }
       ]
     },
