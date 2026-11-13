@@ -1016,24 +1016,101 @@ function renderQuickSettingsModal() {
     '<label class="quick-settings-inline"><input type="checkbox" data-quick-conclave="' + attribute + '" ' +
     (!(settings.conclave_off || []).includes(attribute) ? 'checked' : '') + '><span>' + tName('attribute', attribute) + '</span></label>'
   ).join('');
-  const wardens = Object.entries(state.account.ownedWardens || {}).map(([id, owned]) => {
+  const renderFeatureCheckbox = (kind, id, feature, value, label, checked, extra = '') =>
+    '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="' + kind +
+    '" data-id="' + id + '" data-feature="' + feature + '" data-value="' + value + '" ' + extra + ' ' +
+    (checked ? 'checked' : '') + '><span>' + label + '</span></label>';
+
+  const wardenCandidates = GAME_DB.wardens.filter(entity =>
+    state.account.ownedWardens[entity.id] || entity.summon_item_id != null
+  );
+  const wardens = wardenCandidates.map(entity => {
+    const id = entity.id;
+    const owned = state.account.ownedWardens[id];
     const item = settings.wardens[id] || {};
-    const entity = GAME_DB.wardens.find(row => row.id === Number(id));
-    const name = entity ? tName('warden', entity.name) : id;
-    return '<div class="quick-entity-row"><label class="quick-settings-check"><input type="checkbox" data-quick-entity="warden" data-id="' + id + '" ' +
-      (!item.off ? 'checked' : '') + '><span><b>' + escHtml(name) + '</b><small>Уровень ' + Number(owned.level || 1) + '</small></span></label>' +
-      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-levels="' + id + '" ' + (item.levels !== false ? 'checked' : '') + '>уровни</label>' +
-      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-summon="' + id + '" ' + (item.summon !== false ? 'checked' : '') + '>призыв</label>' +
-      '<input class="input quick-settings-max" type="number" min="1" max="450" placeholder="макс." data-quick-warden-max="' + id + '" value="' + (item.max_level || '') + '"></div>';
-  }).join('') || '<p class="row-sub">В профиле пока нет смотрителей.</p>';
-  const lovers = Object.entries(state.account.ownedLovers || {}).map(([id, owned]) => {
+    const promotions = GAME_DB.warden_promotes
+      .filter(row => !owned || row.min_warden_lvl >=
+        (GAME_DB.warden_promotes.find(stage => stage.id === Number(owned.promoteId))?.max_warden_lvl ?? 1));
+    const auras = (entity.auras || []).filter(row => row.aura_type === 'updatable' && row.upgrade_item_id != null);
+    const talents = entity.talents || [];
+    const skins = entity.skins || [];
+    const promotionHtml = promotions.length
+      ? '<details><summary>Прорывы (' + (promotions.length - (item.promotes_off || []).length) + '/' + promotions.length + ')</summary><div class="quick-feature-grid">' +
+        promotions.map(row => renderFeatureCheckbox('warden', id, 'promotes_off', row.id,
+          escHtml(tName('warden_promote', row.name)) + ' · ур. ' + row.min_warden_lvl,
+          !(item.promotes_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const talentHtml = talents.length
+      ? '<details><summary>Таланты (' + (talents.length - (item.talents_off || []).length) + '/' + talents.length + ')</summary><div class="quick-feature-grid">' +
+        talents.map((row, position) => renderFeatureCheckbox('warden', id, 'talents_off', position,
+          escHtml(tName('attribute', row.attribute)) + ' · ' + row.stars + '★ · №' + position,
+          !(item.talents_off || []).includes(position))).join('') + '</div></details>'
+      : '';
+    const auraHtml = auras.length
+      ? '<details><summary>Вдохновения (' + (auras.length - (item.auras_off || []).length) + '/' + auras.length + ')</summary><div class="quick-feature-grid">' +
+        auras.map(row => renderFeatureCheckbox('warden', id, 'auras_off', row.id,
+          escHtml(tName('aura', row.name)), !(item.auras_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const skinHtml = skins.length
+      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
+        skins.map(row => renderFeatureCheckbox('warden', id, 'skins_off', row.id,
+          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const summonHtml = !owned && entity.summon_item_id != null
+      ? renderFeatureCheckbox('warden', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
+      : '';
+    const levelHtml = '<div class="quick-entity-control-row">' +
+      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-levels="' + id + '" ' +
+      (item.levels !== false ? 'checked' : '') + '> <span>Уровни</span></label>' +
+      '<label class="quick-settings-inline">Не выше <input class="input quick-settings-max" type="number" min="' +
+      (Number(owned?.level) || 1) + '" max="450" placeholder="без лимита" data-quick-warden-max="' + id +
+      '" value="' + (item.max_level || '') + '"></label></div>';
+    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('warden', entity.name)) +
+      '</span><small>' + (owned ? 'свой · ур. ' + Number(owned.level || 1) : 'доступен для призыва') +
+      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
+      renderFeatureCheckbox('warden', id, 'off', 'true', 'Участвует в Quick', !item.off) +
+      summonHtml + levelHtml + promotionHtml + talentHtml + auraHtml + skinHtml + '</div></details>';
+  }).join('') || '<p class="row-sub">Нет доступных смотрителей.</p>';
+
+  const loverCandidates = GAME_DB.lovers.filter(entity =>
+    state.account.ownedLovers[entity.id] || entity.summon_item_id != null
+  );
+  const lovers = loverCandidates.map(entity => {
+    const id = entity.id;
+    const owned = state.account.ownedLovers[id];
     const item = settings.lovers[id] || {};
-    const entity = GAME_DB.lovers.find(row => row.id === Number(id));
-    const name = entity ? tName('lover', entity.name) : id;
-    return '<div class="quick-entity-row"><label class="quick-settings-check"><input type="checkbox" data-quick-entity="lover" data-id="' + id + '" ' +
-      (!item.off ? 'checked' : '') + '><span><b>' + escHtml(name) + '</b><small>Близость ' + Number(owned.closeness || 0) + '</small></span></label>' +
-      '<label class="quick-settings-inline"><input type="checkbox" data-quick-lover-summon="' + id + '" ' + (item.summon !== false ? 'checked' : '') + '>призыв</label></div>';
-  }).join('') || '<p class="row-sub">В профиле пока нет партнёров.</p>';
+    const bonds = entity.scarlet_bonds || [];
+    const presences = (entity.presences || []).filter(row => row.presence_type === 'updatable' && row.upgrade_item_id != null);
+    const skins = entity.skins || [];
+    const bondsHtml = bonds.length
+      ? '<details><summary>Кровные узы (' + (bonds.length * 2 - (item.bonds_off || []).length) + '/' + (bonds.length * 2) + ')</summary><div class="quick-feature-grid">' +
+        bonds.flatMap(row => ['level', 'percent'].map(kind => {
+          const excluded = (item.bonds_off || []).some(entry => entry.attribute === row.attribute && entry.kind === kind);
+          return '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="lover" data-id="' + id +
+            '" data-feature="bonds_off" data-attribute="' + row.attribute + '" data-kind="' + kind + '" ' +
+            (!excluded ? 'checked' : '') + '><span>' + escHtml(tName('attribute', row.attribute)) + ' · ' +
+            (kind === 'level' ? 'уровень' : 'процент') + '</span></label>';
+        })).join('') + '</div></details>'
+      : '';
+    const presenceHtml = presences.length
+      ? '<details><summary>Веяния (' + (presences.length - (item.presences_off || []).length) + '/' + presences.length + ')</summary><div class="quick-feature-grid">' +
+        presences.map(row => renderFeatureCheckbox('lover', id, 'presences_off', row.id,
+          escHtml(tName('presence', row.name)), !(item.presences_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const skinHtml = skins.length
+      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
+        skins.map(row => renderFeatureCheckbox('lover', id, 'skins_off', row.id,
+          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
+      : '';
+    const summonHtml = !owned && entity.summon_item_id != null
+      ? renderFeatureCheckbox('lover', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
+      : '';
+    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('lover', entity.name)) +
+      '</span><small>' + (owned ? 'свой · близость ' + Number(owned.closeness || 0) : 'доступен для призыва') +
+      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
+      renderFeatureCheckbox('lover', id, 'off', 'true', 'Участвует в Quick', !item.off) +
+      summonHtml + bondsHtml + presenceHtml + skinHtml + '</div></details>';
+  }).join('') || '<p class="row-sub">Нет доступных партнёров.</p>';
 
   const html = '<section class="quick-calc-summary">' +
     '<div class="card-title">Quick Calculation · настройки</div>' +
@@ -1089,24 +1166,37 @@ function renderQuickSettingsModal() {
     updateQuickSettings({ ...state.quickSettings, wardens: entities });
     refresh();
   }));
-  body.querySelectorAll('[data-quick-warden-summon]').forEach(input => input.addEventListener('change', event => {
-    const id = event.target.dataset.quickWardenSummon;
-    const entities = { ...state.quickSettings.wardens };
+  body.querySelectorAll('[data-quick-feature-kind]').forEach(input => input.addEventListener('change', event => {
+    const node = event.target;
+    const kind = node.dataset.quickFeatureKind === 'warden' ? 'wardens' : 'lovers';
+    const id = node.dataset.id;
+    const feature = node.dataset.feature;
+    const entities = { ...state.quickSettings[kind] };
     const item = { ...(entities[id] || {}) };
-    if (event.target.checked) delete item.summon;
-    else item.summon = false;
-    entities[id] = item;
-    updateQuickSettings({ ...state.quickSettings, wardens: entities });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-lover-summon]').forEach(input => input.addEventListener('change', event => {
-    const id = event.target.dataset.quickLoverSummon;
-    const entities = { ...state.quickSettings.lovers };
-    const item = { ...(entities[id] || {}) };
-    if (event.target.checked) delete item.summon;
-    else item.summon = false;
-    entities[id] = item;
-    updateQuickSettings({ ...state.quickSettings, lovers: entities });
+    if (feature === 'off') {
+      if (node.checked) delete item.off;
+      else item.off = true;
+    } else if (feature === 'summon') {
+      if (node.checked) delete item.summon;
+      else item.summon = false;
+    } else if (feature === 'bonds_off') {
+      const attribute = node.dataset.attribute;
+      const bondKind = node.dataset.kind;
+      const entries = [...(item.bonds_off || [])];
+      const exists = entries.some(entry => entry.attribute === attribute && entry.kind === bondKind);
+      item.bonds_off = node.checked
+        ? entries.filter(entry => entry.attribute !== attribute || entry.kind !== bondKind)
+        : (exists ? entries : [...entries, { attribute, kind: bondKind }]);
+    } else {
+      const value = Number(node.dataset.value || node.value);
+      const values = [...(item[feature] || [])];
+      item[feature] = node.checked
+        ? values.filter(entry => Number(entry) !== value)
+        : [...values.filter(entry => Number(entry) !== value), value];
+    }
+    if (Object.keys(item).length) entities[id] = item;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
     refresh();
   }));
   body.querySelectorAll('[data-quick-warden-max]').forEach(input => input.addEventListener('change', event => {
