@@ -15,7 +15,7 @@ function fn(name) {
   return app.slice(start.index, end ? end.index : app.length);
 }
 
-for (const name of ['renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
+for (const name of ['renderSpaTopbar','renderCalculationNavStrip','renderSubToolbar','renderHomeScreen','renderCalculationsHubScreen','renderDominanceTab','renderLoverDetailScreen','renderSettingsScreen','runLocalAction','saveCurrentCalculation','exportProfileJson','importProfileJson','bindSpaEvents','render']) fn(name);
 
 const topbar = fn('renderSpaTopbar');
 assert.ok(topbar.includes('id="btn-lang"'), 'language toggle is in the topbar');
@@ -38,6 +38,23 @@ assert.ok(!app.includes('requestOracle('));
 assert.ok(!app.includes('fetch('));
 const events = fn('bindSpaEvents');
 for (const action of ['save-calculation','reset-plan','export-profile','import-profile']) assert.ok(events.includes("action === '" + action + "'"), 'delegated handler supports ' + action);
+
+const loverDetail = fn('renderLoverDetailScreen');
+for (const tab of ['trust','bonds','presences','skins']) {
+  assert.ok(loverDetail.includes("['" + tab + "'"), 'partner detail has ' + tab + ' tab');
+}
+assert.ok(loverDetail.includes('data-action="set-lover-tab"'), 'partner tabs are interactive');
+assert.ok(loverDetail.includes('class="lover-subtabs"'), 'partner tabs use the compact horizontal tab strip');
+const settings = fn('renderSettingsScreen');
+for (const marker of ['portrait-picker-grid','setting-segment','setting-toggle','profile-region-select','data-copy-kind="user"','data-copy-kind="account"','data-action="delete-account"']) {
+  assert.ok(settings.includes(marker), 'settings include ' + marker);
+}
+for (const value of ["'auto','dark','light'","'auto','smooth','less'","'male','female'"]) {
+  assert.ok(settings.includes(value), 'settings preserve ' + value);
+}
+assert.ok(settings.includes('Не подключено'), 'offline app does not pretend that bot messaging is active');
+assert.ok(fn('applyTheme').includes('matchMedia'), 'automatic theme and reduced-motion settings follow device preferences');
+
 assert.ok(css.includes('touch-action:pan-x') || css.includes('touch-action: pan-x'), 'horizontal strip supports touch scrolling');
 assert.ok(css.includes('pointer-events:none') || css.includes('pointer-events: none'), 'decorative images do not intercept taps');
 assert.ok(html.includes('локально на устройстве'));
