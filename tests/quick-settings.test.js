@@ -33,7 +33,7 @@ assert.ok(Object.values(QUICK_DEFAULT_SPEND).every(value => value === true));
         levels: false,
         max_level: 150,
         promotes_off: [3, 1, 3, 'bad'],
-        talents_off: [5, 2],
+        talents_off: [5, 0, 2],
         auras_off: [],
         skins_off: [8, 8],
         ignored: true,
@@ -66,7 +66,7 @@ assert.ok(Object.values(QUICK_DEFAULT_SPEND).every(value => value === true));
   assert.deepEqual(settings.wardens, {
     10170: {
       off: true, summon: false, levels: false, max_level: 150,
-      promotes_off: [1, 3], talents_off: [2, 5], skins_off: [8],
+      promotes_off: [1, 3], talents_off: [0, 2, 5], skins_off: [8],
     },
   });
   assert.deepEqual(settings.lovers, {
