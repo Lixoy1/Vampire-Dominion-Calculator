@@ -37,6 +37,20 @@ for (const [from, to, expected] of bloodIntervals) {
 }
 assert.equal(Engine.getBloodCostConfidence(3, 7), 'approximation_only');
 
+// Additional exact aggregate intervals captured in the 2026-11-13 HAR.
+for (const [from, to, expected] of [
+  [1, 11, 12682],
+  [1, 4, 845],
+  [1, 5, 1536],
+  [1, 100, 12338141],
+  [150, 153, 6396048],
+  [182, 200, 70592158],
+  [258, 259, 29999162],
+]) {
+  assert.equal(Engine.calcBloodCostForRange(from, to), expected, `new HAR blood interval ${from}->${to}`);
+  assert.equal(Engine.getBloodCostConfidence(from, to), 'exact_api_interval');
+}
+
 // API confirms the first flat bond level is free, the following step is 20,
 // and the first percentage step costs 20. Later steps remain unverified.
 assert.equal(Engine.calcBondLevelCost(1), 0);
