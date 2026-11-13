@@ -8,8 +8,8 @@
   },
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "test": "node tests/engine.test.js && node tests/har-reference.test.js && node tests/local-planner.test.js && node tests/spa-shell.test.js && node tests/spa-full.test.js",
-    "check": "node --check scripts/app.js && node --check scripts/engine.js && node --check scripts/observed-costs.js && node --check scripts/local-planner.js && node --check scripts/data.js && node --check tests/local-planner.test.js && node --check tests/har-reference.test.js",
+    "test": "node tests/engine.test.js && node tests/har-reference.test.js && node tests/quick-settings.test.js && node tests/local-planner.test.js && node tests/spa-shell.test.js && node tests/spa-full.test.js",
+    "check": "node --check scripts/app.js && node --check scripts/engine.js && node --check scripts/observed-costs.js && node --check scripts/quick-settings.js && node --check scripts/local-planner.js && node --check scripts/data.js && node --check tests/local-planner.test.js && node --check tests/har-reference.test.js && node --check tests/quick-settings.test.js",
     "verify:icons": "python3 verify_icons.py"
   }
 }
