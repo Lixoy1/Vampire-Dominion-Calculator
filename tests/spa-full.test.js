@@ -30,12 +30,12 @@ assert.ok(blankAccount.includes('blood: 0') && blankAccount.includes('ownedLover
 const progress = fn('getAccountProgressPercent');
 assert.ok(progress.includes('Math.max(0'), 'empty profile can display zero-percent progress');
 assert.ok(!progress.includes('Math.max(1'), 'empty progress is not rounded up to a false one percent');
-const home = fn('renderHomeScreen');
+const homeDashboard = fn('renderHomeScreen');
 for (const marker of ['home-resource-grid','home-primary-actions','home-profile-progress','Подсчёт Господства','Быстрый подсчёт']) {
-  assert.ok(home.includes(marker), 'reference home dashboard includes ' + marker);
+  assert.ok(homeDashboard.includes(marker), 'reference home dashboard includes ' + marker);
 }
 for (const destination of ['resources','wardens_list','lovers','bag','calc_dominance']) {
-  assert.ok(home.includes('data-screen="' + destination + '"'), 'home dashboard shortcut opens ' + destination);
+  assert.ok(homeDashboard.includes('data-screen="' + destination + '"'), 'home dashboard shortcut opens ' + destination);
 }
 
 const nav = fn('renderCalculationNavStrip');
