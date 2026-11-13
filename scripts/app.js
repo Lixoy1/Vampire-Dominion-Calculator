@@ -4,6 +4,7 @@
  */
 import { GAME_DB, getIconUrl } from './data.js';
 import * as LocalPlanner from './local-planner.js';
+import { normalizeQuickSettings, quickResponseToPlan } from './quick-settings.js';
 const ATTRIBUTES = ['strength', 'allure', 'intellect', 'spirit'];
 const FABRIC_COST_BY_QUALITY = { a: 50, s: 100, ss: 200 };
 
@@ -85,6 +86,7 @@ function createDefaultState() {
     searchQuery: '',
     profile,
     settings: { theme: 'dark', loverSex: 'female' },
+    quickSettings: normalizeQuickSettings({}),
     account,
     plan,
     activeAccountId: id,
@@ -215,6 +217,7 @@ export function normalizeState(parsed = {}) {
       lang,
       profile: { name: selected.name, server: selected.server, region: selected.region, avatarId: selected.avatarId },
       settings: { ...base.settings, ...(source.settings || {}) },
+      quickSettings: normalizeQuickSettings(source.quickSettings || {}),
       account: selected.account,
       plan: selected.plan,
       activeAccountId: selected.id,
@@ -240,6 +243,7 @@ export function normalizeState(parsed = {}) {
     lang,
     profile,
     settings: { ...base.settings, ...(source.settings || {}) },
+    quickSettings: normalizeQuickSettings(source.quickSettings || {}),
     account,
     plan,
     activeAccountId: id,
@@ -870,26 +874,265 @@ function renderSpaScreen(db, report, oracle) {
   }
 }
 
-function openQuickCalculation() {
-  const report = calculationSnapshot?.report;
-  if (!report) return;
-  const account = state.account;
+const QUICK_GOAL_LABELS = {
+  all: 'Всё',
+  strength: 'Сила',
+  allure: 'Харизма',
+  intellect: 'Интеллект',
+  spirit: 'Воля',
+};
+
+const QUICK_SPEND_LABELS = {
+  blood: ['Кровь', 'Уровни смотрителей'],
+  promote_items: ['Прорывы', 'Предметы прорыва'],
+  conclave: ['Конклав', 'Очки Конклава'],
+  trust: ['Доверие', 'Кровные узы'],
+  group_items: ['Призыв и вдохновения', 'Предметы призыва'],
+  presence_items: ['Веяния', 'Предметы Веяний'],
+  talent_items: ['Свитки и рукописи', 'Предметы талантов'],
+  talent_exp: ['Личный опыт', 'Опыт талантов'],
+  skin_cards: ['Карточки обликов', 'Карточки'],
+  fabric: ['Ткань', 'Материалы обликов'],
+};
+
+function updateQuickSettings(next) {
+  state.quickSettings = normalizeQuickSettings(next);
+  saveState();
+}
+
+function downloadQuickSettings() {
+  const settings = normalizeQuickSettings(state.quickSettings || {});
+  const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'vampire-dominion-quick-settings.json';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function parseQuickJsonValue(value) {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); }
+  catch (error) { throw new Error('Файл не содержит корректный JSON: ' + error.message); }
+}
+
+function extractQuickResponse(parsedValue) {
+  let parsed = parseQuickJsonValue(parsedValue);
+  if (parsed && parsed.log && Array.isArray(parsed.log.entries)) {
+    const entries = parsed.log.entries.filter(entry =>
+      String(entry.request?.url || '').includes('/calculations/quick') &&
+      Number(entry.response?.status) >= 200 &&
+      Number(entry.response?.status) < 300 &&
+      typeof entry.response?.content?.text === 'string'
+    );
+    if (!entries.length) throw new Error('В HAR не найден успешный ответ /calculations/quick.');
+    const entry = entries[entries.length - 1];
+    let body = entry.response.content.text;
+    if (entry.response.content.encoding === 'base64') {
+      const binary = atob(body);
+      const bytes = Uint8Array.from(binary, ch => ch.charCodeAt(0));
+      body = new TextDecoder().decode(bytes);
+    }
+    parsed = parseQuickJsonValue(body);
+  }
+  if (parsed && parsed.response?.content?.text) {
+    parsed = parseQuickJsonValue(parsed.response.content.text);
+  }
+  if (parsed && parsed.res && typeof parsed.res === 'object') return parsed.res;
+  if (parsed && parsed.result && typeof parsed.result === 'object') return parsed.result;
+  if (parsed && parsed.ok === true && parsed.result && typeof parsed.result === 'object') return parsed.result;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+  throw new Error('Не удалось определить структуру ответа Quick Calculation.');
+}
+
+function quickPlanStats(plan) {
+  const levels = Object.keys(plan.levels || {}).length;
+  const bonds = Object.values(plan.bonds || {}).reduce((sum, value) => sum + Object.keys(value || {}).length, 0);
+  const talents = Object.values(plan.talents || {}).reduce((sum, value) =>
+    sum + ['scrolls', 'scripts', 'exp_levels'].reduce((inner, key) =>
+      inner + Object.values(value?.[key] || {}).filter(amount => Number(amount) > 0).length, 0), 0);
+  const presences = Object.values(plan.presences || {}).reduce((sum, value) => sum + Object.keys(value || {}).length, 0);
+  return { levels, bonds, talents, presences, skins: Object.keys(plan.skins || {}).length,
+    summons: (plan.summons?.wardens?.length || 0) + (plan.summons?.lovers?.length || 0) };
+}
+
+function importQuickResponseFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,.har,application/json';
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      alert('Файл слишком большой для мобильного импорта. Экспортируй из HAR только один JSON-ответ /calculations/quick и импортируй его.');
+      return;
+    }
+    try {
+      const parsed = JSON.parse(await file.text());
+      const response = extractQuickResponse(parsed);
+      const mapped = quickResponseToPlan(response, state.account, state.plan);
+      const counts = quickPlanStats(mapped.plan);
+      const ignoredAuraCount = Object.values(mapped.ignored.wardenAuraLevels || {})
+        .reduce((sum, values) => sum + Object.keys(values || {}).length, 0);
+      const ignoredExpCount = Object.values(mapped.ignored.talentExpItems || {})
+        .reduce((sum, values) => sum + Object.keys(values || {}).length, 0);
+      const detail = [
+        'Смотрители по уровням: ' + counts.levels,
+        'Партнёры / ветви уз: ' + counts.bonds,
+        'Таланты: ' + counts.talents,
+        'Веяния: ' + counts.presences,
+        'Облики: ' + counts.skins,
+        'Призывы: ' + counts.summons,
+        ignoredAuraCount ? 'Вдохновения без поля в локальном плане: ' + ignoredAuraCount : '',
+        ignoredExpCount ? 'Предметы опыта талантов без поля в локальном плане: ' + ignoredExpCount : '',
+      ].filter(Boolean).join('\n');
+      const note = ignoredAuraCount || ignoredExpCount
+        ? '\n\nЧасть результата пока не поддерживается локальной моделью и не будет применена.'
+        : '';
+      if (!confirm('Получен серверный результат Quick Calculation.\n\n' + detail + note + '\n\nПеренести поддерживаемые значения в текущий план?')) return;
+      state.plan = normalizePlan(mapped.plan, state.account);
+      saveState();
+      await render();
+      closeAppModal();
+      alert('Результат Quick перенесён в черновик плана. Профиль и ресурсы не изменены. Проверь расчёт перед применением.');
+    } catch (error) {
+      alert(error.message || 'Не удалось импортировать результат Quick Calculation.');
+    }
+  });
+  input.click();
+}
+
+function renderQuickSettingsModal() {
+  const settings = normalizeQuickSettings(state.quickSettings || {});
+  const goals = Object.entries(QUICK_GOAL_LABELS).map(([key, label]) =>
+    '<option value="' + key + '" ' + (settings.goal === key ? 'selected' : '') + '>' + label + '</option>'
+  ).join('');
+  const spend = Object.entries(QUICK_SPEND_LABELS).map(([key, labels]) =>
+    '<label class="quick-settings-check"><input type="checkbox" data-quick-spend="' + key + '" ' +
+    (settings.spend[key] !== false ? 'checked' : '') + '><span><b>' + labels[0] + '</b><small>' + labels[1] + '</small></span></label>'
+  ).join('');
+  const conclave = ATTRIBUTES.map(attribute =>
+    '<label class="quick-settings-inline"><input type="checkbox" data-quick-conclave="' + attribute + '" ' +
+    (!(settings.conclave_off || []).includes(attribute) ? 'checked' : '') + '><span>' + tName('attribute', attribute) + '</span></label>'
+  ).join('');
+  const wardens = Object.entries(state.account.ownedWardens || {}).map(([id, owned]) => {
+    const item = settings.wardens[id] || {};
+    const entity = GAME_DB.wardens.find(row => row.id === Number(id));
+    const name = entity ? tName('warden', entity.name) : id;
+    return '<div class="quick-entity-row"><label class="quick-settings-check"><input type="checkbox" data-quick-entity="warden" data-id="' + id + '" ' +
+      (!item.off ? 'checked' : '') + '><span><b>' + escHtml(name) + '</b><small>Уровень ' + Number(owned.level || 1) + '</small></span></label>' +
+      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-levels="' + id + '" ' + (item.levels !== false ? 'checked' : '') + '>уровни</label>' +
+      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-summon="' + id + '" ' + (item.summon !== false ? 'checked' : '') + '>призыв</label>' +
+      '<input class="input quick-settings-max" type="number" min="1" max="450" placeholder="макс." data-quick-warden-max="' + id + '" value="' + (item.max_level || '') + '"></div>';
+  }).join('') || '<p class="row-sub">В профиле пока нет смотрителей.</p>';
+  const lovers = Object.entries(state.account.ownedLovers || {}).map(([id, owned]) => {
+    const item = settings.lovers[id] || {};
+    const entity = GAME_DB.lovers.find(row => row.id === Number(id));
+    const name = entity ? tName('lover', entity.name) : id;
+    return '<div class="quick-entity-row"><label class="quick-settings-check"><input type="checkbox" data-quick-entity="lover" data-id="' + id + '" ' +
+      (!item.off ? 'checked' : '') + '><span><b>' + escHtml(name) + '</b><small>Близость ' + Number(owned.closeness || 0) + '</small></span></label>' +
+      '<label class="quick-settings-inline"><input type="checkbox" data-quick-lover-summon="' + id + '" ' + (item.summon !== false ? 'checked' : '') + '>призыв</label></div>';
+  }).join('') || '<p class="row-sub">В профиле пока нет партнёров.</p>';
+
   const html = '<section class="quick-calc-summary">' +
-    '<div class="card-title">Быстрый подсчёт</div>' +
-    '<div class="quick-calc-total">+' + fmt(report.gain?.total || 0) + '</div>' +
-    '<div class="row-sub">Локальный расчёт прироста по выбранному плану · ' + escHtml(calculationSnapshot.meta?.localEngineVersion || '') + '</div>' +
-    '<div class="quick-calc-grid">' +
-      '<div><span>Кровь</span><b>' + fmt(account.blood || 0) + '</b></div>' +
-      '<div><span>Конклав</span><b>' + fmt(account.conclaveExp || 0) + '</b></div>' +
-      '<div><span>Сад</span><b>' + fmt(account.courtyardExp || 0) + '</b></div>' +
-      '<div><span>Смотрители</span><b>' + Object.keys(account.ownedWardens || {}).length + '/' + GAME_DB.wardens.length + '</b></div>' +
-      '<div><span>Партнёры</span><b>' + Object.keys(account.ownedLovers || {}).length + '/' + GAME_DB.lovers.length + '</b></div>' +
-      '<div><span>Облики</span><b>' + Object.values(account.skins || {}).filter(value => Number(value) > 0).length + '</b></div>' +
-    '</div>' +
-    '<p class="row-sub">Это предварительный обзор локального расчёта. Неподтверждённые игровые формулы отмечаются отдельно в покрытии точности.</p>' +
-    '<div class="quick-calc-actions"><button class="btn btn-primary" data-modal-nav="calc_dominance">Подробный расчёт</button><button class="btn" data-modal-nav="resources">Ресурсы</button><button class="btn" data-modal-nav="conclave">Конклав и Сад</button></div>' +
+    '<div class="card-title">Quick Calculation · настройки</div>' +
+    '<div class="row-sub">Формат настроек восстановлен по официальному клиенту. Сам алгоритм оптимизации выполняется на сервере игры и в этой локальной копии не воспроизводится.</div>' +
+    '<label class="field-stack"><span>Цель оптимизации</span><select class="select" id="quick-goal">' + goals + '</select></label>' +
+    '<details open><summary>Что разрешено тратить</summary><div class="quick-settings-spend">' + spend + '</div></details>' +
+    '<details><summary>Атрибуты Конклава</summary><div class="quick-settings-inline-wrap">' + conclave + '</div></details>' +
+    '<details><summary>Участие смотрителей (' + Object.keys(state.account.ownedWardens || {}).length + ')</summary><div class="quick-settings-entities">' + wardens + '</div></details>' +
+    '<details><summary>Участие партнёров (' + Object.keys(state.account.ownedLovers || {}).length + ')</summary><div class="quick-settings-entities">' + lovers + '</div></details>' +
+    '<div class="quick-calc-actions"><button class="btn" id="quick-export-settings">Экспорт настроек JSON</button><button class="btn btn-primary" id="quick-import-response">Импортировать ответ API / HAR</button></div>' +
+    '<p class="row-sub">Импорт переносит подтверждённый сервером план в черновик. Он не списывает ресурсы и не меняет профиль. Вдохновения и отдельные предметы опыта пока сохраняются в списке неподдерживаемых полей.</p>' +
+    '<div class="quick-calc-actions"><button class="btn" id="quick-open-full-calc">Подробный расчёт</button><button class="btn" id="quick-close">Закрыть</button></div>' +
   '</section>';
   openAppModal('Быстрый подсчёт', html);
+
+  const body = document.getElementById('modal-body');
+  if (!body) return;
+  const refresh = () => renderQuickSettingsModal();
+  body.querySelector('#quick-goal')?.addEventListener('change', event => {
+    updateQuickSettings({ ...state.quickSettings, goal: event.target.value });
+    refresh();
+  });
+  body.querySelectorAll('[data-quick-spend]').forEach(input => input.addEventListener('change', event => {
+    const spend = { ...state.quickSettings.spend, [event.target.dataset.quickSpend]: event.target.checked };
+    updateQuickSettings({ ...state.quickSettings, spend });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-conclave]').forEach(input => input.addEventListener('change', () => {
+    const excluded = [...body.querySelectorAll('[data-quick-conclave]:not(:checked)')]
+      .map(node => node.dataset.quickConclave);
+    updateQuickSettings({ ...state.quickSettings, conclave_off: excluded });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-entity]').forEach(input => input.addEventListener('change', event => {
+    const kind = event.target.dataset.quickEntity === 'warden' ? 'wardens' : 'lovers';
+    const id = event.target.dataset.id;
+    const entities = { ...state.quickSettings[kind] };
+    const current = { ...(entities[id] || {}) };
+    if (event.target.checked) delete current.off;
+    else current.off = true;
+    if (Object.keys(current).length) entities[id] = current;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-warden-levels]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickWardenLevels;
+    const entities = { ...state.quickSettings.wardens };
+    const item = { ...(entities[id] || {}) };
+    if (event.target.checked) delete item.levels;
+    else item.levels = false;
+    entities[id] = item;
+    updateQuickSettings({ ...state.quickSettings, wardens: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-warden-summon]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickWardenSummon;
+    const entities = { ...state.quickSettings.wardens };
+    const item = { ...(entities[id] || {}) };
+    if (event.target.checked) delete item.summon;
+    else item.summon = false;
+    entities[id] = item;
+    updateQuickSettings({ ...state.quickSettings, wardens: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-lover-summon]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickLoverSummon;
+    const entities = { ...state.quickSettings.lovers };
+    const item = { ...(entities[id] || {}) };
+    if (event.target.checked) delete item.summon;
+    else item.summon = false;
+    entities[id] = item;
+    updateQuickSettings({ ...state.quickSettings, lovers: entities });
+    refresh();
+  }));
+  body.querySelectorAll('[data-quick-warden-max]').forEach(input => input.addEventListener('change', event => {
+    const id = event.target.dataset.quickWardenMax;
+    const entities = { ...state.quickSettings.wardens };
+    const item = { ...(entities[id] || {}) };
+    const value = Math.max(1, Math.min(450, Math.round(Number(event.target.value) || 0)));
+    if (event.target.value && Number.isFinite(value)) item.max_level = value;
+    else delete item.max_level;
+    if (Object.keys(item).length) entities[id] = item;
+    else delete entities[id];
+    updateQuickSettings({ ...state.quickSettings, wardens: entities });
+    refresh();
+  }));
+  body.querySelector('#quick-export-settings')?.addEventListener('click', downloadQuickSettings);
+  body.querySelector('#quick-import-response')?.addEventListener('click', importQuickResponseFile);
+  body.querySelector('#quick-open-full-calc')?.addEventListener('click', () => {
+    closeAppModal();
+    navigate('calc_dominance');
+  });
+  body.querySelector('#quick-close')?.addEventListener('click', closeAppModal);
+}
+
+function openQuickCalculation() {
+  if (!calculationSnapshot?.report) return;
+  renderQuickSettingsModal();
 }
 
 function openFormulaInfo() {
