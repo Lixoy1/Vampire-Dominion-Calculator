@@ -49,6 +49,11 @@ const firstBondLevels = Object.fromEntries(capturedLover.scarlet_bonds.map(bond 
 const bondResult = Engine.calcLoverBonds(capturedLover, 0, firstBondLevels, {}, 100);
 assert.equal(bondResult.spentAffinity, 0);
 assert.equal(bondResult.totalGain, 620);
+const secondBondLevels = Object.fromEntries(capturedLover.scarlet_bonds.map(bond => [bond.attribute, { level: 0, targetLevel: 2, percentLevel: 0, targetPercentLevel: 0 }]));
+const secondBondResult = Engine.calcLoverBonds(capturedLover, 1000, secondBondLevels, {}, 200);
+assert.equal(secondBondResult.spentAffinity, 114);
+assert.equal(secondBondResult.totalGain, 1302);
+assert.ok(secondBondResult.details.every(row => row.flatGainConfidence === 'exact_api_observation'));
 assert.equal(Engine.calcBondPercentCost(1), 20);
 
 // The captured Conclave levels 5–8 expose the next destination-level costs.
