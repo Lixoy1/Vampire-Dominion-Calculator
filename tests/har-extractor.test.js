@@ -28,8 +28,8 @@ const entry = {
 };
 const fixture = { log: { entries: [entry, structuredClone(entry)] } };
 
-// Simulate a HAR exporter inserting a hard line break inside a long body string.
-const wrapped = JSON.stringify(fixture).replace('"cost":894737', '"cost":894\\n737');
+// Simulate a HAR exporter inserting a raw line break inside a long body string.
+const wrapped = JSON.stringify(fixture).replace('"cost":894737', '"cost":894\n737');
 const har = parseHarText(wrapped);
 const result = extractHarObservations(har);
 
