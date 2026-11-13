@@ -29,7 +29,7 @@ assert.ok(blankAccount.includes('createOwnedWarden(GAME_DB.wardens[0])'), 'start
 assert.ok(blankAccount.includes('blood: 0') && blankAccount.includes('ownedLovers: {}'), 'new account begins with zero Blood and no Partners');
 const progress = fn('getAccountProgressPercent');
 assert.ok(progress.includes('Math.max(0'), 'empty profile can display zero-percent progress');
-assert.ok(!progress.includes('Math.max(1'), 'empty progress is not rounded up to a false one percent');
+assert.ok(progress.includes('return Math.max(0,'), 'empty progress is not rounded up to a false one percent');
 const homeDashboard = fn('renderHomeScreen');
 for (const marker of ['home-resource-grid','home-primary-actions','home-profile-progress','Подсчёт Господства','Быстрый подсчёт']) {
   assert.ok(homeDashboard.includes(marker), 'reference home dashboard includes ' + marker);
