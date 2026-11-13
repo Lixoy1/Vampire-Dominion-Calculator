@@ -1,0 +1,169 @@
+{
+  "source": "Sanitized successful POST /api/v1/accounts/{account}/calculations/quick HAR response, fourth capture 2026-11-13",
+  "request": {
+    "goal": "all",
+    "spend": {
+      "blood": true,
+      "promote_items": true,
+      "conclave": true,
+      "trust": true,
+      "group_items": true,
+      "presence_items": true,
+      "talent_items": true,
+      "talent_exp": true,
+      "skin_cards": true,
+      "fabric": true
+    },
+    "wardens": {},
+    "lovers": {}
+  },
+  "response": {
+    "conclave": {
+      "strength": null,
+      "allure": null,
+      "intellect": null,
+      "spirit": null
+    },
+    "levels": {
+      "10300": 87,
+      "10490": 64,
+      "10530": 100,
+      "10950": 194
+    },
+    "bonds": {
+      "20170": {
+        "strength": {
+          "level": 12,
+          "percent_level": 2
+        },
+        "allure": {
+          "level": 8,
+          "percent_level": null
+        },
+        "intellect": {
+          "level": 10,
+          "percent_level": null
+        },
+        "spirit": {
+          "level": 10,
+          "percent_level": null
+        }
+      },
+      "20280": {
+        "intellect": {
+          "level": 6,
+          "percent_level": null
+        }
+      },
+      "20500": {
+        "strength": {
+          "level": 3,
+          "percent_level": null
+        },
+        "allure": {
+          "level": 1,
+          "percent_level": null
+        },
+        "intellect": {
+          "level": 1,
+          "percent_level": null
+        },
+        "spirit": {
+          "level": 1,
+          "percent_level": null
+        }
+      }
+    },
+    "auras": {},
+    "skins": {},
+    "talents": {
+      "10250": {
+        "scrolls": {
+          "10": 1,
+          "15": 25
+        },
+        "scripts": {},
+        "exp_items": {},
+        "exp_levels": {
+          "29": 7
+        }
+      },
+      "10300": {
+        "scrolls": {},
+        "scripts": {},
+        "exp_items": {},
+        "exp_levels": {
+          "14": 10
+        }
+      },
+      "10960": {
+        "scrolls": {
+          "2": 1
+        },
+        "scripts": {},
+        "exp_items": {},
+        "exp_levels": {}
+      }
+    },
+    "presences": {}
+  },
+  "observedDominance": {
+    "bloodAvailable": 65000000,
+    "wardenIntervals": [
+      {
+        "warden_id": 10300,
+        "from": 50,
+        "to": 85,
+        "cost": 6131963,
+        "nextCost": 293043
+      },
+      {
+        "warden_id": 10300,
+        "from": 50,
+        "to": 87,
+        "cost": 6726205,
+        "nextCost": 309486
+      },
+      {
+        "warden_id": 10490,
+        "from": 50,
+        "to": 61,
+        "cost": 1206554,
+        "nextCost": 136440
+      },
+      {
+        "warden_id": 10490,
+        "from": 50,
+        "to": 64,
+        "cost": 1631077,
+        "nextCost": 151904
+      },
+      {
+        "warden_id": 10530,
+        "from": 50,
+        "to": 100,
+        "cost": 11443404,
+        "nextCost": 434739
+      },
+      {
+        "warden_id": 10950,
+        "from": 182,
+        "to": 191,
+        "cost": 33096771,
+        "nextCost": 3942763
+      },
+      {
+        "warden_id": 10950,
+        "from": 182,
+        "to": 194,
+        "cost": 45089824,
+        "nextCost": 4108454
+      }
+    ]
+  },
+  "notes": [
+    "This is one captured profile scenario, not a universal optimizer output.",
+    "The fixture contains only template IDs, requested targets, and calculation results; account identifiers, credentials, headers, and inventory snapshots are excluded.",
+    "The HAR also contains PATCH requests that mutate saved Warden and talent state. They are not replayed or stored in this fixture."
+  ]
+}

@@ -1,0 +1,290 @@
+{
+  "source_capture_date": "2026-11-13",
+  "source_endpoint": "POST /api/v1/accounts/{account}/calculations/dominance",
+  "note": "Only cost observations are retained. Server gain values varied between repeated responses for the same interval and are account-state dependent.",
+  "blood_known": {
+    "samples": [
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10260,
+        "from_level": 1,
+        "to_level": 50,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 894737,
+        "next_cost": 89785,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10260,
+        "from_level": 1,
+        "to_level": 51,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 984522,
+        "next_cost": 93374,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 1,
+        "to_level": 58,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 1720812,
+        "next_cost": 122150,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 1,
+        "to_level": 77,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 4960329,
+        "next_cost": 232490,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 1,
+        "to_level": 85,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 7026700,
+        "next_cost": 293043,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 1,
+        "to_level": 100,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 12338141,
+        "next_cost": 434739,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "fourth HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 50,
+        "to_level": 85,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 6131963,
+        "next_cost": 293043,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "fourth HAR capture, 2026-11-13",
+        "warden_id": 10300,
+        "from_level": 50,
+        "to_level": 87,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 6726205,
+        "next_cost": 309486,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10490,
+        "from_level": 50,
+        "to_level": 51,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 89785,
+        "next_cost": 93374,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10490,
+        "from_level": 50,
+        "to_level": 61,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 1206554,
+        "next_cost": 136440,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "fourth HAR capture, 2026-11-13",
+        "warden_id": 10490,
+        "from_level": 50,
+        "to_level": 64,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 1631077,
+        "next_cost": 151904,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10500,
+        "from_level": 2,
+        "to_level": 80,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 5679151,
+        "next_cost": 254218,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10500,
+        "from_level": 2,
+        "to_level": 95,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 10339710,
+        "next_cost": 380479,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "fourth HAR capture, 2026-11-13",
+        "warden_id": 10530,
+        "from_level": 50,
+        "to_level": 100,
+        "promote_from": 1,
+        "promote_to": 1,
+        "cost": 11443404,
+        "next_cost": 434739,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10950,
+        "from_level": 182,
+        "to_level": 186,
+        "promote_from": 3,
+        "promote_to": 3,
+        "cost": 14188250,
+        "next_cost": 3675875,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10950,
+        "from_level": 182,
+        "to_level": 191,
+        "promote_from": 3,
+        "promote_to": 3,
+        "cost": 33096771,
+        "next_cost": 3942763,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "fourth HAR capture, 2026-11-13",
+        "warden_id": 10950,
+        "from_level": 182,
+        "to_level": 194,
+        "promote_from": 3,
+        "promote_to": 3,
+        "cost": 45089824,
+        "next_cost": 4108454,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10950,
+        "from_level": 182,
+        "to_level": 196,
+        "promote_from": 3,
+        "promote_to": 3,
+        "cost": 53362888,
+        "next_cost": 4221230,
+        "confidence": "exact_interval"
+      },
+      {
+        "source": "third HAR capture, 2026-11-13",
+        "warden_id": 10950,
+        "from_level": 182,
+        "to_level": 197,
+        "promote_from": 3,
+        "promote_to": 3,
+        "cost": 57584118,
+        "next_cost": 4278313,
+        "confidence": "exact_interval"
+      }
+    ],
+    "exact_next_level_costs": [
+      {
+        "from_level": 51,
+        "cost": 93374,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 58,
+        "cost": 122150,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 77,
+        "cost": 232490,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 80,
+        "cost": 254218,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 85,
+        "cost": 293043,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 61,
+        "cost": 136440,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 95,
+        "cost": 380479,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 197,
+        "cost": 4278313,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 196,
+        "cost": 4221230,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 191,
+        "cost": 3942763,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 186,
+        "cost": 3675875,
+        "source": "third HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 64,
+        "cost": 151904,
+        "source": "fourth HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 87,
+        "cost": 309486,
+        "source": "fourth HAR capture: dominance response next_cost"
+      },
+      {
+        "from_level": 194,
+        "cost": 4108454,
+        "source": "fourth HAR capture: dominance response next_cost"
+      }
+    ]
+  }
+}

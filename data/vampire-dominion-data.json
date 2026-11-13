@@ -9,7 +9,31 @@
     "source_commit": "ebd7e9861e0df063c6d6c1f87b9f1d477b3da7bb",
     "engine_file": "scripts/engine.js",
     "engine_commit": "e8dc106b40bb98e474cf0ac73fa9cfd177ca9333",
-    "conversation_reference": "ПОЛНЫЙ_ДАМП_БЕСЕДЫ_Помощник_Дампира.pdf"
+    "conversation_reference": "ПОЛНЫЙ_ДАМП_БЕСЕДЫ_Помощник_Дампира.pdf",
+    "har_reconstruction": {
+      "source_files": [
+        "web.telegram.org.har",
+        "1web.telegram.org.har"
+      ],
+      "captured_game_api_host": "v1178755.hosted-by-vdsina.com",
+      "template_endpoints": [
+        "/api/v1/templates/wardens",
+        "/api/v1/templates/lovers",
+        "/api/v1/templates/items",
+        "/api/v1/templates/warden-promotes",
+        "/api/v1/templates/conclave-levels",
+        "/api/v1/templates/courtyard-levels"
+      ],
+      "verified_template_counts": {
+        "wardens": 68,
+        "lovers": 45,
+        "items": 240,
+        "warden_promotes": 8,
+        "conclave_levels": 180,
+        "courtyard_levels": 210
+      },
+      "note": "Counts and item additions were compared against successful HTTP 200 template responses in both HAR captures. Private account data and session credentials are excluded."
+    }
   },
   "catalog": {
     "wardens": [
@@ -28279,6 +28303,17 @@
         "icon_path": "items/10394101.9d9e5319.webp"
       },
       {
+        "id": 10464101,
+        "name": "WILLIAM_SKIN_1",
+        "category": "skin",
+        "tags": [
+          "for_warden",
+          "skin_s"
+        ],
+        "icon_path": null,
+        "api_icon_path": "items/10464101.185e0a90.webp"
+      },
+      {
         "id": 10514101,
         "name": "RUDRA_SKIN_1",
         "category": "skin",
@@ -28699,6 +28734,17 @@
         "icon_path": "items/20394101.f9e2905d.webp"
       },
       {
+        "id": 20464101,
+        "name": "REDD_SKIN_1_MALE",
+        "category": "skin",
+        "tags": [
+          "for_lover",
+          "skin_s"
+        ],
+        "icon_path": null,
+        "api_icon_path": "items/20464101.a7a8594d.webp"
+      },
+      {
         "id": 20544101,
         "name": "DIONYSUS_SKIN_1_MALE",
         "category": "skin",
@@ -28987,6 +29033,17 @@
           "skin_s"
         ],
         "icon_path": "items/30394101.68787184.webp"
+      },
+      {
+        "id": 30464101,
+        "name": "REDD_SKIN_1_FEMALE",
+        "category": "skin",
+        "tags": [
+          "for_lover",
+          "skin_s"
+        ],
+        "icon_path": null,
+        "api_icon_path": "items/30464101.61f8de6b.webp"
       },
       {
         "id": 30514101,
@@ -34426,7 +34483,7 @@
     ],
     "blood_known": {
       "status": "partial_exact_api_observation",
-      "note": "Only this complete interval cost is confirmed by the supplied API dump. It is not a complete blood-cost curve.",
+      "note": "Several exact aggregate intervals and next-level costs are confirmed by HAR/API observations. They do not define a complete per-level blood-cost curve; all other steps remain approximation-only.",
       "samples": [
         {
           "source": "conversation PDF, section 6.2",
@@ -34447,6 +34504,233 @@
           "blood_left": 63943127,
           "max_target": 150,
           "max_gain": 1331252
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10270,
+          "from_level": 1,
+          "to_level": 3,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 384,
+          "next_cost": 461,
+          "gain": 50,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10280,
+          "from_level": 1,
+          "to_level": 7,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 3765,
+          "next_cost": 1614,
+          "gain": 641,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 10,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 9799,
+          "next_cost": 2883,
+          "gain": 2051,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 3,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 384,
+          "next_cost": 461,
+          "gain": 57,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 11,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 12682,
+          "next_cost": 3382,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 4,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 845,
+          "next_cost": 691,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 5,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 1536,
+          "next_cost": 961,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 100,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 12338141,
+          "next_cost": 434739,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10170,
+          "from_level": 150,
+          "to_level": 153,
+          "promote_from": 3,
+          "promote_to": 3,
+          "cost": 6396048,
+          "next_cost": 2204807,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10540,
+          "from_level": 258,
+          "to_level": 259,
+          "promote_from": 5,
+          "promote_to": 5,
+          "cost": 29999162,
+          "next_cost": 30745656,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10950,
+          "from_level": 182,
+          "to_level": 200,
+          "promote_from": 3,
+          "promote_to": 3,
+          "cost": 70592158,
+          "next_cost": 8858383,
+          "confidence": "exact_interval"
+        }
+      ],
+      "exact_next_level_costs": [
+        {
+          "from_level": 1,
+          "cost": 115,
+          "source": "HAR dominance response next_cost"
+        },
+        {
+          "from_level": 2,
+          "cost": 269,
+          "source": "difference between exact 1->3 interval and level 1 next_cost"
+        },
+        {
+          "from_level": 3,
+          "cost": 461,
+          "source": "HAR dominance response next_cost after target 3"
+        },
+        {
+          "from_level": 7,
+          "cost": 1614,
+          "source": "HAR dominance response next_cost after target 7"
+        },
+        {
+          "from_level": 10,
+          "cost": 2883,
+          "source": "HAR dominance response next_cost after target 10"
+        },
+        {
+          "from_level": 150,
+          "cost": 2096083,
+          "source": "HAR dominance response next_cost"
+        },
+        {
+          "from_level": 182,
+          "cost": 3470701,
+          "source": "HAR dominance response next_cost"
+        },
+        {
+          "from_level": 258,
+          "cost": 29999162,
+          "source": "HAR dominance response next_cost"
+        },
+        {
+          "from_level": 4,
+          "cost": 691,
+          "source": "HAR dominance response next_cost after target level 4"
+        },
+        {
+          "from_level": 5,
+          "cost": 961,
+          "source": "HAR dominance response next_cost after target level 5"
+        },
+        {
+          "from_level": 11,
+          "cost": 3382,
+          "source": "HAR dominance response next_cost after target level 11"
+        },
+        {
+          "from_level": 100,
+          "cost": 434739,
+          "source": "HAR dominance response next_cost after target level 100"
+        },
+        {
+          "from_level": 153,
+          "cost": 2204807,
+          "source": "HAR dominance response next_cost after target level 153"
+        },
+        {
+          "from_level": 200,
+          "cost": 8858383,
+          "source": "HAR dominance response next_cost after target level 200"
+        },
+        {
+          "from_level": 259,
+          "cost": 30745656,
+          "source": "HAR dominance response next_cost after target level 259"
+        },
+        {
+          "from_level": 50,
+          "cost": 89785,
+          "source": "HAR dominance response next_cost at level 50"
+        },
+        {
+          "from_level": 250,
+          "cost": 25316634,
+          "source": "HAR dominance response next_cost at level 250"
+        },
+        {
+          "from_level": 300,
+          "cost": 126095128,
+          "source": "HAR dominance response next_cost at level 300"
+        },
+        {
+          "from_level": 350,
+          "cost": 624596836,
+          "source": "HAR dominance response next_cost at level 350"
+        },
+        {
+          "from_level": 400,
+          "cost": 6884526660,
+          "source": "HAR dominance response next_cost at level 400"
         }
       ]
     },
@@ -34505,6 +34789,103 @@
       "Catalog and full conclave/courtyard tables were copied from scripts/data.js in the repository.",
       "Blood interval is the one exact aggregate API observation transcribed in PDF section 6.2.",
       "Blood progression formula is retained as an approximation from scripts/engine.js, not upgraded to exact data."
-    ]
+    ],
+    "bond_known": {
+      "status": "partial_exact_api_observation",
+      "observations": [
+        {
+          "bond_id": 1701,
+          "attribute": "strength",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 120,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 132,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
+        },
+        {
+          "bond_id": 1702,
+          "attribute": "allure",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 100,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 110,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
+        },
+        {
+          "bond_id": 1703,
+          "attribute": "intellect",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 100,
+          "flat_cost": 0,
+          "next_flat_cost": 20,
+          "next_flat_gain": 110,
+          "percent_next_cost": 20,
+          "percent_next_gain": 1,
+          "source": "HAR dominance response"
+        },
+        {
+          "bond_id": 1704,
+          "attribute": "spirit",
+          "from_level": 0,
+          "to_level": 1,
+          "flat_gain": 300,
+          "flat_cost": 0,
+          "next_flat_cost": 54,
+          "next_flat_gain": 330,
+          "percent_next_cost": 54,
+          "percent_next_gain": 3,
+          "source": "HAR dominance response"
+        }
+      ],
+      "note": "Values are exact for captured bond templates 1701–1704 through the second flat level (using the API next_gain fields). The percent next_gain values are captured forecasts, not separately exercised applied upgrades. Higher bond levels and other bond templates remain unverified."
+    },
+    "account_limits": {
+      "warden_max_level": 450,
+      "source": "HAR /api/v1/limits and /api/v1/templates/warden-promotes",
+      "confidence": "verified"
+    },
+    "warden_level_gain_known": {
+      "status": "account_state_observations",
+      "observations": [
+        {
+          "warden_id": 10270,
+          "from_level": 1,
+          "to_level": 3,
+          "gain": 50,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10280,
+          "from_level": 1,
+          "to_level": 7,
+          "gain": 641,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 10,
+          "gain": 2051,
+          "source": "HAR dominance response"
+        },
+        {
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 3,
+          "gain": 57,
+          "source": "HAR dominance response"
+        }
+      ],
+      "note": "These are exact values returned for the captured account states only. Repeated HAR responses show gain can vary for the same Warden and interval while Blood cost remains stable. Retain as diagnostic observations; do not use as a universal level-gain formula."
+    }
   }
 }

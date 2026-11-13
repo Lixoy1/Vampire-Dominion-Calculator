@@ -31,7 +31,7 @@ assert.ok(planner.includes('Engine.calculateTotalDominanceReport'));
 assert.equal(typeof Engine.calculateTotalDominanceReport, 'function');
 assert.equal(typeof Planner.calculateLocalSnapshot, 'function');
 
-const expected = { wardens:68, lovers:45, items:237, warden_promotes:8, conclave_levels:180, courtyard_levels:210, lover_presence_levels:155 };
+const expected = { wardens:68, lovers:45, items:240, warden_promotes:8, conclave_levels:180, courtyard_levels:210, lover_presence_levels:155 };
 for (const [key,count] of Object.entries(expected)) assert.equal(GAME_DB[key].length, count, key + ' count');
 for (const path of ['../scripts/app.js','../scripts/data.js','../scripts/engine.js','../scripts/local-planner.js','../assets/css/style.css','../assets/crest.svg']) {
   assert.ok(existsSync(new URL(path, import.meta.url)), 'static file exists: ' + path);

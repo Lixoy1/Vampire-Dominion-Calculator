@@ -6,6 +6,7 @@
  */
 import { GAME_DB, CALCULATION_REFERENCE } from './data.js';
 import * as Engine from './engine.js';
+import { normalizeQuickSettings, summarizeQuickSettings } from './quick-settings.js';
 
 export const LOCAL_ENGINE_VERSION = '1.8.0';
 export const LOCAL_ENGINE_SCHEMA_VERSION = 1;
@@ -55,7 +56,7 @@ function normalizeAccount(input = {}) {
     const warden = record(raw);
     ownedWardens[id] = {
       ...warden,
-      level: Math.max(1, Math.min(500, Math.round(numeric(warden.level, 1)))),
+      level: Math.max(1, Math.min(GAME_DB.limits?.levels?.max_warden_lvl ?? 450, Math.round(numeric(warden.level, 1)))),
       promoteId: Math.max(1, Math.min(db.promotes.length, Math.round(numeric(warden.promoteId, 1)))),
       exp: nonNegative(warden.exp),
       talents: record(warden.talents),
@@ -119,6 +120,7 @@ function normalizePlan(input = {}, account) {
     levels: {},
     promotes: {},
     bonds: {},
+    auras: Object.fromEntries(Object.entries(record(source.auras)).filter(([id]) => /^\d+$/.test(id)).map(([id, levels]) => [id, clone(record(levels))])),
     presences: {},
     skins: Object.fromEntries(Object.entries(record(source.skins)).filter(([id]) => {
       const skinId = Number(id);
@@ -326,7 +328,7 @@ function getPresenceUpgradeUsage(plan, account) {
   return { byItem, byPresence, missingRows, totalCost };
 }
 
-function runPresenceAutoDistribution(account, plan, availableBag = account.bag) {
+function runPresenceAutoDistribution(account, plan, availableBag = account.bag, quickSettings = null) {
   const nextPlan = { ...plan, presences: clone(record(plan.presences)) };
   const reserved = getPresenceUpgradeUsage(nextPlan, account);
   const bag = { ...availableBag };
@@ -341,9 +343,10 @@ function runPresenceAutoDistribution(account, plan, availableBag = account.bag) 
     let best = null;
     for (const lover of db.lovers) {
       const owned = account.ownedLovers[lover.id];
-      if (!owned) continue;
+      const loverRule = quickSettings?.lovers?.[lover.id] || {};
+      if (!owned || loverRule.off) continue;
       for (const presence of lover.presences || []) {
-        if (presence.presence_type !== 'updatable') continue;
+        if (presence.presence_type !== 'updatable' || (loverRule.presences_off || []).includes(presence.id)) continue;
         const itemId = Math.round(numeric(presence.upgrade_item_id));
         if (!itemId) continue;
         const current = Math.max(presence.min_lvl || 0,
@@ -360,10 +363,14 @@ function runPresenceAutoDistribution(account, plan, availableBag = account.bag) 
         const after = Engine.calcPresencePercents(presence, nextLevel, db.presenceCurvesMap);
         const gain = ATTRIBUTES.reduce((sum, attr) => sum + Math.max(0, numeric(after[attr]) - numeric(before[attr])), 0);
         if (gain <= 0) continue;
-        const efficiency = gain / cost;
-        if (!best || efficiency > best.efficiency ||
-            (efficiency === best.efficiency && presence.id < best.presence.id)) {
-          best = { lover, presence, itemId, cost, nextLevel, gain, efficiency };
+        const goalAttribute = quickSettings && quickSettings.goal !== 'all' ? quickSettings.goal : null;
+        const priorityGain = goalAttribute ? Math.max(0, numeric(after[goalAttribute]) - numeric(before[goalAttribute])) : 0;
+        const preferred = Boolean(goalAttribute && priorityGain > 0);
+        const efficiency = (preferred ? priorityGain : gain) / cost;
+        if (!best || (preferred && !best.preferred) ||
+            (preferred === best.preferred && (efficiency > best.efficiency ||
+              (efficiency === best.efficiency && presence.id < best.presence.id)))) {
+          best = { lover, presence, itemId, cost, nextLevel, gain, efficiency, preferred };
         }
       }
     }
@@ -479,7 +486,7 @@ function getTalentPlanUsage(plan, ownedWardens) {
   return { byItem, byWarden, expByWarden, expLevels, expSpentTotal, scrollLevels, scriptLevels, totalLevels };
 }
 
-function buildTalentDistributionBlock(account, plan, availableBag = account.bag) {
+function buildTalentDistributionBlock(account, plan, availableBag = account.bag, quickSettings = null) {
   const groups = { scrolls: new Map(), scripts: new Map() };
   const ownExp = [];
   const usage = getTalentPlanUsage(plan, account.ownedWardens);
@@ -499,6 +506,8 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
 
     for (let position = 0; position < warden.talents.length; position++) {
       const talent = warden.talents[position];
+      const wardenRule = quickSettings?.wardens?.[wardenId] || {};
+      if (wardenRule.off || (wardenRule.talents_off || []).includes(position)) continue;
       if (!talent.scroll_item_id && !talent.script_item_id) continue;
       const baseLevel = Math.max(1, Math.min(cap, Math.round(numeric(record(owned.talents)[position], 1))));
       const scrollChosen = Math.max(0, Math.round(numeric(selectedScrolls[position])));
@@ -565,8 +574,8 @@ function buildTalentDistributionBlock(account, plan, availableBag = account.bag)
   };
 }
 
-function runTalentAutoDistribution(account, plan, availableBag = account.bag) {
-  const block = buildTalentDistributionBlock(account, plan, availableBag);
+function runTalentAutoDistribution(account, plan, availableBag = account.bag, quickSettings = null) {
+  const block = buildTalentDistributionBlock(account, plan, availableBag, quickSettings);
   const result = Engine.autoDistributeTalents(block, plan.talents || {});
   const nextPlan = { ...plan, talents: result.after };
   return {
@@ -954,16 +963,19 @@ export function autoDistributePresencePlan(input = {}) {
 
 export function autoDistributeBondPlan(input = {}) {
   const raw = record(input);
+  const quickSettings = raw.quickSettings ? normalizeQuickSettings(raw.quickSettings) : null;
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
   let addedLevels = 0;
   let addedAffinity = 0;
   let estimatedGain = 0;
+  const goalAttribute = quickSettings && quickSettings.goal !== 'all' ? quickSettings.goal : null;
   const byLover = {};
 
   for (const [loverId, owned] of Object.entries(account.ownedLovers)) {
     const lover = db.lovers.find(item => item.id === Number(loverId));
-    if (!lover?.scarlet_bonds?.length) continue;
+    const loverRule = quickSettings?.lovers?.[loverId] || {};
+    if (!lover?.scarlet_bonds?.length || loverRule.off || quickSettings?.spend?.trust === false) continue;
     const states = clone(record(plan.bonds[loverId]));
     const wardenBaseAttrs = getWardenBaseAttributes(lover.warden_id, account, plan);
     const currentResult = Engine.calcLoverBonds(
@@ -979,30 +991,39 @@ export function autoDistributeBondPlan(input = {}) {
       let best = null;
       for (const bond of lover.scarlet_bonds) {
         const state = record(states[bond.attribute]);
+        const excludedBond = (loverRule.bonds_off || []).some(item => item.attribute === bond.attribute && item.kind === 'level');
         const flatLevel = Math.max(numeric(state.level), numeric(state.targetLevel, numeric(state.level)));
-        if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
-          const cost = Engine.calcBondLevelCost(flatLevel + 1);
-          const gain = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-          if (cost > 0 && cost <= remaining) {
-            const efficiency = gain / cost;
-            if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1 };
+        if (!excludedBond && owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
+          const cost = Engine.calcBondLevelCost(flatLevel + 1, bond);
+          const observed = Engine.BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+          const gain = flatLevel === 0 && observed
+            ? observed.flatGain
+            : bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
+          if (cost >= 0 && cost <= remaining && gain > 0) {
+            const efficiency = cost === 0 ? Number.POSITIVE_INFINITY : gain / cost;
+            const preferred = Boolean(goalAttribute && bond.attribute === goalAttribute && gain > 0);
+            if (!best || (preferred && !best.preferred) ||
+                (preferred === best.preferred && efficiency > best.efficiency)) {
+              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, preferred, nextLevel: flatLevel + 1 };
             }
           }
         }
 
         const currentPercent = Math.max(0, numeric(state.percentLevel, numeric(state.pctLevel)));
         const targetPercent = Math.max(currentPercent, numeric(state.targetPercentLevel, currentPercent));
-        if (owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
-          const cost = Engine.calcBondPercentCost(targetPercent + 1);
+        const excludedPercent = (loverRule.bonds_off || []).some(item => item.attribute === bond.attribute && item.kind === 'percent');
+        if (!excludedPercent && owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
+          const cost = Engine.calcBondPercentCost(targetPercent + 1, bond);
           const step = bond.is_advantage ? 0.005 : 0.0025;
           const previousGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent - currentPercent) * step);
           const nextGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent + 1 - currentPercent) * step);
           const gain = nextGain - previousGain;
           if (cost > 0 && cost <= remaining && gain > 0) {
             const efficiency = gain / cost;
-            if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, nextLevel: targetPercent + 1 };
+            const preferred = Boolean(goalAttribute && bond.attribute === goalAttribute && gain > 0);
+            if (!best || (preferred && !best.preferred) ||
+                (preferred === best.preferred && efficiency > best.efficiency)) {
+              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, preferred, nextLevel: targetPercent + 1 };
             }
           }
         }
@@ -1039,22 +1060,155 @@ export function autoDistributeBondPlan(input = {}) {
   };
 }
 
+function maskQuickResources(account, settings) {
+  const masked = clone(account);
+  const clearItems = ids => {
+    for (const id of ids) masked.bag[id] = 0;
+  };
+  const promoteItems = db.promotes.flatMap(item => item.item_ids || []);
+  const summonAndAuraItems = [
+    ...db.wardens.map(item => item.summon_item_id),
+    ...db.wardens.flatMap(item => (item.auras || []).map(aura => aura.upgrade_item_id)),
+    ...db.lovers.map(item => item.summon_item_id),
+  ].filter(id => id != null);
+  const presenceItems = db.lovers.flatMap(item =>
+    (item.presences || []).filter(presence => presence.presence_type === 'updatable').map(presence => presence.upgrade_item_id)
+  ).filter(id => id != null);
+  const talentItems = db.wardens.flatMap(item => (item.talents || []).flatMap(talent =>
+    [talent.scroll_item_id, talent.script_item_id]
+  )).filter(id => id != null);
+  const skinCards = [
+    ...db.wardens.flatMap(item => (item.skins || []).map(skin => skin.id)),
+    ...db.lovers.flatMap(item => (item.skins || []).map(skin => skin.id)),
+  ];
+  const fabrics = [4421, 4422, 4423];
+
+  if (!settings.spend.blood) masked.blood = 0;
+  if (!settings.spend.conclave) masked.conclaveExp = 0;
+  if (!settings.spend.trust) {
+    for (const lover of Object.values(masked.ownedLovers)) lover.affinity = 0;
+  }
+  if (!settings.spend.talent_exp) {
+    for (const warden of Object.values(masked.ownedWardens)) warden.exp = 0;
+  }
+  if (!settings.spend.promote_items) clearItems(promoteItems);
+  if (!settings.spend.group_items) clearItems(summonAndAuraItems);
+  if (!settings.spend.presence_items) clearItems(presenceItems);
+  if (!settings.spend.talent_items) clearItems(talentItems);
+  if (!settings.spend.skin_cards) clearItems(skinCards);
+  if (!settings.spend.fabric) clearItems(fabrics);
+  return masked;
+}
+
+/**
+ * Local offline reconstruction of the original Quick Calculation.
+ *
+ * Settings and entity exclusions follow the captured UI/API contract. The
+ * resource optimizer uses our local, confidence-labelled mechanics; it does
+ * not claim parity with the unavailable server optimizer for unsupported
+ * aura/skin formulas.
+ */
+export function autoDistributeQuick(input = {}) {
+  const raw = record(input);
+  const settings = normalizeQuickSettings(raw.settings ?? raw.quickSettings ?? {});
+  const account = normalizeAccount(raw.account);
+  const maskedAccount = maskQuickResources(account, settings);
+  // The original quick calculator replaces the plan's selected targets rather
+  // than incrementally extending an earlier manual draft.
+  const freshPlan = {
+    conclave: { ...account.conclave },
+    courtyardToLvl: account.courtyardLvl,
+    levels: {},
+    promotes: {},
+    talents: {},
+    bonds: {},
+    auras: {},
+    presences: {},
+    skins: {},
+    summons: { wardens: [], lovers: [] },
+  };
+  const result = autoDistributeAll({
+    account: maskedAccount,
+    plan: freshPlan,
+    quickSettings: settings,
+  });
+
+  // The original Quick Calculation response has no Courtyard field and does
+  // not include Courtyard in its eight-step flow. Keep it out of this plan.
+  result.plan.courtyardToLvl = account.courtyardLvl;
+
+  // The API quick-plan contract contains changed targets only. Do not emit
+  // every owned Warden at their unchanged current level.
+  result.plan.levels = Object.fromEntries(
+    Object.entries(result.plan.levels || {}).filter(([id, target]) =>
+      Number(target) > Number(account.ownedWardens[id]?.level || 1)
+    )
+  );
+  result.plan.promotes = Object.fromEntries(
+    Object.entries(result.plan.promotes || {}).filter(([id, target]) =>
+      Number(target) > Number(account.ownedWardens[id]?.promoteId || 1)
+    )
+  );
+
+  const unsupported = [];
+  if (settings.spend.blood && Object.entries(result.plan.levels || {}).some(([id, target]) =>
+    Number(target) > Number(account.ownedWardens[id]?.level || 1)
+  )) unsupported.push({
+    code: 'QUICK_WARDEN_GAIN_APPROXIMATE',
+    message: 'Прирост Господства от уровней смотрителей для большинства уровней пока рассчитан локальной моделью, а не полностью сверенной формулой сервера.',
+  });
+  if (settings.spend.presence_items && Object.keys(result.plan.presences || {}).length) unsupported.push({
+    code: 'QUICK_PRESENCE_OBJECTIVE_APPROXIMATE',
+    message: 'Веяния распределяются по приросту процентных пунктов и стоимости жетонов. Это не доказанный максимум абсолютного Господства.',
+  });
+  if (settings.spend.group_items) unsupported.push({
+    code: 'QUICK_AURAS_NOT_OPTIMIZED',
+    message: 'Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.',
+  });
+  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push({
+    code: 'QUICK_SKINS_NOT_OPTIMIZED',
+    message: 'Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.',
+  });
+  return {
+    ...result,
+    quickSettings: settings,
+    settingsSummary: summarizeQuickSettings(settings),
+    warnings: [...(result.warnings || []), ...unsupported],
+    precision: {
+      blood: 'mixed_exact_observations_and_approximation',
+      wardenDominance: 'local_model_not_full_api_parity',
+      bonds: 'captured_first_steps_exact_later_steps_estimated',
+      presences: 'curve_based_percentage_greed_is_not_total_dominance',
+      auras: 'not_auto_allocated',
+      skins: 'not_auto_allocated',
+      optimizer: 'deterministic_local_heuristic_not_server_algorithm_clone',
+    },
+  };
+}
+
 export function autoDistributeAll(input = {}) {
   const raw = record(input);
+  const quickSettings = raw.quickSettings ? normalizeQuickSettings(raw.quickSettings) : null;
   const account = normalizeAccount(raw.account);
   const plan = normalizePlan(raw.plan, account);
   const wardensByAttribute = {};
   for (const attribute of ATTRIBUTES) {
     wardensByAttribute[attribute] = db.wardens.filter(warden =>
-      account.ownedWardens[warden.id] && warden.attributes.includes(attribute)
+      account.ownedWardens[warden.id] && !quickSettings?.wardens?.[warden.id]?.off && warden.attributes.includes(attribute)
     ).length || 1;
   }
 
+  const goalAttribute = quickSettings && quickSettings.goal !== 'all' ? quickSettings.goal : null;
+  const excludedConclave = quickSettings?.spend?.conclave === false
+    ? ['strength', 'allure', 'intellect', 'spirit']
+    : (quickSettings?.conclave_off || []);
   plan.conclave = Engine.autoDistributeConclave(
     db.conclaveLevels,
     account.conclave,
-    account.conclaveExp,
-    wardensByAttribute
+    quickSettings?.spend?.conclave === false ? 0 : account.conclaveExp,
+    wardensByAttribute,
+    excludedConclave,
+    goalAttribute
   ).levels;
   plan.courtyardToLvl = Engine.calcMaxCourtyardLevel(
     db.courtyardLevels,
@@ -1076,23 +1230,35 @@ export function autoDistributeAll(input = {}) {
     let bestEfficiency = 0;
     for (const [id, owned] of Object.entries(account.ownedWardens)) {
       const warden = db.wardens.find(item => item.id === Number(id));
-      if (!warden) continue;
+      const rule = quickSettings?.wardens?.[id] || {};
+      if (!warden || rule.off || rule.levels === false) continue;
       const from = nextLevels[id];
-      if (from >= 450) continue;
+      const maxLevel = Math.min(450, Math.max(1, Number(rule.max_level) || 450));
+      if (from >= maxLevel) continue;
+      const blockedRequiredPromote = db.promotes.some(item =>
+        item.id > nextPromotes[id] && item.min_warden_lvl < from + 1 && (rule.promotes_off || []).includes(item.id)
+      );
+      if (blockedRequiredPromote) continue;
+      const allowedPromotes = db.promotes;
       const step = Engine.calcWardenLevelsUpgrade(
         warden,
         from,
         from + 1,
         nextPromotes[id],
-        db.promotes,
+        allowedPromotes,
         tempBag,
         owned.talents || {}
       );
       if (!step.canPromote || step.bloodSpent <= 0 || step.bloodSpent > bloodLeft) continue;
-      const efficiency = step.baseGain / step.bloodSpent;
-      if (efficiency > bestEfficiency) {
+      const attributeGain = goalAttribute
+        ? Engine.calcWardenAttributeGain(warden, from, from + 1, owned.talents || {})[goalAttribute] || 0
+        : 0;
+      const efficiency = (goalAttribute && attributeGain > 0 ? attributeGain : step.baseGain) / step.bloodSpent;
+      const prioritizesGoal = Boolean(goalAttribute && attributeGain > 0);
+      if (!best || (prioritizesGoal && !best.prioritizesGoal) ||
+          (prioritizesGoal === best.prioritizesGoal && efficiency > bestEfficiency)) {
         bestEfficiency = efficiency;
-        best = { id, step, promoteId: nextPromotes[id] };
+        best = { id, step, promoteId: nextPromotes[id], prioritizesGoal };
       }
     }
     if (!best) break;
@@ -1122,14 +1288,6 @@ export function autoDistributeAll(input = {}) {
     tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
   }
 
-  // Plan scrolls, scripts and personal EXP against resources remaining after
-  // Warden breakthrough and existing skin reservations.
-  const talentDistribution = runTalentAutoDistribution(account, plan, tempBag);
-  plan.talents = talentDistribution.plan.talents;
-  for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
-    tempBag[itemId] = Math.max(0, (tempBag[itemId] || 0) - count);
-  }
-
   // Reserve summon resources through one shared bag ledger. A Lover can be
   // auto-selected only when their Warden is already owned or included above.
   plan.summons.wardens = [];
@@ -1145,9 +1303,12 @@ export function autoDistributeAll(input = {}) {
   ).wardens;
   plan.summons.lovers = [];
   for (const candidate of wardenCandidates) {
-    if (!candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
+    const rule = quickSettings?.wardens?.[candidate.id] || {};
+    // A zero-cost catalog entry is not proof that the game currently allows a summon.
+    // Require an actual summon item until a captured Quick response confirms otherwise.
+    if (rule.off || rule.summon === false || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
+    if ((summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.wardens.push(candidate.id);
     ownedWardenIds.add(candidate.id);
   }
@@ -1160,15 +1321,25 @@ export function autoDistributeAll(input = {}) {
     summonBag
   ).lovers;
   for (const candidate of loverCandidates) {
-    if (!candidate.hasWarden || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
-    if (candidate.itemId && (summonBag[candidate.itemId] || 0) < candidate.cost) continue;
-    if (candidate.itemId) summonBag[candidate.itemId] -= candidate.cost;
+    const rule = quickSettings?.lovers?.[candidate.id] || {};
+    if (rule.off || rule.summon === false || !candidate.hasWarden || !candidate.canSummon || !candidate.itemId || candidate.cost <= 0) continue;
+    if ((summonBag[candidate.itemId] || 0) < candidate.cost) continue;
+    summonBag[candidate.itemId] -= candidate.cost;
     plan.summons.lovers.push(candidate.id);
   }
 
-  const presenceDistribution = runPresenceAutoDistribution(account, plan, summonBag);
+  // Match the captured Quick stage order: summon first, then talents. Both
+  // stages share this same mutable inventory ledger so an item cannot be
+  // allocated twice if a future catalog revision reuses an item category.
+  const talentDistribution = runTalentAutoDistribution(account, plan, summonBag, quickSettings);
+  plan.talents = talentDistribution.plan.talents;
+  for (const [itemId, count] of Object.entries(talentDistribution.usage.byItem)) {
+    summonBag[itemId] = Math.max(0, (summonBag[itemId] || 0) - count);
+  }
+
+  const presenceDistribution = runPresenceAutoDistribution(account, plan, summonBag, quickSettings);
   plan.presences = presenceDistribution.plan.presences;
-  const bondDistribution = autoDistributeBondPlan({ account, plan });
+  const bondDistribution = autoDistributeBondPlan({ account, plan, quickSettings });
   Object.assign(plan, bondDistribution.plan);
   return {
     plan,

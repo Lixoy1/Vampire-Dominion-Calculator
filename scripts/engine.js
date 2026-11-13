@@ -1,3 +1,5 @@
+import { CALCULATION_REFERENCE } from './data.js';
+
 /**
  * ============================================================================
  * VAMPIRE DOMINION / ПОМОЩНИК ДАМПИРА — ПОЛНЫЙ ДВИЖОК РАСЧЁТОВ И ОПТИМИЗАЦИИ
@@ -484,7 +486,7 @@ export function calcConclaveBranch(conclaveLevels, fromLvl, toLvl, activeWardens
   };
 }
 
-export function autoDistributeConclave(conclaveLevels, currentLevels, availablePoints, wardensByAttr, excludedAttrs = []) {
+export function autoDistributeConclave(conclaveLevels, currentLevels, availablePoints, wardensByAttr, excludedAttrs = [], priorityAttribute = null) {
   const levels = { ...currentLevels };
   let left = availablePoints;
   const maxLvl = conclaveLevels.length;
@@ -492,6 +494,8 @@ export function autoDistributeConclave(conclaveLevels, currentLevels, availableP
   while (true) {
     let bestAttr = null;
     let bestEff = 0;
+    let bestPriorityAttr = null;
+    let bestPriorityEff = 0;
 
     for (const attr of ATTRIBUTES) {
       if (excludedAttrs.includes(attr)) continue;
@@ -509,13 +513,18 @@ export function autoDistributeConclave(conclaveLevels, currentLevels, availableP
         bestEff = eff;
         bestAttr = attr;
       }
+      if (attr === priorityAttribute && eff > bestPriorityEff) {
+        bestPriorityEff = eff;
+        bestPriorityAttr = attr;
+      }
     }
 
-    if (!bestAttr) break;
-    const nextLvl = (levels[bestAttr] ?? 0) + 1;
+    const selectedAttr = bestPriorityAttr || bestAttr;
+    if (!selectedAttr) break;
+    const nextLvl = (levels[selectedAttr] ?? 0) + 1;
     const cost = conclaveLevels.find(r => r.id === nextLvl).cost;
     left -= cost;
-    levels[bestAttr] = nextLvl;
+    levels[selectedAttr] = nextLvl;
   }
 
   return { levels, spent: availablePoints - left, left };
@@ -570,6 +579,26 @@ export function calcMaxCourtyardLevel(courtyardLevels, currentLvl, availablePoin
  *   ΔAttr(L -> L+1) = TotalTalentStarsLevel * (L + 1) / 10  (для L >= 1)
  * - Полный расчёт статов смотрителя по всем 4 атрибутам с учётом Вдохновений (Auras), Обликов, Кровных Уз, Конклава и Сада.
  */
+export function calcWardenTalentAttributeSums(warden, talentLevelsByPos = {}) {
+  const totals = Object.fromEntries(ATTRIBUTES.map(attribute => [attribute, 0]));
+  for (const [index, talent] of (warden.talents || []).entries()) {
+    const attribute = talent.attribute;
+    if (!ATTRIBUTES.includes(attribute)) continue;
+    const level = Math.max(0, Number(talentLevelsByPos[index] ?? 1) || 0);
+    totals[attribute] += level * (Number(talent.stars) || 0);
+  }
+  return totals;
+}
+
+export function calcWardenAttributeGain(warden, fromLevel, toLevel, talentLevelsByPos = {}) {
+  const delta = calcWardenLevelMultiplier(toLevel) - calcWardenLevelMultiplier(fromLevel);
+  const totals = calcWardenTalentAttributeSums(warden, talentLevelsByPos);
+  return Object.fromEntries(ATTRIBUTES.map(attribute => [
+    attribute,
+    Math.round(totals[attribute] * delta),
+  ]));
+}
+
 export function calcWardenTalentSum(warden, talentLevelsByPos = {}) {
   // По умолчанию каждый талант имеет 1-й уровень при призыве
   return warden.talents.reduce((sum, t, idx) => {
@@ -590,7 +619,15 @@ export function calcWardenLevelMultiplier(level) {
 /**
  * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
  */
+// Exact single-step costs exposed as next_cost by captured dominance responses.
+export const BLOOD_COST_EXACT_STEPS = Object.freeze(
+  Object.fromEntries((CALCULATION_REFERENCE.blood_known.exact_next_level_costs || [])
+    .map(row => [row.from_level, row.cost]))
+);
+
 export function calcBloodCostForLevel(level) {
+  const exactStep = BLOOD_COST_EXACT_STEPS[Math.round(Number(level))];
+  if (exactStep !== undefined) return exactStep;
   if (level < 100) return Math.round(100 * Math.pow(1.065, level - 1));
   if (level < 150) return Math.round(52000 * Math.pow(1.045, level - 100));
   if (level < 200) return Math.round(470000 * Math.pow(1.038, level - 150));
@@ -601,16 +638,64 @@ export function calcBloodCostForLevel(level) {
   return Math.round(605000000 * Math.pow(1.02, level - 400));
 }
 
+// Exact aggregate intervals observed in successful /calculations/dominance responses.
+// These override the legacy approximation only for the precise interval captured.
+export const BLOOD_COST_EXACT_INTERVALS = Object.freeze(
+  (CALCULATION_REFERENCE.blood_known.samples || []).map(row => ({
+    from: row.from_level,
+    to: row.to_level,
+    cost: row.cost,
+    nextCost: row.next_cost,
+  }))
+);
+
+export function calcBloodCostForRange(fromLevel, toLevel) {
+  const from = Math.max(1, Math.round(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.round(Number(toLevel) || from));
+  const exact = BLOOD_COST_EXACT_INTERVALS.find(row => row.from === from && row.to === to);
+  if (exact) return exact.cost;
+  let total = 0;
+  for (let level = from; level < to; level++) total += calcBloodCostForLevel(level);
+  return total;
+}
+
+export function getBloodCostConfidence(fromLevel, toLevel) {
+  const from = Math.max(1, Math.round(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.round(Number(toLevel) || from));
+  if (BLOOD_COST_EXACT_INTERVALS.some(row => row.from === from && row.to === to)) {
+    return 'exact_api_interval';
+  }
+  const steps = [];
+  for (let level = from; level < to; level++) steps.push(level);
+  return steps.length > 0 && steps.every(level => BLOOD_COST_EXACT_STEPS[level] !== undefined)
+    ? 'exact_api_steps'
+    : 'approximation_only';
+}
+
+// Exact Warden dominance gains returned by the captured dominance API scenarios.
+export const WARDEN_LEVEL_GAIN_EXACT_INTERVALS = Object.freeze(
+  (CALCULATION_REFERENCE.warden_level_gain_known?.observations || []).map(row => ({
+    wardenId: row.warden_id,
+    from: row.from_level,
+    to: row.to_level,
+    gain: row.gain,
+  }))
+);
+
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
   const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
   const multBefore = calcWardenLevelMultiplier(currentLvl);
   const multAfter = calcWardenLevelMultiplier(targetLvl);
-  const baseGain = Math.round(talentSum * (multAfter - multBefore));
+  const estimatedBaseGain = Math.round(talentSum * (multAfter - multBefore));
+  const exactGainObservation = WARDEN_LEVEL_GAIN_EXACT_INTERVALS.find(
+    row => row.wardenId === warden.id && row.from === currentLvl && row.to === targetLvl
+  );
+  // HAR gains depend on the captured account state (talents, attributes and
+  // other modifiers). Keep them as diagnostic evidence; never use them as a
+  // generic forecast for another account.
+  const baseGain = estimatedBaseGain;
 
-  let bloodSpent = 0;
-  for (let l = currentLvl; l < targetLvl; l++) {
-    bloodSpent += calcBloodCostForLevel(l);
-  }
+  const bloodSpent = calcBloodCostForRange(currentLvl, targetLvl);
 
   // Проверка требуемых прорывов
   const neededPromotes = promotes.filter(p => p.id > currentPromoteId && p.min_warden_lvl < targetLvl);
@@ -635,6 +720,10 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     toLvl: targetLvl,
     bloodSpent,
     baseGain,
+    estimatedBaseGain,
+    baseGainConfidence: 'approximation_only',
+    observedApiGain: exactGainObservation?.gain ?? null,
+    observedApiGainScope: exactGainObservation ? 'captured_account_state_only' : null,
     neededPromotes,
     missingItems,
     canPromote: missingItems.length === 0,
@@ -647,12 +736,33 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Обычный уровень (level: 1..600): даёт плоскую прибавку к атрибуту смотрителя.
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
-export function calcBondLevelCost(level) {
-  // Стоимость шага доверия растёт по параболе/ступеням
+// First-step observations are keyed by the actual bond template ID.
+// They are exact for the four bonds exercised in the supplied HAR captures.
+export const BOND_FIRST_STEP_OBSERVATIONS = Object.freeze(
+  Object.fromEntries((CALCULATION_REFERENCE.bond_known?.observations || []).map(row => [row.bond_id, {
+    flatGain: row.flat_gain,
+    flatNextCost: row.next_flat_cost,
+    flatNextGain: row.next_flat_gain,
+    percentNextCost: row.percent_next_cost,
+    percentNextGain: row.percent_next_gain,
+  }]))
+);
+
+export function calcBondLevelCost(level, bond = null) {
+  // The first flat bond level is free in every observed branch.
+  if (level <= 1) return 0;
+  const observed = bond && BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+  if (level === 2 && observed) return observed.flatNextCost;
+  if (level === 2) return 20;
+  // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
-export function calcBondPercentCost(percentLevel) {
+export function calcBondPercentCost(percentLevel, bond = null) {
+  const observed = bond && BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+  if (percentLevel === 1 && observed) return observed.percentNextCost;
+  if (percentLevel === 1) return 20;
+  // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(200 + Math.pow(percentLevel, 2.05) * 12);
 }
 
@@ -669,20 +779,31 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
     const targetPercentLevel = unlockedPct ? st.targetPercentLevel : st.percentLevel;
 
     let costFlat = 0;
-    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1);
+    for (let l = st.level; l < targetLevel; l++) costFlat += calcBondLevelCost(l + 1, bond);
 
     let costPct = 0;
-    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1);
+    for (let l = st.percentLevel; l < targetPercentLevel; l++) costPct += calcBondPercentCost(l + 1, bond);
 
     spentAffinity += costFlat + costPct;
 
     // Плоский бонус за уровень связи (зависит от типа связи one/two/all/default)
+    const observedBond = BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+    const exactFlatSteps = observedBond && st.level <= 1 && targetLevel <= 2;
     const flatStep = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-    const flatGain = (targetLevel - st.level) * flatStep;
+    let flatGain;
+    if (exactFlatSteps && targetLevel > st.level) {
+      flatGain = (st.level === 0 ? observedBond.flatGain : 0)
+        + (targetLevel >= 2 ? observedBond.flatNextGain : 0);
+    } else {
+      flatGain = (targetLevel - st.level) * flatStep;
+    }
 
-    // Процентный бонус: 0.5% за уровень связи от базового атрибута смотрителя
+    // Percentage gains are estimated from the Warden's base attributes unless a captured next-step value is available.
     const pctStep = bond.is_advantage ? 0.005 : 0.0025;
-    const pctGain = Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
+    const exactPercentStep = observedBond && st.percentLevel === 0 && targetPercentLevel === 1;
+    const pctGain = exactPercentStep
+      ? observedBond.percentNextGain
+      : Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
 
     gainByAttr[bond.attribute] += flatGain + pctGain;
 
@@ -695,6 +816,10 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
       flatGain,
       pctGain,
       totalAttrGain: flatGain + pctGain,
+      flatGainConfidence: exactFlatSteps ? 'exact_api_observation' : 'approximation_only',
+      flatCostConfidence: observedBond && st.level <= 1 && targetLevel <= 2 ? 'exact_api_observation' : 'approximation_only',
+      percentGainConfidence: exactPercentStep ? 'exact_api_next_gain' : 'approximation_only',
+      percentCostConfidence: observedBond && st.percentLevel === 0 && targetPercentLevel === 1 ? 'exact_api_observation' : 'approximation_only',
     };
   });
 

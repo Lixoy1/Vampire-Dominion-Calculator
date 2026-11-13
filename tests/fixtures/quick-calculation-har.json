@@ -1,0 +1,112 @@
+{
+  "source": "Sanitized successful POST /api/v1/accounts/{account_id}/calculations/quick HAR response",
+  "request": {
+    "goal": "all",
+    "spend": {
+      "blood": true,
+      "promote_items": true,
+      "conclave": true,
+      "trust": true,
+      "group_items": true,
+      "presence_items": true,
+      "talent_items": true,
+      "talent_exp": true,
+      "skin_cards": true,
+      "fabric": true
+    },
+    "wardens": {},
+    "lovers": {}
+  },
+  "response": {
+    "conclave": {
+      "strength": null,
+      "allure": null,
+      "intellect": null,
+      "spirit": null
+    },
+    "levels": {
+      "10270": 3,
+      "10280": 7,
+      "10300": 10,
+      "10960": 3
+    },
+    "bonds": {
+      "20170": {
+        "strength": {
+          "level": 1,
+          "percent_level": null
+        },
+        "allure": {
+          "level": 1,
+          "percent_level": null
+        },
+        "intellect": {
+          "level": 1,
+          "percent_level": null
+        },
+        "spirit": {
+          "level": 1,
+          "percent_level": null
+        }
+      }
+    },
+    "auras": {},
+    "skins": {},
+    "talents": {
+      "10540": {
+        "scrolls": {
+          "2": 2
+        },
+        "scripts": {},
+        "exp_items": {},
+        "exp_levels": {}
+      }
+    },
+    "presences": {}
+  },
+  "observedDominance": {
+    "bloodAvailable": 14345,
+    "bloodSpent": 14332,
+    "bloodLeft": 13,
+    "levelGain": 2799,
+    "wardenSteps": [
+      {
+        "warden_id": 10270,
+        "from": 1,
+        "to": 3,
+        "cost": 384,
+        "gain": 50
+      },
+      {
+        "warden_id": 10280,
+        "from": 1,
+        "to": 7,
+        "cost": 3765,
+        "gain": 641
+      },
+      {
+        "warden_id": 10300,
+        "from": 1,
+        "to": 10,
+        "cost": 9799,
+        "gain": 2051
+      },
+      {
+        "warden_id": 10960,
+        "from": 1,
+        "to": 3,
+        "cost": 384,
+        "gain": 57
+      }
+    ],
+    "talent": {
+      "warden_id": 10540,
+      "position": 2,
+      "scroll_levels": 2
+    },
+    "loverId": 20170,
+    "firstFlatBondLevels": 4,
+    "firstFlatBondAffinityCost": 0,
+    "firstFlatBondGain": 620
+  }
+}
