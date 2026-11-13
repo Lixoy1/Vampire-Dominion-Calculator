@@ -9,7 +9,31 @@
     "source_commit": "ebd7e9861e0df063c6d6c1f87b9f1d477b3da7bb",
     "engine_file": "scripts/engine.js",
     "engine_commit": "e8dc106b40bb98e474cf0ac73fa9cfd177ca9333",
-    "conversation_reference": "ПОЛНЫЙ_ДАМП_БЕСЕДЫ_Помощник_Дампира.pdf"
+    "conversation_reference": "ПОЛНЫЙ_ДАМП_БЕСЕДЫ_Помощник_Дампира.pdf",
+    "har_reconstruction": {
+      "source_files": [
+        "web.telegram.org.har",
+        "1web.telegram.org.har"
+      ],
+      "captured_game_api_host": "v1178755.hosted-by-vdsina.com",
+      "template_endpoints": [
+        "/api/v1/templates/wardens",
+        "/api/v1/templates/lovers",
+        "/api/v1/templates/items",
+        "/api/v1/templates/warden-promotes",
+        "/api/v1/templates/conclave-levels",
+        "/api/v1/templates/courtyard-levels"
+      ],
+      "verified_template_counts": {
+        "wardens": 68,
+        "lovers": 45,
+        "items": 240,
+        "warden_promotes": 8,
+        "conclave_levels": 180,
+        "courtyard_levels": 210
+      },
+      "note": "Counts and item additions were compared against successful HTTP 200 template responses in both HAR captures. Private account data and session credentials are excluded."
+    }
   },
   "catalog": {
     "wardens": [
@@ -28279,6 +28303,16 @@
         "icon_path": "items/10394101.9d9e5319.webp"
       },
       {
+        "id": 10464101,
+        "name": "WILLIAM_SKIN_1",
+        "category": "skin",
+        "tags": [
+          "for_warden",
+          "skin_s"
+        ],
+        "icon_path": "items/10464101.185e0a90.webp"
+      },
+      {
         "id": 10514101,
         "name": "RUDRA_SKIN_1",
         "category": "skin",
@@ -28699,6 +28733,16 @@
         "icon_path": "items/20394101.f9e2905d.webp"
       },
       {
+        "id": 20464101,
+        "name": "REDD_SKIN_1_MALE",
+        "category": "skin",
+        "tags": [
+          "for_lover",
+          "skin_s"
+        ],
+        "icon_path": "items/20464101.a7a8594d.webp"
+      },
+      {
         "id": 20544101,
         "name": "DIONYSUS_SKIN_1_MALE",
         "category": "skin",
@@ -28987,6 +29031,16 @@
           "skin_s"
         ],
         "icon_path": "items/30394101.68787184.webp"
+      },
+      {
+        "id": 30464101,
+        "name": "REDD_SKIN_1_FEMALE",
+        "category": "skin",
+        "tags": [
+          "for_lover",
+          "skin_s"
+        ],
+        "icon_path": "items/30464101.61f8de6b.webp"
       },
       {
         "id": 30514101,
@@ -34447,6 +34501,54 @@
           "blood_left": 63943127,
           "max_target": 150,
           "max_gain": 1331252
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10270,
+          "from_level": 1,
+          "to_level": 3,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 384,
+          "next_cost": 461,
+          "gain": 50,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10280,
+          "from_level": 1,
+          "to_level": 7,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 3765,
+          "next_cost": 1614,
+          "gain": 641,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 10,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 9799,
+          "next_cost": 2883,
+          "gain": 2051,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 3,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 384,
+          "next_cost": 461,
+          "gain": 57,
+          "confidence": "exact_interval"
         }
       ]
     },
@@ -34505,6 +34607,32 @@
       "Catalog and full conclave/courtyard tables were copied from scripts/data.js in the repository.",
       "Blood interval is the one exact aggregate API observation transcribed in PDF section 6.2.",
       "Blood progression formula is retained as an approximation from scripts/engine.js, not upgraded to exact data."
-    ]
+    ],
+    "bond_known": {
+      "status": "partial_exact_api_observation",
+      "observations": [
+        {
+          "branch": "flat",
+          "from_level": 0,
+          "to_level": 1,
+          "cost": 0,
+          "next_cost": 20,
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance"
+        },
+        {
+          "branch": "percent",
+          "from_level": 0,
+          "to_level": 1,
+          "cost": 20,
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance"
+        }
+      ],
+      "note": "Only first-step costs are confirmed by captured API responses. Higher bond levels remain unverified."
+    },
+    "account_limits": {
+      "warden_max_level": 450,
+      "source": "HAR /api/v1/limits and /api/v1/templates/warden-promotes",
+      "confidence": "verified"
+    }
   }
 }
