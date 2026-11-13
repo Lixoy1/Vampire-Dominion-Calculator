@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { GAME_DB } from '../scripts/data.js';
 import * as Engine from '../scripts/engine.js';
+import { importCommunitySnapshot } from '../scripts/local-planner.js';
 import {
   API_OBSERVED_BLOOD_COSTS,
   API_OBSERVATION_META,
@@ -91,5 +92,86 @@ assert.equal(Engine.getBondCostSource('flat', 10, 'one'), 'estimated');
 // An observed point is exact only at the observed step. No interpolation.
 assert.equal(Engine.calcBondLevelCost(8, 'one'), Math.round(50 + Math.pow(8, 1.85) * 4.5));
 assert.ok(GAME_DB.wardens.length > 0);
+
+
+// Exact gain observations are imported only with their Warden-level context.
+{
+  const account = {
+    blood: 0,
+    conclaveExp: 0,
+    courtyardExp: 0,
+    courtyardLvl: 0,
+    conclave: { strength: 0, allure: 0, intellect: 0, spirit: 0 },
+    ownedWardens: {
+      10170: { level: 150, promoteId: 3, exp: 0, talents: {}, auras: {} },
+    },
+    ownedLovers: {
+      20170: { affinity: 1000, closeness: 200, sex: 'female', bonds: {}, presences: {} },
+    },
+    bag: {},
+  };
+  const imported = importCommunitySnapshot({
+    account,
+    snapshot: {
+      levels: {
+        wardens: [{ warden_id: 10170, level: 150, target: 150 }],
+      },
+      bonds: {
+        lovers: [{
+          lover_id: 20170,
+          warden_id: 10170,
+          trust: 1000,
+          bonds: [{
+            attribute: 'strength',
+            level: {
+              level: 0, target: 1, cost: 0, gain: '123',
+              next_cost: 20, next_gain: '40', max_target: 5,
+            },
+            percent: {
+              level: 0, target: 0, cost: 0, gain: '0',
+              next_cost: 20, next_gain: '10', max_target: 10,
+            },
+          }],
+        }],
+      },
+    },
+  });
+  const observations = imported.account.communityImport.referenceObservations.bondSteps;
+  const exact = observations.find(row =>
+    row.loverId === 20170 && row.attribute === 'strength' && row.kind === 'flat'
+  );
+  assert.ok(exact, 'importer preserves exact flat bond response');
+  assert.deepEqual(
+    [exact.level, exact.target, exact.cost, Number(exact.gain), exact.nextCost, Number(exact.nextGain), exact.wardenLevel],
+    [0, 1, 0, 123, 20, 40, 150]
+  );
+
+  const lover = GAME_DB.lovers.find(item => item.id === 20170);
+  const plan = {
+    strength: { level: 0, targetLevel: 1, percentLevel: 0, targetPercentLevel: 0 },
+  };
+  const result = Engine.calcLoverBonds(
+    lover, 1000, plan,
+    { strength: 1000, allure: 1000, intellect: 1000, spirit: 1000 },
+    200, observations, 150
+  );
+  const strength = result.details.find(row => row.attribute === 'strength');
+  assert.equal(strength.exactFlat, true);
+  assert.equal(strength.costFlat, 0);
+  assert.equal(strength.flatGain, 123);
+  assert.equal(result.totalGain, 123, 'matching API gain overrides the generic flat-gain estimate');
+
+  assert.equal(
+    Engine.findObservedBondStep(observations, lover, 'strength', 'flat', 0, 1, 151),
+    null,
+    'an observation for another Warden level must not be reused'
+  );
+  const conflicting = [...observations, { ...exact, cost: 1, gain: '124' }];
+  assert.equal(
+    Engine.findObservedBondStep(conflicting, lover, 'strength', 'flat', 0, 1, 150),
+    null,
+    'conflicting observations must fail closed'
+  );
+}
 
 console.log('HAR-observed calculation regression tests passed.');
