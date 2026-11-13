@@ -53,7 +53,7 @@ function createDefaultState() {
   const account = createBlankAccountData();
   const plan = createBlankPlan(account);
   return {
-    version: 6,
+    version: 7,
     screen: 'home',
     currentWardenId: GAME_DB.wardens[0]?.id ?? 10010,
     currentLoverId: GAME_DB.lovers[0]?.id ?? 20010,
@@ -187,6 +187,33 @@ function adaptLegacyProfileSnapshot(parsed = {}) {
   };
 }
 
+function ensureStarterWarden(account, storedVersion = 0) {
+  // One-time migration: the HAR reference starts at 1/68 Wardens. Only migrate
+  // genuinely untouched pre-v7 profiles; never overwrite a populated roster
+  // or a profile intentionally cleared in v7+.
+  if (Number(storedVersion) >= 7 || Object.keys(account.ownedWardens || {}).length) return account;
+  const hasNonZero = value => Number(value || 0) > 0;
+  const hasValues = values => Object.values(values || {}).some(hasNonZero);
+  const conclaveHasProgress = hasValues(account.conclave);
+  const guildHasProgress = hasValues(account.guildProgress);
+  const pristine =
+    !hasNonZero(account.blood) &&
+    !hasNonZero(account.conclaveExp) &&
+    !hasNonZero(account.courtyardExp) &&
+    !hasNonZero(account.courtyardLvl) &&
+    !conclaveHasProgress &&
+    !guildHasProgress &&
+    !Object.keys(account.ownedLovers || {}).length &&
+    !hasValues(account.bag) &&
+    !hasValues(account.skins);
+  const starter = GAME_DB.wardens[0];
+  if (!pristine || !starter) return account;
+  return {
+    ...account,
+    ownedWardens: { [starter.id]: createOwnedWarden(starter) },
+  };
+}
+
 export function normalizeState(parsed = {}) {
   parsed = adaptLegacyProfileSnapshot(parsed);
   const source = parsed && typeof parsed === 'object' ? parsed : {};
@@ -196,7 +223,7 @@ export function normalizeState(parsed = {}) {
   // Import profile format used by the previous multi-account v4 calculator.
   if (Array.isArray(source.accounts) && source.accounts.length) {
     const accounts = source.accounts.map((raw, index) => {
-      const account = normalizeAccountData(raw);
+      const account = ensureStarterWarden(normalizeAccountData(raw), source.version);
       const profile = {
         name: raw.name || `Аккаунт ${index + 1}`,
         server: raw.server || '',
@@ -214,7 +241,7 @@ export function normalizeState(parsed = {}) {
     return {
       ...base,
       ...source,
-      version: 6,
+      version: 7,
       lang,
       profile: { name: selected.name, server: selected.server, region: selected.region, avatarId: selected.avatarId },
       settings: { ...base.settings, ...(source.settings || {}) },
@@ -227,7 +254,7 @@ export function normalizeState(parsed = {}) {
   }
 
   // Migrate the previous v4 single-account shape and the reference v3 export.
-  const account = normalizeAccountData(source.account || source);
+  const account = ensureStarterWarden(normalizeAccountData(source.account || source), source.version);
   const profileIn = source.profile || {};
   const profile = {
     name: profileIn.name || source.name || base.profile.name,
@@ -240,7 +267,7 @@ export function normalizeState(parsed = {}) {
   return {
     ...base,
     ...source,
-    version: 6,
+    version: 7,
     lang,
     profile,
     settings: { ...base.settings, ...(source.settings || {}) },
