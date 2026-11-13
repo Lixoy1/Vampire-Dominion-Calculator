@@ -157,3 +157,35 @@ node scripts/extract-har-observations.js capture.har sanitized-observations.json
 ```
 
 The generated JSON contains only changed-Warden interval costs and next-level cost observations from successful dominance responses. It excludes account IDs, request bodies, headers, cookies, authorization values, and gain fields. The original HAR stays local and should never be committed. Review the extracted output before merging it into the canonical observation data.
+
+
+## Fourth HAR capture: additional Quick plan and exact dominance intervals
+
+A fourth capture from 2026-11-13 contains a successful `POST /calculations/quick` response with a different non-empty plan. The captured plan proposes these Warden targets:
+
+| Warden template | Current level | Quick target |
+|---:|---:|---:|
+| 10300 | 50 | 87 |
+| 10490 | 50 | 64 |
+| 10530 | 50 | 100 |
+| 10950 | 182 | 194 |
+
+The corresponding successful dominance responses confirm these exact aggregate Blood costs:
+
+| Warden template | Interval | Cost | Next cost |
+|---:|---:|---:|---:|
+| 10300 | 50→85 | 6,131,963 | 293,043 |
+| 10300 | 50→87 | 6,726,205 | 309,486 |
+| 10490 | 50→61 | 1,206,554 | 136,440 |
+| 10490 | 50→64 | 1,631,077 | 151,904 |
+| 10530 | 50→100 | 11,443,404 | 434,739 |
+| 10950 | 182→191 | 33,096,771 | 3,942,763 |
+| 10950 | 182→194 | 45,089,824 | 4,108,454 |
+
+Some intervals independently repeat in multiple successful responses with identical costs. The canonical supplemental observation file adds only the new distinct intervals and next-level values; repeated evidence is not duplicated.
+
+The same Quick response proposes several Scarlet Bond targets for templates 20170, 20280, and 20500, plus talent-scroll and talent-EXP targets for Wardens 10250, 10300, and 10960. The sanitized response fixture is `tests/fixtures/quick-calculation-har-2026-11-13.json`; the Quick response mapper tests cover its levels, bonds, scrolls, and EXP-level fields. This fixture is a captured profile scenario, not a claim that the server optimizer always returns those targets.
+
+### Important: the HAR contains write operations
+
+The capture also contains successful `PATCH` requests to Warden batch and account batch endpoints. These are state-changing operations, unlike the read-only calculation requests. Their request bodies and account-specific data are not copied into the repository, and the project tooling does not replay them. For future captures, use calculation-only interactions whenever possible and avoid exporting or sharing login codes, cookies, authorization headers, Telegram init data, or account mutation payloads.
