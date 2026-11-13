@@ -659,6 +659,7 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
     toLvl: targetLvl,
     bloodSpent,
     baseGain,
+    baseGainConfidence: 'approximation_only',
     neededPromotes,
     missingItems,
     canPromote: missingItems.length === 0,
