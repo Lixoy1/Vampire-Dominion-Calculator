@@ -486,7 +486,7 @@ export function calcConclaveBranch(conclaveLevels, fromLvl, toLvl, activeWardens
   };
 }
 
-export function autoDistributeConclave(conclaveLevels, currentLevels, availablePoints, wardensByAttr, excludedAttrs = []) {
+export function autoDistributeConclave(conclaveLevels, currentLevels, availablePoints, wardensByAttr, excludedAttrs = [], priorityAttribute = null) {
   const levels = { ...currentLevels };
   let left = availablePoints;
   const maxLvl = conclaveLevels.length;
@@ -494,6 +494,8 @@ export function autoDistributeConclave(conclaveLevels, currentLevels, availableP
   while (true) {
     let bestAttr = null;
     let bestEff = 0;
+    let bestPriorityAttr = null;
+    let bestPriorityEff = 0;
 
     for (const attr of ATTRIBUTES) {
       if (excludedAttrs.includes(attr)) continue;
@@ -511,13 +513,18 @@ export function autoDistributeConclave(conclaveLevels, currentLevels, availableP
         bestEff = eff;
         bestAttr = attr;
       }
+      if (attr === priorityAttribute && eff > bestPriorityEff) {
+        bestPriorityEff = eff;
+        bestPriorityAttr = attr;
+      }
     }
 
-    if (!bestAttr) break;
-    const nextLvl = (levels[bestAttr] ?? 0) + 1;
+    const selectedAttr = bestPriorityAttr || bestAttr;
+    if (!selectedAttr) break;
+    const nextLvl = (levels[selectedAttr] ?? 0) + 1;
     const cost = conclaveLevels.find(r => r.id === nextLvl).cost;
     left -= cost;
-    levels[bestAttr] = nextLvl;
+    levels[selectedAttr] = nextLvl;
   }
 
   return { levels, spent: availablePoints - left, left };
@@ -572,6 +579,26 @@ export function calcMaxCourtyardLevel(courtyardLevels, currentLvl, availablePoin
  *   ΔAttr(L -> L+1) = TotalTalentStarsLevel * (L + 1) / 10  (для L >= 1)
  * - Полный расчёт статов смотрителя по всем 4 атрибутам с учётом Вдохновений (Auras), Обликов, Кровных Уз, Конклава и Сада.
  */
+export function calcWardenTalentAttributeSums(warden, talentLevelsByPos = {}) {
+  const totals = Object.fromEntries(ATTRIBUTES.map(attribute => [attribute, 0]));
+  for (const [index, talent] of (warden.talents || []).entries()) {
+    const attribute = talent.attribute;
+    if (!ATTRIBUTES.includes(attribute)) continue;
+    const level = Math.max(0, Number(talentLevelsByPos[index] ?? 1) || 0);
+    totals[attribute] += level * (Number(talent.stars) || 0);
+  }
+  return totals;
+}
+
+export function calcWardenAttributeGain(warden, fromLevel, toLevel, talentLevelsByPos = {}) {
+  const delta = calcWardenLevelMultiplier(toLevel) - calcWardenLevelMultiplier(fromLevel);
+  const totals = calcWardenTalentAttributeSums(warden, talentLevelsByPos);
+  return Object.fromEntries(ATTRIBUTES.map(attribute => [
+    attribute,
+    Math.round(totals[attribute] * delta),
+  ]));
+}
+
 export function calcWardenTalentSum(warden, talentLevelsByPos = {}) {
   // По умолчанию каждый талант имеет 1-й уровень при призыве
   return warden.talents.reduce((sum, t, idx) => {
