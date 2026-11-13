@@ -40,6 +40,11 @@ function numericId(value) {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
+function numericIndex(value) {
+  const index = Number(value);
+  return Number.isSafeInteger(index) && index >= 0 ? index : null;
+}
+
 function sortedUniqueIds(values) {
   if (!Array.isArray(values)) return undefined;
   const ids = [...new Set(values.map(numericId).filter(id => id !== null))].sort((a, b) => a - b);
@@ -258,7 +263,7 @@ export function quickResponseToPlan(responseValue, accountValue = {}, basePlan =
     for (const key of ['scrolls', 'scripts', 'exp_levels']) {
       const values = {};
       for (const [rawPosition, countValue] of Object.entries(asRecord(source[key]))) {
-        const position = numericId(rawPosition);
+        const position = numericIndex(rawPosition);
         const count = Number(countValue);
         if (position !== null && Number.isFinite(count) && count > 0) values[position] = Math.floor(count);
       }
