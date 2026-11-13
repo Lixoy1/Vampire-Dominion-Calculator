@@ -1,6 +1,6 @@
 /**
- * Runtime adapter for the single canonical data file.
- * Catalogs and calculation reference live together in ../data/vampire-dominion-data.json.
+ * Runtime adapter for the canonical master data and reviewed HAR observations.
+ * Shared catalogs live in vampire-dominion-data.json; interval evidence is supplemental.
  */
 import MASTER_DATA from '../data/vampire-dominion-data.json' with { type: 'json' };
 import HAR_BLOOD_OBSERVATIONS from '../data/har-blood-observations-2026-11-13.json' with { type: 'json' };
