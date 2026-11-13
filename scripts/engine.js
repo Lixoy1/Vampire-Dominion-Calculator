@@ -757,13 +757,22 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
 
     // Плоский бонус за уровень связи (зависит от типа связи one/two/all/default)
     const observedBond = BOND_FIRST_STEP_OBSERVATIONS[bond.id];
-    const exactFirstStep = st.level === 0 && targetLevel === 1 && observedBond;
+    const exactFlatSteps = observedBond && st.level <= 1 && targetLevel <= 2;
     const flatStep = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-    const flatGain = exactFirstStep ? observedBond.flatGain : (targetLevel - st.level) * flatStep;
+    let flatGain;
+    if (exactFlatSteps && targetLevel > st.level) {
+      flatGain = (st.level === 0 ? observedBond.flatGain : 0)
+        + (targetLevel >= 2 ? observedBond.flatNextGain : 0);
+    } else {
+      flatGain = (targetLevel - st.level) * flatStep;
+    }
 
-    // Процентный бонус: 0.5% за уровень связи от базового атрибута смотрителя
+    // Percentage gains are estimated from the Warden's base attributes unless a captured next-step value is available.
     const pctStep = bond.is_advantage ? 0.005 : 0.0025;
-    const pctGain = Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
+    const exactPercentStep = observedBond && st.percentLevel === 0 && targetPercentLevel === 1;
+    const pctGain = exactPercentStep
+      ? observedBond.percentNextGain
+      : Math.round((wardenBaseAttrs[bond.attribute] ?? 0) * (targetPercentLevel - st.percentLevel) * pctStep);
 
     gainByAttr[bond.attribute] += flatGain + pctGain;
 
@@ -776,7 +785,10 @@ export function calcLoverBonds(lover, affinity, bondStates = {}, wardenBaseAttrs
       flatGain,
       pctGain,
       totalAttrGain: flatGain + pctGain,
-      flatGainConfidence: exactFirstStep ? 'exact_api_observation' : 'approximation_only',
+      flatGainConfidence: exactFlatSteps ? 'exact_api_observation' : 'approximation_only',
+      flatCostConfidence: observedBond && st.level <= 1 && targetLevel <= 2 ? 'exact_api_observation' : 'approximation_only',
+      percentGainConfidence: exactPercentStep ? 'exact_api_observation' : 'approximation_only',
+      percentCostConfidence: observedBond && st.percentLevel === 0 && targetPercentLevel === 1 ? 'exact_api_observation' : 'approximation_only',
     };
   });
 
