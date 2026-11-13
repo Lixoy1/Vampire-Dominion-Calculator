@@ -36,6 +36,13 @@ for (const [from, to, expected] of bloodIntervals) {
   assert.equal(Engine.getBloodCostConfidence(from, to), 'exact_api_interval');
 }
 assert.equal(Engine.getBloodCostConfidence(3, 7), 'approximation_only');
+for (const [level, expected] of [
+  [4, 691], [5, 961], [11, 3382], [50, 89785], [100, 434739],
+  [153, 2204807], [200, 8858383], [250, 25316634],
+  [259, 30745656], [300, 126095128], [350, 624596836], [400, 6884526660],
+]) {
+  assert.equal(Engine.calcBloodCostForLevel(level), expected, `HAR next blood cost at level ${level}`);
+}
 
 // Additional exact aggregate intervals captured in the 2026-11-13 HAR.
 for (const [from, to, expected] of [
