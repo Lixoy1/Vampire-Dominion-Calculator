@@ -63,4 +63,12 @@ assert.deepEqual(
   [[1,100,0,1],[2,50,3,2],[3,33.3,4,3],[4,25,6,4],[5,20,8,5],[6,16.6,10,6]],
 );
 
+// Exact dominance gains for the four Warden intervals explicitly present in the HAR.
+for (const [wardenId, target, gain] of [[10270,3,50],[10280,7,641],[10300,10,2051],[10960,3,57]]) {
+  const warden = GAME_DB.wardens.find(item => item.id === wardenId);
+  const result = Engine.calcWardenLevelsUpgrade(warden, 1, target, 1, GAME_DB.warden_promotes, {}, {});
+  assert.equal(result.baseGain, gain, `Warden ${wardenId} gain`);
+  assert.equal(result.baseGainConfidence, 'exact_api_interval');
+}
+
 console.log('HAR parity checks passed: templates, limits, exact intervals, bond entry costs, bag points, manuscripts.');
