@@ -17,6 +17,9 @@ This is a route-level inventory of the two supplied HAR captures. Account IDs ar
 | GET | `/api/v1/accounts` | 30 | Account list |
 | POST | `/api/v1/accounts` | 2 | Create account |
 | GET | `/api/v1/accounts/{account_id}/summary` | 59 | Account summary |
+| GET | `/api/v1/accounts/{account_id}/quick-template` | 11 | Active quick-calculation preset |
+| GET | `/api/v1/me/quick-templates` | 11 | Built-in and saved quick presets |
+| GET | `/api/v1/accounts/{account_id}/sync/free-rewards` | 2 | Free synchronization rewards |
 | PATCH | `/api/v1/accounts/{account_id}` | 27 | Account resources and profile fields |
 
 ## Canonical templates
@@ -40,10 +43,10 @@ This is a route-level inventory of the two supplied HAR captures. Account IDs ar
 | GET | `/api/v1/accounts/{account_id}/conclaves` | 19 |
 | GET | `/api/v1/accounts/{account_id}/skin-store` | 32 |
 | GET | `/api/v1/accounts/{account_id}/skin-store/skins` | 20 |
-| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/attributes` | 80 |
-| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/talents` | 38 |
-| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/auras` | 8 |
-| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/skins` | 4 |
+| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/attributes` | 98 |
+| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/talents` | 15 |
+| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/auras` | 12 |
+| GET | `/api/v1/accounts/{account_id}/wardens/{warden_id}/skins` | 10 |
 
 ## Calculation routes
 
