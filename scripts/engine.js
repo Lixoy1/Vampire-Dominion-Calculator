@@ -1,3 +1,5 @@
+import { CALCULATION_REFERENCE } from './data.js';
+
 /**
  * ============================================================================
  * VAMPIRE DOMINION / ПОМОЩНИК ДАМПИРА — ПОЛНЫЙ ДВИЖОК РАСЧЁТОВ И ОПТИМИЗАЦИИ
@@ -591,16 +593,10 @@ export function calcWardenLevelMultiplier(level) {
  * Стоимость уровня смотрителя в Крови (аппроксимация кривой прогрессии по ступеням прорыва)
  */
 // Exact single-step costs exposed as next_cost by captured dominance responses.
-export const BLOOD_COST_EXACT_STEPS = Object.freeze({
-  1: 115,
-  2: 269,
-  3: 461,
-  7: 1614,
-  10: 2883,
-  150: 2096083,
-  182: 3470701,
-  258: 29999162,
-});
+export const BLOOD_COST_EXACT_STEPS = Object.freeze(
+  Object.fromEntries((CALCULATION_REFERENCE.blood_known.exact_next_level_costs || [])
+    .map(row => [row.from_level, row.cost]))
+);
 
 export function calcBloodCostForLevel(level) {
   const exactStep = BLOOD_COST_EXACT_STEPS[Math.round(Number(level))];
@@ -617,12 +613,14 @@ export function calcBloodCostForLevel(level) {
 
 // Exact aggregate intervals observed in successful /calculations/dominance responses.
 // These override the legacy approximation only for the precise interval captured.
-export const BLOOD_COST_EXACT_INTERVALS = Object.freeze([
-  { from: 1, to: 3, cost: 384, nextCost: 461 },
-  { from: 1, to: 7, cost: 3765, nextCost: 1614 },
-  { from: 1, to: 10, cost: 9799, nextCost: 2883 },
-  { from: 105, to: 150, cost: 36056873, nextCost: 2096083 },
-]);
+export const BLOOD_COST_EXACT_INTERVALS = Object.freeze(
+  (CALCULATION_REFERENCE.blood_known.samples || []).map(row => ({
+    from: row.from_level,
+    to: row.to_level,
+    cost: row.cost,
+    nextCost: row.next_cost,
+  }))
+);
 
 export function calcBloodCostForRange(fromLevel, toLevel) {
   const from = Math.max(1, Math.round(Number(fromLevel) || 1));
@@ -648,12 +646,14 @@ export function getBloodCostConfidence(fromLevel, toLevel) {
 }
 
 // Exact Warden dominance gains returned by the captured dominance API scenarios.
-export const WARDEN_LEVEL_GAIN_EXACT_INTERVALS = Object.freeze([
-  { wardenId: 10270, from: 1, to: 3, gain: 50 },
-  { wardenId: 10280, from: 1, to: 7, gain: 641 },
-  { wardenId: 10300, from: 1, to: 10, gain: 2051 },
-  { wardenId: 10960, from: 1, to: 3, gain: 57 },
-]);
+export const WARDEN_LEVEL_GAIN_EXACT_INTERVALS = Object.freeze(
+  (CALCULATION_REFERENCE.warden_level_gain_known?.observations || []).map(row => ({
+    wardenId: row.warden_id,
+    from: row.from_level,
+    to: row.to_level,
+    gain: row.gain,
+  }))
+);
 
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
   const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
@@ -707,12 +707,15 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  */
 // First-step observations are keyed by the actual bond template ID.
 // They are exact for the four bonds exercised in the supplied HAR captures.
-export const BOND_FIRST_STEP_OBSERVATIONS = Object.freeze({
-  1701: { flatGain: 120, flatNextCost: 20, flatNextGain: 132, percentNextCost: 20, percentNextGain: 1 },
-  1702: { flatGain: 100, flatNextCost: 20, flatNextGain: 110, percentNextCost: 20, percentNextGain: 1 },
-  1703: { flatGain: 100, flatNextCost: 20, flatNextGain: 110, percentNextCost: 20, percentNextGain: 1 },
-  1704: { flatGain: 300, flatNextCost: 54, flatNextGain: 330, percentNextCost: 54, percentNextGain: 3 },
-});
+export const BOND_FIRST_STEP_OBSERVATIONS = Object.freeze(
+  Object.fromEntries((CALCULATION_REFERENCE.bond_known?.observations || []).map(row => [row.bond_id, {
+    flatGain: row.flat_gain,
+    flatNextCost: row.next_flat_cost,
+    flatNextGain: row.next_flat_gain,
+    percentNextCost: row.percent_next_cost,
+    percentNextGain: row.percent_next_gain,
+  }]))
+);
 
 export function calcBondLevelCost(level, bond = null) {
   // The first flat bond level is free in every observed branch.
