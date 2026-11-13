@@ -1051,6 +1051,84 @@ export function autoDistributeBondPlan(input = {}) {
   };
 }
 
+function maskQuickResources(account, settings) {
+  const masked = clone(account);
+  const clearItems = ids => {
+    for (const id of ids) masked.bag[id] = 0;
+  };
+  const promoteItems = db.promotes.flatMap(item => item.item_ids || []);
+  const summonAndAuraItems = [
+    ...db.wardens.map(item => item.summon_item_id),
+    ...db.wardens.flatMap(item => (item.auras || []).map(aura => aura.upgrade_item_id)),
+    ...db.lovers.map(item => item.summon_item_id),
+  ].filter(id => id != null);
+  const presenceItems = db.lovers.flatMap(item =>
+    (item.presences || []).filter(presence => presence.presence_type === 'updatable').map(presence => presence.upgrade_item_id)
+  ).filter(id => id != null);
+  const talentItems = db.wardens.flatMap(item => (item.talents || []).flatMap(talent =>
+    [talent.scroll_item_id, talent.script_item_id]
+  )).filter(id => id != null);
+  const skinCards = [
+    ...db.wardens.flatMap(item => (item.skins || []).map(skin => skin.id)),
+    ...db.lovers.flatMap(item => (item.skins || []).map(skin => skin.id)),
+  ];
+  const fabrics = [4421, 4422, 4423];
+
+  if (!settings.spend.blood) masked.blood = 0;
+  if (!settings.spend.conclave) masked.conclaveExp = 0;
+  if (!settings.spend.trust) {
+    for (const lover of Object.values(masked.ownedLovers)) lover.affinity = 0;
+  }
+  if (!settings.spend.talent_exp) {
+    for (const warden of Object.values(masked.ownedWardens)) warden.exp = 0;
+  }
+  if (!settings.spend.promote_items) clearItems(promoteItems);
+  if (!settings.spend.group_items) clearItems(summonAndAuraItems);
+  if (!settings.spend.presence_items) clearItems(presenceItems);
+  if (!settings.spend.talent_items) clearItems(talentItems);
+  if (!settings.spend.skin_cards) clearItems(skinCards);
+  if (!settings.spend.fabric) clearItems(fabrics);
+  return masked;
+}
+
+/**
+ * Local offline reconstruction of the original Quick Calculation.
+ *
+ * Settings and entity exclusions follow the captured UI/API contract. The
+ * resource optimizer uses our local, confidence-labelled mechanics; it does
+ * not claim parity with the unavailable server optimizer for unsupported
+ * aura/skin formulas.
+ */
+export function autoDistributeQuick(input = {}) {
+  const raw = record(input);
+  const settings = normalizeQuickSettings(raw.settings ?? raw.quickSettings ?? {});
+  const account = normalizeAccount(raw.account);
+  const maskedAccount = maskQuickResources(account, settings);
+  const result = autoDistributeAll({
+    account: maskedAccount,
+    plan: raw.plan,
+    quickSettings: settings,
+  });
+  const unsupported = [];
+  if (settings.spend.group_items) unsupported.push('Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.');
+  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push('Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.');
+  return {
+    ...result,
+    quickSettings: settings,
+    settingsSummary: summarizeQuickSettings(settings),
+    warnings: [...(result.warnings || []), ...unsupported],
+    precision: {
+      blood: 'mixed_exact_observations_and_approximation',
+      wardenDominance: 'local_model_not_full_api_parity',
+      bonds: 'captured_first_steps_exact_later_steps_estimated',
+      presences: 'curve_based_percentage_greed_is_not_total_dominance',
+      auras: 'not_auto_allocated',
+      skins: 'not_auto_allocated',
+      optimizer: 'deterministic_local_heuristic_not_server_algorithm_clone',
+    },
+  };
+}
+
 export function autoDistributeAll(input = {}) {
   const raw = record(input);
   const quickSettings = raw.quickSettings ? normalizeQuickSettings(raw.quickSettings) : null;
