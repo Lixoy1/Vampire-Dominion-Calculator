@@ -92,6 +92,10 @@ console.log('PASS local SPA actions, persistent top controls, swipe navigation a
 const wardenCatalog = fn('renderWardensListScreen');
 assert.ok(wardenCatalog.includes('Добавить смотрителя') && wardenCatalog.includes('data-action="add-warden"'), 'Warden selection uses a visible catalog');
 assert.ok(wardenCatalog.includes('getIconUrl(warden.icon_path'), 'Warden catalog cards include portraits');
+assert.ok(wardenCatalog.includes("catalog = catalog.filter(warden => Array.isArray(warden.attributes) && warden.attributes.includes(filter))"), 'attribute filter is applied to the add-Warden catalog');
+assert.ok(wardenCatalog.includes("catalog = catalog.filter(warden => tName('warden',warden.name).toLocaleLowerCase().includes(query))"), 'search is applied to the add-Warden catalog');
+assert.ok(wardenCatalog.includes('catalog.sort('), 'selected sorting is applied to the add-Warden catalog');
+assert.ok(wardenCatalog.includes('По выбранным условиям смотрители не найдены.'), 'empty filtered catalog has a clear empty state');
 assert.ok(!wardenCatalog.includes('prompt(') && !app.includes("Введите ID смотрителя"), 'Warden selection never asks players to type IDs');
 const loverCatalog = fn('renderLoversScreen');
 assert.ok(loverCatalog.includes('Добавить партнёра') && loverCatalog.includes('data-action="add-lover"'), 'Partner selection uses a visible catalog');
