@@ -34854,7 +34854,7 @@
       "confidence": "verified"
     },
     "warden_level_gain_known": {
-      "status": "exact_api_intervals",
+      "status": "account_state_observations",
       "observations": [
         {
           "warden_id": 10270,
@@ -34885,7 +34885,7 @@
           "source": "HAR dominance response"
         }
       ],
-      "note": "Exact only for the captured Warden IDs and intervals. The generic level gain formula remains approximation-only for other intervals."
+      "note": "These are exact values returned for the captured account states only. Repeated HAR responses show gain can vary for the same Warden and interval while Blood cost remains stable. Retain as diagnostic observations; do not use as a universal level-gain formula."
     }
   }
 }
