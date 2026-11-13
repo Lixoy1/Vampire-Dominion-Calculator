@@ -363,10 +363,14 @@ function runPresenceAutoDistribution(account, plan, availableBag = account.bag, 
         const after = Engine.calcPresencePercents(presence, nextLevel, db.presenceCurvesMap);
         const gain = ATTRIBUTES.reduce((sum, attr) => sum + Math.max(0, numeric(after[attr]) - numeric(before[attr])), 0);
         if (gain <= 0) continue;
-        const efficiency = gain / cost;
-        if (!best || efficiency > best.efficiency ||
-            (efficiency === best.efficiency && presence.id < best.presence.id)) {
-          best = { lover, presence, itemId, cost, nextLevel, gain, efficiency };
+        const goalAttribute = quickSettings && quickSettings.goal !== 'all' ? quickSettings.goal : null;
+        const priorityGain = goalAttribute ? Math.max(0, numeric(after[goalAttribute]) - numeric(before[goalAttribute])) : 0;
+        const preferred = Boolean(goalAttribute && priorityGain > 0);
+        const efficiency = (preferred ? priorityGain : gain) / cost;
+        if (!best || (preferred && !best.preferred) ||
+            (preferred === best.preferred && (efficiency > best.efficiency ||
+              (efficiency === best.efficiency && presence.id < best.presence.id)))) {
+          best = { lover, presence, itemId, cost, nextLevel, gain, efficiency, preferred };
         }
       }
     }
@@ -965,6 +969,7 @@ export function autoDistributeBondPlan(input = {}) {
   let addedLevels = 0;
   let addedAffinity = 0;
   let estimatedGain = 0;
+  const goalAttribute = quickSettings && quickSettings.goal !== 'all' ? quickSettings.goal : null;
   const byLover = {};
 
   for (const [loverId, owned] of Object.entries(account.ownedLovers)) {
@@ -996,8 +1001,10 @@ export function autoDistributeBondPlan(input = {}) {
             : bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
           if (cost >= 0 && cost <= remaining && gain > 0) {
             const efficiency = cost === 0 ? Number.POSITIVE_INFINITY : gain / cost;
-            if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1 };
+            const preferred = Boolean(goalAttribute && bond.attribute === goalAttribute && gain > 0);
+            if (!best || (preferred && !best.preferred) ||
+                (preferred === best.preferred && efficiency > best.efficiency)) {
+              best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, preferred, nextLevel: flatLevel + 1 };
             }
           }
         }
@@ -1013,8 +1020,10 @@ export function autoDistributeBondPlan(input = {}) {
           const gain = nextGain - previousGain;
           if (cost > 0 && cost <= remaining && gain > 0) {
             const efficiency = gain / cost;
-            if (!best || efficiency > best.efficiency) {
-              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, nextLevel: targetPercent + 1 };
+            const preferred = Boolean(goalAttribute && bond.attribute === goalAttribute && gain > 0);
+            if (!best || (preferred && !best.preferred) ||
+                (preferred === best.preferred && efficiency > best.efficiency)) {
+              best = { attribute: bond.attribute, kind: 'percent', cost, gain, efficiency, preferred, nextLevel: targetPercent + 1 };
             }
           }
         }
@@ -1137,7 +1146,7 @@ export function autoDistributeAll(input = {}) {
   const wardensByAttribute = {};
   for (const attribute of ATTRIBUTES) {
     wardensByAttribute[attribute] = db.wardens.filter(warden =>
-      account.ownedWardens[warden.id] && warden.attributes.includes(attribute)
+      account.ownedWardens[warden.id] && !quickSettings?.wardens?.[warden.id]?.off && warden.attributes.includes(attribute)
     ).length || 1;
   }
 
@@ -1178,9 +1187,11 @@ export function autoDistributeAll(input = {}) {
       const from = nextLevels[id];
       const maxLevel = Math.min(450, Math.max(1, Number(rule.max_level) || 450));
       if (from >= maxLevel) continue;
-      const allowedPromotes = rule.promotes_off?.length
-        ? db.promotes.filter(item => !rule.promotes_off.includes(item.id))
-        : db.promotes;
+      const blockedRequiredPromote = db.promotes.some(item =>
+        item.id > nextPromotes[id] && item.min_warden_lvl < from + 1 && (rule.promotes_off || []).includes(item.id)
+      );
+      if (blockedRequiredPromote) continue;
+      const allowedPromotes = db.promotes;
       const step = Engine.calcWardenLevelsUpgrade(
         warden,
         from,
