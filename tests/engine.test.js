@@ -224,13 +224,14 @@ test('HAR-confirmed reference values override approximations', () => {
   assert.equal(E.calcBondPercentCost(1), 20);
 });
 
-test('HAR-confirmed early Warden upgrade interval is used by the engine', () => {
+test('account-specific HAR gain is diagnostic only, not a universal forecast', () => {
   const warden = GAME_DB.wardens.find(item => item.id === 10270);
   const result = E.calcWardenLevelsUpgrade(warden, 1, 3, 1, GAME_DB.warden_promotes, {}, {});
   assert.equal(result.bloodSpent, 384);
   assert.equal(result.observedApiGain, 50);
-  assert.equal(result.baseGain, 50);
-  assert.equal(result.baseGainConfidence, 'exact_api_observation');
+  assert.equal(result.observedApiGainScope, 'captured_account_state_only');
+  assert.equal(result.baseGain, result.estimatedBaseGain);
+  assert.equal(result.baseGainConfidence, 'approximation_only');
 });
 
 console.log(`\n${passed} test groups passed.`);
