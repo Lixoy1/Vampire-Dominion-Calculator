@@ -44,10 +44,11 @@ These are exact **aggregate intervals**, not enough evidence to reconstruct ever
 
 The same dominance responses confirm first-step Scarlet Bond costs:
 
-- Flat bond level 0 -> 1: 0 affinity; next flat step: 20.
-- Percent bond level 0 -> 1: 20 affinity.
+- Captured bond templates 1701–1704: first flat level costs 0 and gains 120 / 100 / 100 / 300 respectively.
+- Their next flat-step costs are 20 / 20 / 20 / 54; next gains are 132 / 110 / 110 / 330.
+- Their first percentage-step costs are 20 / 20 / 20 / 54, with next-gain fields 1 / 1 / 1 / 3.
 
-Higher bond levels are not covered by these captures and remain unverified.
+These values are exact only for those four captured bond templates. Higher bond levels and other bond templates are not covered and remain unverified.
 
 A successful `GET /calculations/lover-points` scenario confirms that 2 units of item 4232 yield 10 minimum, 12 expected, and 16 maximum intimacy points.
 
