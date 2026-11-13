@@ -1793,7 +1793,6 @@ export function importCommunitySnapshot(input = {}) {
         referenceObservations.wardenSteps[id] = {
           ...step,
           level: row.level ?? row.current_level ?? null,
-          target: row.target ?? null,
           dominance: row.dominance ?? null,
         };
         summary.wardenSteps++;
