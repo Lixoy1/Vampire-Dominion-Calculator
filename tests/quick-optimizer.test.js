@@ -113,8 +113,8 @@ const protectedResult = autoDistributeQuick({
     goal: 'all',
     spend: {
       blood: false, promote_items: false, conclave: false, trust: false,
-      group_items: false, presence_items: false, talent_items: false,
-      talent_exp: false, skin_cards: false, fabric: false,
+      group_items: true, presence_items: false, talent_items: false,
+      talent_exp: false, skin_cards: true, fabric: true,
     },
   },
 });
