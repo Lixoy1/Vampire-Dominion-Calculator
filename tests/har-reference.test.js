@@ -6,6 +6,11 @@ import {
   API_OBSERVED_BLOOD_COSTS,
   API_OBSERVATION_META,
 } from '../scripts/observed-costs.js';
+import {
+  WORKBOOK_BLOOD_COSTS,
+  WORKBOOK_BLOOD_COST_META,
+  getWorkbookBloodCost,
+} from '../scripts/workbook-blood-costs.js';
 
 assert.equal(API_OBSERVATION_META.successfulDominanceResponses, 78);
 assert.equal(Object.keys(API_OBSERVED_BLOOD_COSTS).length, 32);
@@ -23,13 +28,34 @@ for (const [level, cost] of Object.entries({
   assert.equal(Engine.getBloodCostSource(Number(level)), 'api-observed');
 }
 
-// Unknown levels are not interpolated or presented as API-confirmed.
-assert.equal(Engine.getBloodCostSource(6), 'estimated');
-assert.equal(
-  Engine.calcBloodCostForLevel(6),
-  Math.round(100 * Math.pow(1.065, 5)),
-  'unobserved levels retain the explicitly estimated fallback'
-);
+// The 500-step workbook is the historical fallback; it is not promoted to
+// current-server exactness and nothing is interpolated between its rows.
+assert.equal(WORKBOOK_BLOOD_COST_META.levels, 500);
+assert.equal(Object.keys(WORKBOOK_BLOOD_COSTS).length, 500);
+for (let level = 1; level <= 500; level++) {
+  assert.ok(getWorkbookBloodCost(level) > 0, 'workbook row for level ' + level);
+  assert.equal(
+    Engine.getBloodCostSource(level),
+    API_OBSERVED_BLOOD_COSTS[level] !== undefined ? 'api-observed' : 'workbook-reference'
+  );
+}
+assert.equal(Engine.getBloodCostSource(6), 'workbook-reference');
+assert.equal(Engine.calcBloodCostForLevel(6), 1267);
+assert.equal(getWorkbookBloodCost(6), 1267);
+
+// HAR values must override workbook conflicts.
+assert.equal(getWorkbookBloodCost(350), 574147920);
+assert.equal(Engine.calcBloodCostForLevel(350), 624596836);
+assert.equal(Engine.getBloodCostSource(350), 'api-observed');
+assert.equal(getWorkbookBloodCost(400), 22553464259);
+assert.equal(Engine.calcBloodCostForLevel(400), 6884526660);
+assert.equal(Engine.getBloodCostSource(400), 'api-observed');
+
+// Reproduce the historical workbook's 350 -> 375 control example.
+const rudraWorkbookCost = Array.from({ length: 25 }, (_, index) =>
+  getWorkbookBloodCost(350 + index)
+).reduce((sum, cost) => sum + cost, 0);
+assert.equal(rudraWorkbookCost, 89043997100);
 
 // The level-up calculator sums the same observed step costs.
 {
@@ -40,6 +66,21 @@ assert.equal(
   assert.equal(result.bloodSpent, 115 + 269);
   assert.deepEqual(result.bloodCostEvidence, {
     apiObservedSteps: 2,
+    workbookReferenceSteps: 0,
+    estimatedSteps: 0,
+  });
+}
+
+// Mixed-source ranges expose how each step was priced.
+{
+  const warden = GAME_DB.wardens[0];
+  const result = Engine.calcWardenLevelsUpgrade(
+    warden, 5, 7, 1, GAME_DB.warden_promotes, {}, {}
+  );
+  assert.equal(result.bloodSpent, 961 + 1267);
+  assert.deepEqual(result.bloodCostEvidence, {
+    apiObservedSteps: 1,
+    workbookReferenceSteps: 1,
     estimatedSteps: 0,
   });
 }
