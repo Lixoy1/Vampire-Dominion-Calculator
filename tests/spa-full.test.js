@@ -68,7 +68,11 @@ for (const action of ['save-calculation','reset-plan','export-profile','import-p
 const exporter = fn('exportProfileJson');
 assert.ok(exporter.includes('navigator.canShare') && exporter.includes('navigator.share'), 'profile export supports the native mobile share sheet');
 assert.ok(exporter.includes('document.body.appendChild(link)') && exporter.includes('link.click()'), 'profile export attaches its download link to the document before clicking');
-assert.ok(exporter.includes('profile-export-json') && exporter.includes('btn-copy-export-json'), 'profile export provides a manual JSON copy fallback');
+assert.ok(exporter.includes("const filename = 'Господство.json'"), 'profile export uses the requested Господство filename');
+assert.ok(exporter.includes('window.showSaveFilePicker') && exporter.includes('suggestedName: filename'), 'profile export offers a native save-file picker when supported');
+assert.ok(exporter.includes('navigator.share') && exporter.includes('files: [file]'), 'profile export offers the generated file through the Android share sheet');
+assert.ok(exporter.includes('link.download = filename'), 'profile export downloads the generated file with the requested name');
+assert.ok(!exporter.includes('profile-export-json') && !exporter.includes('btn-copy-export-json'), 'profile export no longer falls back to copying raw JSON');
 const importer = fn('importProfileJson');
 assert.ok(importer.includes('document.body.appendChild(input)') && importer.includes('input.click()'), 'profile import keeps the file picker attached to the document');
 assert.ok(importer.includes('FileReader') && importer.includes('file.text()'), 'profile import supports both modern and fallback file reading');
