@@ -981,10 +981,13 @@ export function autoDistributeBondPlan(input = {}) {
         const state = record(states[bond.attribute]);
         const flatLevel = Math.max(numeric(state.level), numeric(state.targetLevel, numeric(state.level)));
         if (owned.closeness >= bond.unlock_closeness && flatLevel < 600) {
-          const cost = Engine.calcBondLevelCost(flatLevel + 1);
-          const gain = bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
-          if (cost > 0 && cost <= remaining) {
-            const efficiency = gain / cost;
+          const cost = Engine.calcBondLevelCost(flatLevel + 1, bond);
+          const observed = Engine.BOND_FIRST_STEP_OBSERVATIONS[bond.id];
+          const gain = flatLevel === 0 && observed
+            ? observed.flatGain
+            : bond.type === 'one' ? 250 : bond.type === 'two' ? 200 : bond.type === 'all' ? 150 : 100;
+          if (cost >= 0 && cost <= remaining && gain > 0) {
+            const efficiency = cost === 0 ? Number.POSITIVE_INFINITY : gain / cost;
             if (!best || efficiency > best.efficiency) {
               best = { attribute: bond.attribute, kind: 'flat', cost, gain, efficiency, nextLevel: flatLevel + 1 };
             }
@@ -994,7 +997,7 @@ export function autoDistributeBondPlan(input = {}) {
         const currentPercent = Math.max(0, numeric(state.percentLevel, numeric(state.pctLevel)));
         const targetPercent = Math.max(currentPercent, numeric(state.targetPercentLevel, currentPercent));
         if (owned.closeness >= bond.unlock_closeness_percent && targetPercent < 600) {
-          const cost = Engine.calcBondPercentCost(targetPercent + 1);
+          const cost = Engine.calcBondPercentCost(targetPercent + 1, bond);
           const step = bond.is_advantage ? 0.005 : 0.0025;
           const previousGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent - currentPercent) * step);
           const nextGain = Math.round((wardenBaseAttrs[bond.attribute] || 0) * (targetPercent + 1 - currentPercent) * step);
