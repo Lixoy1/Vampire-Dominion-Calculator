@@ -34552,6 +34552,90 @@
           "next_cost": 461,
           "gain": 57,
           "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10300,
+          "from_level": 1,
+          "to_level": 11,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 12682,
+          "next_cost": 3382,
+          "gain": 2468,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 4,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 845,
+          "next_cost": 691,
+          "gain": 102,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 5,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 1536,
+          "next_cost": 961,
+          "gain": 160,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10960,
+          "from_level": 1,
+          "to_level": 100,
+          "promote_from": 1,
+          "promote_to": 1,
+          "cost": 12338141,
+          "next_cost": 434739,
+          "gain": 0,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10170,
+          "from_level": 150,
+          "to_level": 153,
+          "promote_from": 3,
+          "promote_to": 3,
+          "cost": 6396048,
+          "next_cost": 2204807,
+          "gain": 0,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10540,
+          "from_level": 258,
+          "to_level": 259,
+          "promote_from": 5,
+          "promote_to": 5,
+          "cost": 29999162,
+          "next_cost": 30745656,
+          "gain": 0,
+          "confidence": "exact_interval"
+        },
+        {
+          "source": "HAR /api/v1/accounts/{account}/calculations/dominance (2026-11-13)",
+          "warden_id": 10950,
+          "from_level": 182,
+          "to_level": 200,
+          "promote_from": 3,
+          "promote_to": 3,
+          "cost": 70592158,
+          "next_cost": 8858383,
+          "gain": 0,
+          "confidence": "exact_interval"
         }
       ],
       "exact_next_level_costs": [
@@ -34594,6 +34678,41 @@
           "from_level": 258,
           "cost": 29999162,
           "source": "HAR dominance response next_cost"
+        },
+        {
+          "from_level": 4,
+          "cost": 691,
+          "source": "HAR dominance response next_cost after target level 4"
+        },
+        {
+          "from_level": 5,
+          "cost": 961,
+          "source": "HAR dominance response next_cost after target level 5"
+        },
+        {
+          "from_level": 11,
+          "cost": 3382,
+          "source": "HAR dominance response next_cost after target level 11"
+        },
+        {
+          "from_level": 100,
+          "cost": 434739,
+          "source": "HAR dominance response next_cost after target level 100"
+        },
+        {
+          "from_level": 153,
+          "cost": 2204807,
+          "source": "HAR dominance response next_cost after target level 153"
+        },
+        {
+          "from_level": 200,
+          "cost": 8858383,
+          "source": "HAR dominance response next_cost after target level 200"
+        },
+        {
+          "from_level": 259,
+          "cost": 30745656,
+          "source": "HAR dominance response next_cost after target level 259"
         }
       ]
     },
