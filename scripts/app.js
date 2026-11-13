@@ -1057,7 +1057,7 @@ async function runQuickOptimization() {
     saveState();
     await render();
     const report = calculationSnapshot?.report || {};
-    const warnings = (result.warnings || []).map(item => '<li>' + escHtml(item) + '</li>').join('');
+    const warnings = (result.warnings || []).map(item => '<li>' + escHtml(item?.message || item) + '</li>').join('');
     const html = '<div class="quick-result-panel">' +
       '<div class="quick-calc-total">+' + fmt(report.gain?.total || 0) + '</div>' +
       '<div class="row-sub">Черновик плана сформирован. Профиль и ресурсы не изменены.</div>' +
