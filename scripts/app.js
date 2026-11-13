@@ -1914,8 +1914,11 @@ function renderLevelsTab(db, report, oracle) {
             <div class="row-info">
               <div class="row-name">${tName('warden', w.name)} ${attrDotsHtml(w.attributes)}</div>
               <div class="row-sub">
-                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь по расчёту: ${fmt(upg.bloodSpent)}
+                Ступень: ${tName('warden_promote', prom?.name)} (до ${prom?.max_warden_lvl} ур.) · Кровь: ${fmt(upg.bloodSpent)}
                 ${!upg.canPromote ? `<span style="color:var(--warn)"> · Нужны предметы прорыва</span>` : ''}
+              </div>
+              <div class="row-sub">
+                Источник цены: API ${upg.bloodCostEvidence?.apiObservedSteps || 0} · Excel ${upg.bloodCostEvidence?.workbookReferenceSteps || 0} · резерв ${upg.bloodCostEvidence?.estimatedSteps || 0}
               </div>
             </div>
             <div class="row-controls">
