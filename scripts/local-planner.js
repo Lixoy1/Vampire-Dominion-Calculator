@@ -1050,6 +1050,8 @@ export function autoDistributeBondPlan(input = {}) {
     let localAddedLevels = 0;
     let localAddedAffinity = 0;
     let localGain = 0;
+    let localExactSteps = 0;
+    let localEstimatedSteps = 0;
 
     for (let guard = 0; guard < 8 * 600; guard++) {
       if (remaining <= 0) break;
@@ -1114,8 +1116,10 @@ export function autoDistributeBondPlan(input = {}) {
       localGain += best.gain;
       if (best.exact) {
         exactStepCount++;
+        localExactSteps++;
       } else {
         estimatedStepCount++;
+        localEstimatedSteps++;
       }
     }
 
@@ -1126,7 +1130,8 @@ export function autoDistributeBondPlan(input = {}) {
         addedLevels: localAddedLevels,
         affinitySpent: localAddedAffinity,
         gain: Math.round(localGain),
-        exactSteps: localAddedLevels,
+        exactSteps: localExactSteps,
+        estimatedSteps: localEstimatedSteps,
         remainingAffinity: remaining,
       };
       addedLevels += localAddedLevels;
