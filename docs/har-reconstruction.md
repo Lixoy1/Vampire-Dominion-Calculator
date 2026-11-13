@@ -79,3 +79,7 @@ For the captured Warden upgrade scenario 10270, level 1 -> 3, the server returns
 
 
 Validation is run in GitHub Actions for this feature branch before merging.
+
+## Exact Warden dominance gains
+
+The captured dominance response includes exact gains for four level intervals: Warden 10270 (1→3: 50), 10280 (1→7: 641), 10300 (1→10: 2,051), and 10960 (1→3: 57). The engine now returns these exact values for those exact intervals. The general level-gain formula remains approximation-only outside these observations.
