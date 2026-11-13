@@ -82,4 +82,4 @@ Validation is run in GitHub Actions for this feature branch before merging.
 
 ## Exact Warden dominance gains
 
-The captured dominance response includes exact gains for four level intervals: Warden 10270 (1→3: 50), 10280 (1→7: 641), 10300 (1→10: 2,051), and 10960 (1→3: 57). The engine now returns these exact values for those exact intervals. The general level-gain formula remains approximation-only outside these observations.
+The captured dominance response includes exact gains for four level intervals: Warden 10270 (1→3: 50), 10280 (1→7: 641), 10300 (1→10: 2,051), and 10960 (1→3: 57). The engine stores these as captured-account observations, separate from its local estimate. They are not substituted into the generic formula because the HAR does not fully describe every profile modifier that contributed to the server result. The general level-gain formula remains approximation-only.
