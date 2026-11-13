@@ -1133,8 +1133,8 @@ export function autoDistributeQuick(input = {}) {
     quickSettings: settings,
   });
   const unsupported = [];
-  if (settings.spend.group_items) unsupported.push('Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.');
-  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push('Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.');
+  if (settings.spend.group_items) unsupported.push({ code: 'QUICK_AURAS_NOT_OPTIMIZED', message: 'Автораспределение уровней Вдохновений пока не включено: в HAR нет подтверждённого оптимального плана для этих улучшений.' });
+  if (settings.spend.skin_cards || settings.spend.fabric) unsupported.push({ code: 'QUICK_SKINS_NOT_OPTIMIZED', message: 'Автораспределение Обликов пока не включено: требуется восстановить серверный рейтинг следующего шага.' });
   return {
     ...result,
     quickSettings: settings,
