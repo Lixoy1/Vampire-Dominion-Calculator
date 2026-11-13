@@ -601,16 +601,40 @@ export function calcBloodCostForLevel(level) {
   return Math.round(605000000 * Math.pow(1.02, level - 400));
 }
 
+// Exact aggregate intervals observed in successful /calculations/dominance responses.
+// These override the legacy approximation only for the precise interval captured.
+export const BLOOD_COST_EXACT_INTERVALS = Object.freeze([
+  { from: 1, to: 3, cost: 384, nextCost: 461 },
+  { from: 1, to: 7, cost: 3765, nextCost: 1614 },
+  { from: 1, to: 10, cost: 9799, nextCost: 2883 },
+  { from: 105, to: 150, cost: 36056873, nextCost: 2096083 },
+]);
+
+export function calcBloodCostForRange(fromLevel, toLevel) {
+  const from = Math.max(1, Math.round(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.round(Number(toLevel) || from));
+  const exact = BLOOD_COST_EXACT_INTERVALS.find(row => row.from === from && row.to === to);
+  if (exact) return exact.cost;
+  let total = 0;
+  for (let level = from; level < to; level++) total += calcBloodCostForLevel(level);
+  return total;
+}
+
+export function getBloodCostConfidence(fromLevel, toLevel) {
+  const from = Math.max(1, Math.round(Number(fromLevel) || 1));
+  const to = Math.max(from, Math.round(Number(toLevel) || from));
+  return BLOOD_COST_EXACT_INTERVALS.some(row => row.from === from && row.to === to)
+    ? 'exact_api_interval'
+    : 'approximation_only';
+}
+
 export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPromoteId, promotes, bagCountsById, talentLevelsByPos = {}) {
   const talentSum = calcWardenTalentSum(warden, talentLevelsByPos);
   const multBefore = calcWardenLevelMultiplier(currentLvl);
   const multAfter = calcWardenLevelMultiplier(targetLvl);
   const baseGain = Math.round(talentSum * (multAfter - multBefore));
 
-  let bloodSpent = 0;
-  for (let l = currentLvl; l < targetLvl; l++) {
-    bloodSpent += calcBloodCostForLevel(l);
-  }
+  const bloodSpent = calcBloodCostForRange(currentLvl, targetLvl);
 
   // Проверка требуемых прорывов
   const neededPromotes = promotes.filter(p => p.id > currentPromoteId && p.min_warden_lvl < targetLvl);
@@ -648,11 +672,17 @@ export function calcWardenLevelsUpgrade(warden, currentLvl, targetLvl, currentPr
  * - Процентный уровень (percent_level: 1..600): даёт +0.5% (или +1% для профильных) к базовому атрибуту.
  */
 export function calcBondLevelCost(level) {
-  // Стоимость шага доверия растёт по параболе/ступеням
+  // HAR confirms the first flat bond level is free; the following step costs 20.
+  if (level <= 1) return 0;
+  if (level === 2) return 20;
+  // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(50 + Math.pow(level, 1.85) * 4.5);
 }
 
 export function calcBondPercentCost(percentLevel) {
+  // HAR response exposes next_cost=20 from percent level 0.
+  if (percentLevel === 1) return 20;
+  // Higher levels remain an explicitly unverified legacy estimate.
   return Math.round(200 + Math.pow(percentLevel, 2.05) * 12);
 }
 
