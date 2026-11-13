@@ -842,7 +842,7 @@ function renderLoverDetailScreen(db) {
     activeTab === 'presences' ? presencesHtml : skinsSection;
   const currentIndex = ownedIds.indexOf(id);
   const pager = ownedIds.length > 1
-    ? '<div class="warden-pager-bar"><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex - 1 + ownedIds.length) % ownedIds.length] + '">‹ Предыдущий</button><button class="pager-btn" data-action="open-lover-picker">' + (currentIndex + 1) + ' из ' + ownedIds.length + ' ⌃</button><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex + 1) % ownedIds.length] + '">Следующий ›</button></div>'
+    ? '<div class="warden-pager-bar"><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex - 1 + ownedIds.length) % ownedIds.length] + '">‹ Предыдущий</button><button class="pager-btn" data-action="nav" data-screen="lovers">' + (currentIndex + 1) + ' из ' + ownedIds.length + ' ⌃</button><button class="pager-btn" data-action="open-lover" data-id="' + ownedIds[(currentIndex + 1) % ownedIds.length] + '">Следующий ›</button></div>'
     : '';
 
   return renderSubToolbar('lovers', 'Партнёр') +
@@ -1681,7 +1681,7 @@ function renderSettingsScreen() {
       '<div class="setting-preference-row"><div><b>Анимации</b><div class="row-sub">Плавность переходов и движения</div></div>' + segment('animations', ['auto','smooth','less'], ['Авто','Плавно','Меньше']) + '</div>' +
       '<div class="setting-preference-row"><div><b>Пол партнёров по умолчанию</b><div class="row-sub">Применяется к новым записям, если каталог не задаёт пол</div></div>' + segment('loverSex', ['male','female'], ['Мужской','Женский']) + '</div>' +
       toggle('warnOnChoice', 'Предупреждать о выборе', 'Запрашивать подтверждение перед добавлением сущностей в профиль.', true) +
-      toggle('botMessages', 'Сообщения приложения', 'Показывать локальные уведомления о действиях и ошибках. Игровой бот не подключён.', true) +
+      '<div class="setting-toggle-row"><div><b>Сообщения игрового бота</b><div class="row-sub">Недоступны в автономной версии без подключения к боту. Расчёты и сохранения работают локально.</div></div><span class="badge">Не подключено</span></div>' +
     '</section>' +
     '<section class="attrs-box"><div class="card-title">Уведомления и поддержка</div>' +
       '<div class="setting-id-row"><div><b>Telegram ID</b><div class="row-sub">' + (userId ? escHtml(String(userId)) : 'Доступен только внутри Telegram') + '</div></div><button type="button" class="btn btn-sm" data-action="copy-id" data-copy-kind="user" ' + (userId ? '' : 'disabled') + '>Копировать</button></div>' +
@@ -2612,7 +2612,7 @@ function bindSpaEvents(db, report, oracle) {
       }
       if (action === 'setting-toggle') {
         const key = button.dataset.setting;
-        if (!['warnOnChoice','botMessages'].includes(key)) return;
+        if (!['warnOnChoice'].includes(key)) return;
         state.settings ||= {};
         state.settings[key] = !Boolean(state.settings[key] ?? true);
         saveState();
@@ -2672,6 +2672,7 @@ function bindSpaEvents(db, report, oracle) {
         const answer = globalThis.prompt('Введите ID смотрителя:\n' + choices.slice(0, 30).map(function (warden) { return warden.id + ' — ' + tName('warden', warden.name); }).join('\n'));
         const warden = db.wardens.find(function (item) { return item.id === Number(answer); });
         if (!warden) return;
+        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить смотрителя в профиль?')) return;
         pushUndoSnapshot();
         state.account.ownedWardens[warden.id] = createOwnedWarden(warden);
         state.currentWardenId = warden.id;
@@ -2691,6 +2692,7 @@ function bindSpaEvents(db, report, oracle) {
         const answer = globalThis.prompt('Введите ID партнёра:\n' + choices.slice(0, 30).map(function (lover) { return lover.id + ' — ' + tName('lover', lover.name); }).join('\n'));
         const lover = db.lovers.find(function (item) { return item.id === Number(answer); });
         if (!lover) return;
+        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить партнёра в профиль?')) return;
         pushUndoSnapshot();
         state.account.ownedLovers[lover.id] = createOwnedLover(lover);
         state.currentLoverId = lover.id;
