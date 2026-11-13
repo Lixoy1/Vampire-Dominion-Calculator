@@ -51,6 +51,13 @@ assert.equal(bondResult.spentAffinity, 0);
 assert.equal(bondResult.totalGain, 620);
 assert.equal(Engine.calcBondPercentCost(1), 20);
 
+// The captured Conclave levels 5–8 expose the next destination-level costs.
+for (const [from, to, expected] of [[5,6,6014],[6,7,6132],[7,8,6250],[8,9,6368]]) {
+  assert.equal(Engine.calcConclaveBranch(GAME_DB.conclave_levels, from, to).spent, expected);
+}
+
+assert.equal(Engine.calcGuildExp({}, 3).expected, 0);
+
 // The captured lover-points scenario: 2 bags of item 4232 yield 10 / 12 / 16.
 const points = Engine.calcBagPoints({ 4232: 2 }, [4232]);
 assert.deepEqual(
