@@ -58,6 +58,36 @@ for (const [from, to, expected] of [
   assert.equal(Engine.getBloodCostConfidence(from, to), 'exact_api_interval');
 }
 
+// Additional exact aggregate intervals captured in the third HAR (2026-11-13).
+for (const [from, to, expected] of [
+  [1, 50, 894737],
+  [1, 51, 984522],
+  [1, 58, 1720812],
+  [1, 77, 4960329],
+  [1, 85, 7026700],
+  [1, 100, 12338141],
+  [2, 80, 5679151],
+  [50, 51, 89785],
+  [50, 61, 1206554],
+  [2, 95, 10339710],
+  [182, 197, 57584118],
+  [182, 196, 53362888],
+  [182, 191, 33096771],
+  [182, 186, 14188250],
+]) {
+  assert.equal(Engine.calcBloodCostForRange(from, to), expected, `third HAR blood interval ${from}->${to}`);
+  assert.equal(Engine.getBloodCostConfidence(from, to), 'exact_api_interval');
+}
+
+// Exact next-step costs independently returned after several target levels.
+for (const [level, expected] of [
+  [51, 93374], [58, 122150], [77, 232490], [80, 254218],
+  [85, 293043], [61, 136440], [95, 380479],
+  [186, 3675875], [191, 3942763], [196, 4221230], [197, 4278313],
+]) {
+  assert.equal(Engine.calcBloodCostForLevel(level), expected, `third HAR next blood cost at level ${level}`);
+}
+
 // API confirms the first flat bond level is free, the following step is 20,
 // and the first percentage step costs 20. Later steps remain unverified.
 assert.equal(Engine.calcBondLevelCost(1), 0);
