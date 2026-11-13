@@ -1085,222 +1085,14 @@ function importQuickResponseFile() {
 }
 
 function renderQuickSettingsModal() {
-  const settings = normalizeQuickSettings(state.quickSettings || {});
-  const goals = Object.entries(QUICK_GOAL_LABELS).map(([key, label]) =>
-    '<option value="' + key + '" ' + (settings.goal === key ? 'selected' : '') + '>' + label + '</option>'
-  ).join('');
-  const spend = Object.entries(QUICK_SPEND_LABELS).map(([key, labels]) =>
-    '<label class="quick-settings-check"><input type="checkbox" data-quick-spend="' + key + '" ' +
-    (settings.spend[key] !== false ? 'checked' : '') + '><span><b>' + labels[0] + '</b><small>' + labels[1] + '</small></span></label>'
-  ).join('');
-  const conclave = ATTRIBUTES.map(attribute =>
-    '<label class="quick-settings-inline"><input type="checkbox" data-quick-conclave="' + attribute + '" ' +
-    (!(settings.conclave_off || []).includes(attribute) ? 'checked' : '') + '><span>' + tName('attribute', attribute) + '</span></label>'
-  ).join('');
-  const renderFeatureCheckbox = (kind, id, feature, value, label, checked, extra = '') =>
-    '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="' + kind +
-    '" data-id="' + id + '" data-feature="' + feature + '" data-value="' + value + '" ' + extra + ' ' +
-    (checked ? 'checked' : '') + '><span>' + label + '</span></label>';
-
-  const wardenCandidates = GAME_DB.wardens.filter(entity =>
-    state.account.ownedWardens[entity.id] || entity.summon_item_id != null
-  );
-  const wardens = wardenCandidates.map(entity => {
-    const id = entity.id;
-    const owned = state.account.ownedWardens[id];
-    const item = settings.wardens[id] || {};
-    const promotions = GAME_DB.warden_promotes
-      .filter(row => !owned || row.min_warden_lvl >=
-        (GAME_DB.warden_promotes.find(stage => stage.id === Number(owned.promoteId))?.max_warden_lvl ?? 1));
-    const auras = (entity.auras || []).filter(row => row.aura_type === 'updatable' && row.upgrade_item_id != null);
-    const talents = entity.talents || [];
-    const skins = entity.skins || [];
-    const promotionHtml = promotions.length
-      ? '<details><summary>Прорывы (' + (promotions.length - (item.promotes_off || []).length) + '/' + promotions.length + ')</summary><div class="quick-feature-grid">' +
-        promotions.map(row => renderFeatureCheckbox('warden', id, 'promotes_off', row.id,
-          escHtml(tName('warden_promote', row.name)) + ' · ур. ' + row.min_warden_lvl,
-          !(item.promotes_off || []).includes(row.id))).join('') + '</div></details>'
-      : '';
-    const talentHtml = talents.length
-      ? '<details><summary>Таланты (' + (talents.length - (item.talents_off || []).length) + '/' + talents.length + ')</summary><div class="quick-feature-grid">' +
-        talents.map((row, position) => renderFeatureCheckbox('warden', id, 'talents_off', position,
-          escHtml(tName('attribute', row.attribute)) + ' · ' + row.stars + '★ · №' + position,
-          !(item.talents_off || []).includes(position))).join('') + '</div></details>'
-      : '';
-    const auraHtml = auras.length
-      ? '<details><summary>Вдохновения (' + (auras.length - (item.auras_off || []).length) + '/' + auras.length + ')</summary><div class="quick-feature-grid">' +
-        auras.map(row => renderFeatureCheckbox('warden', id, 'auras_off', row.id,
-          escHtml(tName('aura', row.name)), !(item.auras_off || []).includes(row.id))).join('') + '</div></details>'
-      : '';
-    const skinHtml = skins.length
-      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
-        skins.map(row => renderFeatureCheckbox('warden', id, 'skins_off', row.id,
-          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
-      : '';
-    const summonHtml = !owned && entity.summon_item_id != null
-      ? renderFeatureCheckbox('warden', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
-      : '';
-    const levelHtml = '<div class="quick-entity-control-row">' +
-      '<label class="quick-settings-inline"><input type="checkbox" data-quick-warden-levels="' + id + '" ' +
-      (item.levels !== false ? 'checked' : '') + '> <span>Уровни</span></label>' +
-      '<label class="quick-settings-inline">Не выше <input class="input quick-settings-max" type="number" min="' +
-      (Number(owned?.level) || 1) + '" max="450" placeholder="без лимита" data-quick-warden-max="' + id +
-      '" value="' + (item.max_level || '') + '"></label></div>';
-    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('warden', entity.name)) +
-      '</span><small>' + (owned ? 'свой · ур. ' + Number(owned.level || 1) : 'доступен для призыва') +
-      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
-      renderFeatureCheckbox('warden', id, 'off', 'true', 'Участвует в Quick', !item.off) +
-      summonHtml + levelHtml + promotionHtml + talentHtml + auraHtml + skinHtml + '</div></details>';
-  }).join('') || '<p class="row-sub">Нет доступных смотрителей.</p>';
-
-  const loverCandidates = GAME_DB.lovers.filter(entity =>
-    state.account.ownedLovers[entity.id] || entity.summon_item_id != null
-  );
-  const lovers = loverCandidates.map(entity => {
-    const id = entity.id;
-    const owned = state.account.ownedLovers[id];
-    const item = settings.lovers[id] || {};
-    const bonds = entity.scarlet_bonds || [];
-    const presences = (entity.presences || []).filter(row => row.presence_type === 'updatable' && row.upgrade_item_id != null);
-    const skins = entity.skins || [];
-    const bondsHtml = bonds.length
-      ? '<details><summary>Кровные узы (' + (bonds.length * 2 - (item.bonds_off || []).length) + '/' + (bonds.length * 2) + ')</summary><div class="quick-feature-grid">' +
-        bonds.flatMap(row => ['level', 'percent'].map(kind => {
-          const excluded = (item.bonds_off || []).some(entry => entry.attribute === row.attribute && entry.kind === kind);
-          return '<label class="quick-settings-inline"><input type="checkbox" class="quick-feature-checkbox" data-quick-feature-kind="lover" data-id="' + id +
-            '" data-feature="bonds_off" data-attribute="' + row.attribute + '" data-kind="' + kind + '" ' +
-            (!excluded ? 'checked' : '') + '><span>' + escHtml(tName('attribute', row.attribute)) + ' · ' +
-            (kind === 'level' ? 'уровень' : 'процент') + '</span></label>';
-        })).join('') + '</div></details>'
-      : '';
-    const presenceHtml = presences.length
-      ? '<details><summary>Веяния (' + (presences.length - (item.presences_off || []).length) + '/' + presences.length + ')</summary><div class="quick-feature-grid">' +
-        presences.map(row => renderFeatureCheckbox('lover', id, 'presences_off', row.id,
-          escHtml(tName('presence', row.name)), !(item.presences_off || []).includes(row.id))).join('') + '</div></details>'
-      : '';
-    const skinHtml = skins.length
-      ? '<details><summary>Облики (' + (skins.length - (item.skins_off || []).length) + '/' + skins.length + ')</summary><div class="quick-feature-grid">' +
-        skins.map(row => renderFeatureCheckbox('lover', id, 'skins_off', row.id,
-          escHtml(tName('skin', row.name)), !(item.skins_off || []).includes(row.id))).join('') + '</div></details>'
-      : '';
-    const summonHtml = !owned && entity.summon_item_id != null
-      ? renderFeatureCheckbox('lover', id, 'summon', 'true', 'Разрешить призыв', item.summon !== false)
-      : '';
-    return '<details class="quick-entity-settings"><summary><span>' + escHtml(tName('lover', entity.name)) +
-      '</span><small>' + (owned ? 'свой · близость ' + Number(owned.closeness || 0) : 'доступен для призыва') +
-      (item.off ? ' · выключен' : '') + '</small></summary><div class="quick-entity-settings-body">' +
-      renderFeatureCheckbox('lover', id, 'off', 'true', 'Участвует в Quick', !item.off) +
-      summonHtml + bondsHtml + presenceHtml + skinHtml + '</div></details>';
-  }).join('') || '<p class="row-sub">Нет доступных партнёров.</p>';
-
-  const html = '<section class="quick-calc-summary">' +
-    '<div class="card-title">Quick Calculation · настройки</div>' +
-    '<div class="row-sub">Формат настроек восстановлен по официальному клиенту. Сам алгоритм оптимизации выполняется на сервере игры и в этой локальной копии не воспроизводится.</div>' +
-    '<label class="field-stack"><span>Цель оптимизации</span><select class="select" id="quick-goal">' + goals + '</select></label>' +
-    '<details open><summary>Что разрешено тратить</summary><div class="quick-settings-spend">' + spend + '</div></details>' +
-    '<details><summary>Атрибуты Конклава</summary><div class="quick-settings-inline-wrap">' + conclave + '</div></details>' +
-    '<details><summary>Участие смотрителей (' + Object.keys(state.account.ownedWardens || {}).length + ')</summary><div class="quick-settings-entities">' + wardens + '</div></details>' +
-    '<details><summary>Участие партнёров (' + Object.keys(state.account.ownedLovers || {}).length + ')</summary><div class="quick-settings-entities">' + lovers + '</div></details>' +
-    '<div class="quick-calc-actions"><button class="btn" id="quick-export-settings">Экспорт настроек JSON</button><button class="btn btn-primary" id="quick-import-response">Импортировать ответ API / HAR</button></div>' +
-    '<p class="row-sub">Импорт переносит подтверждённый сервером план в черновик. Он не списывает ресурсы и не меняет профиль. Вдохновения и отдельные предметы опыта пока сохраняются в списке неподдерживаемых полей.</p>' +
-    '<div class="quick-calc-actions"><button class="btn" id="quick-open-full-calc">Подробный расчёт</button><button class="btn" id="quick-close">Закрыть</button></div>' +
-  '</section>';
-  openAppModal('Быстрый подсчёт', html);
-
+  const html = '<section class="quick-calc-summary"><div class="card-title">Быстрый расчёт</div>' +
+    '<p class="row-sub">Калькулятор покажет результат по данным твоего профиля и текущего плана. Сначала укажи свои ресурсы и уровни в разделе «Ресурсы».</p>' +
+    '<div class="quick-calc-actions"><button class="btn btn-primary" id="quick-run-local">Рассчитать быстро</button><button class="btn" id="quick-close">Закрыть</button></div></section>';
+  openAppModal('Быстрый расчёт', html);
   const body = document.getElementById('modal-body');
-  if (!body) return;
-  const refresh = () => renderQuickSettingsModal();
-  body.querySelector('#quick-goal')?.addEventListener('change', event => {
-    updateQuickSettings({ ...state.quickSettings, goal: event.target.value });
-    refresh();
-  });
-  body.querySelectorAll('[data-quick-spend]').forEach(input => input.addEventListener('change', event => {
-    const spend = { ...state.quickSettings.spend, [event.target.dataset.quickSpend]: event.target.checked };
-    updateQuickSettings({ ...state.quickSettings, spend });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-conclave]').forEach(input => input.addEventListener('change', () => {
-    const excluded = [...body.querySelectorAll('[data-quick-conclave]:not(:checked)')]
-      .map(node => node.dataset.quickConclave);
-    updateQuickSettings({ ...state.quickSettings, conclave_off: excluded });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-entity]').forEach(input => input.addEventListener('change', event => {
-    const kind = event.target.dataset.quickEntity === 'warden' ? 'wardens' : 'lovers';
-    const id = event.target.dataset.id;
-    const entities = { ...state.quickSettings[kind] };
-    const current = { ...(entities[id] || {}) };
-    if (event.target.checked) delete current.off;
-    else current.off = true;
-    if (Object.keys(current).length) entities[id] = current;
-    else delete entities[id];
-    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-warden-levels]').forEach(input => input.addEventListener('change', event => {
-    const id = event.target.dataset.quickWardenLevels;
-    const entities = { ...state.quickSettings.wardens };
-    const item = { ...(entities[id] || {}) };
-    if (event.target.checked) delete item.levels;
-    else item.levels = false;
-    entities[id] = item;
-    updateQuickSettings({ ...state.quickSettings, wardens: entities });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-feature-kind]').forEach(input => input.addEventListener('change', event => {
-    const node = event.target;
-    const kind = node.dataset.quickFeatureKind === 'warden' ? 'wardens' : 'lovers';
-    const id = node.dataset.id;
-    const feature = node.dataset.feature;
-    const entities = { ...state.quickSettings[kind] };
-    const item = { ...(entities[id] || {}) };
-    if (feature === 'off') {
-      if (node.checked) delete item.off;
-      else item.off = true;
-    } else if (feature === 'summon') {
-      if (node.checked) delete item.summon;
-      else item.summon = false;
-    } else if (feature === 'bonds_off') {
-      const attribute = node.dataset.attribute;
-      const bondKind = node.dataset.kind;
-      const entries = [...(item.bonds_off || [])];
-      const exists = entries.some(entry => entry.attribute === attribute && entry.kind === bondKind);
-      item.bonds_off = node.checked
-        ? entries.filter(entry => entry.attribute !== attribute || entry.kind !== bondKind)
-        : (exists ? entries : [...entries, { attribute, kind: bondKind }]);
-    } else {
-      const value = Number(node.dataset.value || node.value);
-      const values = [...(item[feature] || [])];
-      item[feature] = node.checked
-        ? values.filter(entry => Number(entry) !== value)
-        : [...values.filter(entry => Number(entry) !== value), value];
-    }
-    if (Object.keys(item).length) entities[id] = item;
-    else delete entities[id];
-    updateQuickSettings({ ...state.quickSettings, [kind]: entities });
-    refresh();
-  }));
-  body.querySelectorAll('[data-quick-warden-max]').forEach(input => input.addEventListener('change', event => {
-    const id = event.target.dataset.quickWardenMax;
-    const entities = { ...state.quickSettings.wardens };
-    const item = { ...(entities[id] || {}) };
-    const value = Math.max(1, Math.min(450, Math.round(Number(event.target.value) || 0)));
-    if (event.target.value && Number.isFinite(value)) item.max_level = value;
-    else delete item.max_level;
-    if (Object.keys(item).length) entities[id] = item;
-    else delete entities[id];
-    updateQuickSettings({ ...state.quickSettings, wardens: entities });
-    refresh();
-  }));
-  body.querySelector('#quick-export-settings')?.addEventListener('click', downloadQuickSettings);
-  body.querySelector('#quick-import-response')?.addEventListener('click', importQuickResponseFile);
-  body.querySelector('#quick-open-full-calc')?.addEventListener('click', () => {
-    closeAppModal();
-    navigate('calc_dominance');
-  });
-  body.querySelector('#quick-close')?.addEventListener('click', closeAppModal);
+  body?.querySelector('#quick-run-local')?.addEventListener('click', () => { closeAppModal(); navigate('calc_dominance'); });
+  body?.querySelector('#quick-close')?.addEventListener('click', closeAppModal);
 }
-
 function openQuickCalculation() {
   if (!calculationSnapshot?.report) return;
   renderQuickSettingsModal();
@@ -1514,55 +1306,36 @@ function renderResourcesScreen() {
 
 function renderWardensListScreen(db) {
   const ownedIds = Object.keys(state.account.ownedWardens || {}).map(Number);
-  let list = ownedIds.map(function (id) { return db.wardens.find(function (warden) { return warden.id === id; }); }).filter(Boolean);
+  let list = ownedIds.map(id => db.wardens.find(warden => warden.id === id)).filter(Boolean);
   const filter = state.wardenListFilter || 'all';
-  if (filter !== 'all') list = list.filter(function (warden) { return warden.attributes.includes(filter); });
+  if (filter !== 'all') list = list.filter(warden => warden.attributes.includes(filter));
   const query = String(state.wardenListSearch || '').trim().toLocaleLowerCase();
-  if (query) list = list.filter(function (warden) { return tName('warden', warden.name).toLocaleLowerCase().includes(query); });
-  list.sort(function (a, b) {
-    if (state.wardenListSort === 'sum') return (computeWardenDetailedStats(state.account, b.id).sum - computeWardenDetailedStats(state.account, a.id).sum);
-    return tName('warden', a.name).localeCompare(tName('warden', b.name), state.lang === 'en' ? 'en' : 'ru');
-  });
-  return renderSubToolbar('resources', 'Смотрители') +
+  if (query) list = list.filter(warden => tName('warden',warden.name).toLocaleLowerCase().includes(query));
+  list.sort((a,b) => state.wardenListSort === 'sum' ? computeWardenDetailedStats(state.account,b.id).sum - computeWardenDetailedStats(state.account,a.id).sum : tName('warden',a.name).localeCompare(tName('warden',b.name),state.lang === 'en' ? 'en' : 'ru'));
+  const catalog = db.wardens.filter(warden => !state.account.ownedWardens[warden.id]);
+  return renderSubToolbar('resources','Смотрители') +
     '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="warden" placeholder="Поиск смотрителя..." value="' + escHtml(state.wardenListSearch || '') + '"></div><button class="pill-tab" data-action="toggle-warden-sort">' + (state.wardenListSort === 'sum' ? 'Сумма ↓' : 'Имя ↑') + '</button></div>' +
     '<div class="pill-tabs"><button class="pill-tab ' + (filter === 'all' ? 'active' : '') + '" data-action="warden-filter" data-val="all">Все ' + ownedIds.length + '</button>' +
-    ATTRIBUTES.map(function (attr) { return '<button class="pill-tab ' + (filter === attr ? 'active' : '') + '" data-action="warden-filter" data-val="' + attr + '"><span class="dot ' + attr + '"></span>' + tName('attribute', attr) + '</button>'; }).join('') + '</div>' +
-    '<div class="card-stack">' + list.map(function (warden) {
-      const owned = state.account.ownedWardens[warden.id];
-      const stats = computeWardenDetailedStats(state.account, warden.id);
-      return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '">' +
-        '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt="">' +
-        '<div class="card-body"><div class="card-title">' + tName('warden', warden.name) + '</div><div class="card-subtitle">' + warden.attributes.map(function (attr) { return '<span class="dot ' + attr + '"></span>'; }).join(' ') + ' · ур. ' + Number(owned.level || 1) + ' · ' + tName('warden_promote', (db.promotes.find(function (p) { return p.id === Number(owned.promoteId || 1); }) || {}).name || '') + '</div></div>' +
-        '<div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">локальная расчётная база</div>›</div></div>';
-    }).join('') +
-    '<button type="button" class="nav-card add-dashed" data-action="open-add-warden"><strong>＋ Добавить смотрителей (' + ownedIds.length + '/' + db.wardens.length + ')</strong></button></div>' +
-    '<details class="attrs-box add-owned-details"><summary>Открыть полный каталог · ' + db.wardens.length + ' смотрителей</summary><div class="grid-2">' +
-      db.wardens.filter(function (warden) { return !state.account.ownedWardens[warden.id]; }).map(function (warden) {
-        return '<button type="button" class="catalog-pick" data-action="add-warden" data-id="' + warden.id + '">' +
-          '<img src="' + getIconUrl(warden.icon_path, state.preferLocalIcons) + '" alt="" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px">' +
-          tName('warden', warden.name) + '</button>';
-      }).join('') + '</div></details>';
+    ATTRIBUTES.map(attr => '<button class="pill-tab ' + (filter === attr ? 'active' : '') + '" data-action="warden-filter" data-val="' + attr + '"><span class="dot ' + attr + '"></span>' + tName('attribute',attr) + '</button>').join('') + '</div>' +
+    '<div class="card-stack">' + list.map(warden => {
+      const owned = state.account.ownedWardens[warden.id], stats = computeWardenDetailedStats(state.account,warden.id);
+      return '<div class="nav-card" data-action="open-warden" data-id="' + warden.id + '"><img src="' + getIconUrl(warden.icon_path,state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt=""><div class="card-body"><div class="card-title">' + escHtml(tName('warden',warden.name)) + '</div><div class="card-subtitle">' + warden.attributes.map(attr => '<span class="dot ' + attr + '"></span>').join(' ') + ' · ур. ' + Number(owned.level || 1) + '</div></div><div class="card-right"><b>' + fmt(stats.sum) + '</b><div class="row-sub">локальная база</div>›</div></div>';
+    }).join('') + '</div><section class="attrs-box add-owned-details"><h3>Добавить смотрителя</h3><p class="row-sub">Выбери персонажа — нажми на его карточку</p><div class="grid-2">' +
+    catalog.map(warden => '<button type="button" class="catalog-pick" data-action="add-warden" data-id="' + warden.id + '"><img src="' + getIconUrl(warden.icon_path,state.preferLocalIcons) + '" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px"><span>' + escHtml(tName('warden',warden.name)) + '</span></button>').join('') + '</div></section>';
 }
-
-
 function renderLoversScreen(db) {
   const ownedIds = Object.keys(state.account.ownedLovers || {}).map(Number);
-  let list = ownedIds.map(function (id) { return db.lovers.find(function (lover) { return lover.id === id; }); }).filter(Boolean);
+  let list = ownedIds.map(id => db.lovers.find(lover => lover.id === id)).filter(Boolean);
   const query = String(state.loverListSearch || '').trim().toLocaleLowerCase();
-  if (query) list = list.filter(function (lover) { return tName('lover', lover.name).toLocaleLowerCase().includes(query); });
-  return renderSubToolbar('resources', 'Партнёры') + '<div class="collection-banner partners-banner"><div><b>КРОВНЫЕ УЗЫ</b><span>Партнёры · близость · доверие</span></div></div>' +
+  if (query) list = list.filter(lover => tName('lover',lover.name).toLocaleLowerCase().includes(query));
+  const catalog = db.lovers.filter(lover => !state.account.ownedLovers[lover.id]);
+  return renderSubToolbar('resources','Партнёры') +
+    '<div class="collection-banner partners-banner"><div><b>КРОВНЫЕ УЗЫ</b><span>Партнёры · близость · доверие</span></div></div>' +
     '<div class="search-toolbar"><div class="search-box">🔍 <input type="search" data-spa-search="lover" placeholder="Поиск партнёра..." value="' + escHtml(state.loverListSearch || '') + '"></div></div>' +
-    '<div class="card-stack">' + list.map(function (lover) {
-      const owned = state.account.ownedLovers[lover.id];
-      return '<div class="nav-card" data-action="open-lover" data-id="' + lover.id + '"><img src="' + getIconUrl(getLoverIconPath(lover, owned), state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt=""><div class="card-body"><div class="card-title">' + tName('lover', lover.name) + '</div><div class="card-subtitle">♡ Близость: ' + fmt(owned.closeness || 0) + ' · Доверие: ' + fmt(owned.affinity || 0) + '</div></div><div class="card-right">›</div></div>';
-    }).join('') +
-    '<button class="nav-card add-dashed" data-action="open-add-lover"><strong>＋ Добавить партнёров (' + ownedIds.length + '/' + db.lovers.length + ')</strong></button>' +
-    '<details class="attrs-box add-owned-details"><summary>Добавить из полного каталога</summary><div class="grid-2">' + db.lovers.filter(function (lover) { return !state.account.ownedLovers[lover.id]; }).map(function (lover) {
-      return '<button class="catalog-pick" data-action="add-lover" data-id="' + lover.id + '">' + tName('lover', lover.name) + '</button>';
-    }).join('') + '</div></details>';
+    '<div class="card-stack">' + list.map(lover => { const owned = state.account.ownedLovers[lover.id]; return '<div class="nav-card" data-action="open-lover" data-id="' + lover.id + '"><img src="' + getIconUrl(getLoverIconPath(lover,owned),state.preferLocalIcons) + '" class="profile-avatar-lg" style="width:48px;height:48px" alt=""><div class="card-body"><div class="card-title">' + escHtml(tName('lover',lover.name)) + '</div><div class="card-subtitle">♡ Близость: ' + fmt(owned.closeness || 0) + ' · Доверие: ' + fmt(owned.affinity || 0) + '</div></div><div class="card-right">›</div></div>'; }).join('') +
+    '</div><section class="attrs-box add-owned-details"><h3>Добавить партнёра</h3><p class="row-sub">Выбери персонажа — нажми на его карточку</p><div class="grid-2">' +
+    catalog.map(lover => '<button type="button" class="catalog-pick" data-action="add-lover" data-id="' + lover.id + '"><img src="' + getIconUrl(getLoverIconPath(lover,null),state.preferLocalIcons) + '" alt="" style="width:52px;height:52px;object-fit:contain;display:block;margin:0 auto 6px"><span>' + escHtml(tName('lover',lover.name)) + '</span></button>').join('') + '</div></section>';
 }
-
-
 function itemBelongsToCategory(item, category) {
   if (category === 'all') return true;
   const tags = item.tags || [];
@@ -1825,10 +1598,8 @@ function renderSettingsTab() {
         </div>
       </div>
       <div class="settings-actions">
-        <button class="btn" id="btn-export">💾 Экспорт профиля</button>
-        <button class="btn" id="btn-import">📂 Импорт профиля</button>
-        
-        <button class="btn" id="btn-game-connect-panel">🔗 Подключение к игре</button>
+        <button class="btn" id="btn-export">💾 Сохранить копию профиля</button>
+        <button class="btn" id="btn-import">📂 Восстановить профиль</button>
         <button class="btn btn-danger" id="btn-reset-account">🧹 Очистить калькулятор</button>
       </div>
       <div class="row-sub settings-note">Профиль и введённые значения хранятся локально в браузере. Экспортируй резервную копию перед очисткой или переносом на другое устройство.</div>
@@ -1884,18 +1655,6 @@ function renderDominanceTab(db, report) {
         <button class="btn" type="button" data-action="export-profile">⇧ Экспорт профиля</button>
         <button class="btn" type="button" data-action="import-profile">⇩ Импорт профиля</button>
       </div>
-    </section>
-
-    <section class="card game-sync-card">
-      <div class="card-head">
-        <div>
-          <span class="card-title">🔗 Подключение игрового аккаунта</span>
-          <div class="row-sub">Прямой вход в игровой аккаунт не используется. Значения профиля вводятся вручную.</div>
-        </div>
-        <span class="badge">Локальный режим</span>
-      </div>
-      <button class="btn btn-sm" id="btn-game-connect-panel">Проверить способ подключения</button>
-      <div class="row-sub" style="margin-top:8px;">Не передавай пароль от игры. Для резервной копии используй экспорт и импорт профиля.</div>
     </section>
 
     <section class="card">
@@ -2709,18 +2468,6 @@ function bindSpaEvents(db, report, oracle) {
         saveState();
         return navigate('warden-detail');
       }
-      if (action === 'open-add-warden') {
-        const choices = db.wardens.filter(function (warden) { return !state.account.ownedWardens[warden.id]; });
-        const answer = globalThis.prompt('Введите ID смотрителя:\n' + choices.slice(0, 30).map(function (warden) { return warden.id + ' — ' + tName('warden', warden.name); }).join('\n'));
-        const warden = db.wardens.find(function (item) { return item.id === Number(answer); });
-        if (!warden) return;
-        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить смотрителя в профиль?')) return;
-        pushUndoSnapshot();
-        state.account.ownedWardens[warden.id] = createOwnedWarden(warden);
-        state.currentWardenId = warden.id;
-        saveState();
-        return navigate('warden-detail');
-      }
       if (action === 'delete-warden') {
         if (!globalThis.confirm('Удалить смотрителя из профиля?')) return;
         pushUndoSnapshot();
@@ -2729,18 +2476,6 @@ function bindSpaEvents(db, report, oracle) {
         return navigate('wardens_list');
       }
       if (action === 'open-lover') { state.currentLoverId = Number(button.dataset.id); return navigate('lover-detail'); }
-      if (action === 'open-add-lover') {
-        const choices = db.lovers.filter(function (lover) { return !state.account.ownedLovers[lover.id]; });
-        const answer = globalThis.prompt('Введите ID партнёра:\n' + choices.slice(0, 30).map(function (lover) { return lover.id + ' — ' + tName('lover', lover.name); }).join('\n'));
-        const lover = db.lovers.find(function (item) { return item.id === Number(answer); });
-        if (!lover) return;
-        if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить партнёра в профиль?')) return;
-        pushUndoSnapshot();
-        state.account.ownedLovers[lover.id] = createOwnedLover(lover);
-        state.currentLoverId = lover.id;
-        saveState();
-        return navigate('lover-detail');
-      }
       if (action === 'add-lover') {
         const lover = db.lovers.find(function (item) { return item.id === Number(button.dataset.id); });
         if (state.settings?.warnOnChoice && !globalThis.confirm('Добавить партнёра в профиль?')) return;
